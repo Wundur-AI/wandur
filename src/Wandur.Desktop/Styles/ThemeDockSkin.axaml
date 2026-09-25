@@ -18,16 +18,30 @@
       <Setter Property="Template">
         <ControlTemplate>
           <local:ThemeDockSkinHost Name="PART_DockSkin">
-            <dc:DockableControl Name="PART_DockableControl"
-                                TrackingMode="Visible"
-                                Background="{TemplateBinding Background}"
-                                DockProperties.IsDropArea="True"
-                                DockProperties.IsDockTarget="True">
-              <dc:ToolChromeControl IsActive="{Binding IsActive}"
-                                    IsVisible="{Binding !!VisibleDockables.Count}">
-                <dc:ToolControl />
-              </dc:ToolChromeControl>
-            </dc:DockableControl>
+            <Grid>
+              <dc:DockableControl Name="PART_DockableControl"
+                                  TrackingMode="Visible"
+                                  Background="{TemplateBinding Background}"
+                                  DockProperties.IsDropArea="True"
+                                  DockProperties.IsDockTarget="True">
+                <dc:ToolChromeControl IsActive="{Binding IsActive}"
+                                      IsVisible="{Binding !!VisibleDockables.Count}">
+                  <dc:ToolControl />
+                </dc:ToolChromeControl>
+              </dc:DockableControl>
+              <!-- Decorative overlay only: Dock retains all original hit targets and commands. -->
+              <Grid Name="ArmoredBayChrome" IsHitTestVisible="False">
+                <Border Name="ArmoredBayRim" BorderBrush="{DynamicResource FleetRimEdgeBrush}"
+                        BorderThickness="1,0,1,1" CornerRadius="1"
+                        BoxShadow="inset 0 2 3 0 #58000000, inset 0 -1 0 0 #20FFFFFF" />
+                <Border Height="1" VerticalAlignment="Top" Background="{DynamicResource ArmoredBayHighlightBrush}" />
+                <Grid Height="{DynamicResource DockHeaderHeight}" VerticalAlignment="Top">
+                  <Border Name="ArmoredBayFocus" Width="28" Height="2" Margin="12,0,0,0"
+                          HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                          Background="{DynamicResource AccentBrush}" IsVisible="{Binding IsActive}" />
+                </Grid>
+              </Grid>
+            </Grid>
           </local:ThemeDockSkinHost>
         </ControlTemplate>
       </Setter>

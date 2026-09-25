@@ -4,7 +4,9 @@ using Avalonia.VisualTree;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Dock.Avalonia.Controls;
+using Dock.Model.Controls;
 using Wandur.Core.Discovery;
+using Wandur.Desktop.Converters;
 
 namespace Wandur.Desktop;
 
@@ -101,21 +103,29 @@ public sealed class ThemeDockSkinHost : Decorator
     }
 
     /// <summary>
-    /// The shape each panel border was templated with. The corners come through a converter on a binding
-    /// over the dock's alignment, which squares the edge that meets the window side; a binding does not
-    /// re-run because a theme moved a radius, so the shape is re-derived here from the pattern the
-    /// template produced. Keeping the original means a theme can square the corners and a later one can
-    /// round them again, instead of squaring being one-way.
+    /// Fallback patterns for borders without a known Dock template. Dock header/body patterns are
+    /// derived from their alignment below so Armored's square styles cannot erase Fleet's corners.
     /// </summary>
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Border, object> Templated = new();
 
     private void ApplyPanelRadius()
     {
-        var radius = ThemeService.AppliedSkin?.Radii?.Panel;
+        var radius = ThemeService.ActiveWindowSkin.IsArmored ? 0 : ThemeService.AppliedSkin?.Radii?.Panel;
         if (radius is null) return;
         foreach (var border in this.GetVisualDescendants().OfType<Border>().Where(b => b.Name == "PART_Border"))
         {
-            var original = (CornerRadius)Templated.GetValue(border, b => b.CornerRadius);
+            // Read Dock's alignment pattern, not the currently styled corners:
+            // Armored may already have squared them before this first theme event.
+            var part = border.TemplatedParent switch
+            {
+                ToolChromeControl => "HeaderCorner",
+                ToolControl => "ContentCorner",
+                _ => null
+            };
+            var original = part is not null && border.DataContext is IToolDock dock
+                ? (CornerRadius)DockChromeConverter.Instance.Convert(dock.Alignment, typeof(CornerRadius), part,
+                    System.Globalization.CultureInfo.InvariantCulture)
+                : (CornerRadius)Templated.GetValue(border, b => b.CornerRadius);
             border.CornerRadius = new CornerRadius(
                 original.TopLeft > 0 ? radius.Value : 0,
                 original.TopRight > 0 ? radius.Value : 0,
@@ -132,6 +142,15 @@ public sealed class ThemeDockSkinHost : Decorator
         Classes.Set("fleet", _custom);
         Classes.Set("skin-controls", true);
         Classes.Set("system", !_custom);
+        Classes.Set("armored", definition.IsArmored);
+        // Ui.Toolbar resolves ChromeBrush locally. Share one quiet face with the
+        // header so tool rows form a single bay cap, without changing the outer hull.
+        foreach (var key in new[] { "ChromeBrush", "ToolbarBrush", "DockHeaderBrush" })
+        {
+            if (definition.IsArmored && Application.Current?.Resources["PanelBrush"] is IBrush face)
+                Resources[key] = face;
+            else Resources.Remove(key);
+        }
         HeaderHeight = definition.DockHeaderHeight;
         ApplyPanelRadius();
         var skin = ThemeSkinResources.FromApplied();
@@ -207,6 +226,14 @@ public sealed class ThemeDockSkinHost : Decorator
         base.Render(context);
         if (_custom && !IsSkinActive && Bounds.Width > 6 && Bounds.Height > 6)
         {
+            if (ThemeService.ActiveWindowSkin.IsArmored)
+            {
+                // A thin recessed seam instead of the raised Fleet metal surround.
+                context.FillRectangle(FleetSkin.RimShadow, new Rect(Bounds.Size));
+                context.DrawLine(new Pen(FleetSkin.RimHighlight, .6),
+                    new(0, Bounds.Height - .5), new(Bounds.Width, Bounds.Height - .5));
+                return;
+            }
             var edge = new Pen(FleetSkin.RimEdge, 1);
             if (!_joinsLeft && !_joinsRight)
                 context.DrawRectangle(FleetSkin.DockMetal, edge, new Rect(Bounds.Size).Deflate(.5), 3, 3);

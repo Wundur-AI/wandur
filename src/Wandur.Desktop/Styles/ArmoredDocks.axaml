@@ -1,0 +1,39 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dc="using:Dock.Avalonia.Controls" xmlns:local="using:Wandur.Desktop">
+  <!-- Only Armored uses this overlay. Never replace Dock's grip, buttons or content. -->
+  <Style Selector="Grid#ArmoredBayChrome">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="local|ThemeDockSkinHost.armored Grid#ArmoredBayChrome">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+  <Style Selector="local|ThemeDockSkinHost.armored.joined-left Border#ArmoredBayRim">
+    <Setter Property="BorderThickness" Value="0,0,1,1" />
+  </Style>
+  <Style Selector="local|ThemeDockSkinHost.armored.joined-right Border#ArmoredBayRim">
+    <Setter Property="BorderThickness" Value="1,0,0,1" />
+  </Style>
+  <Style Selector="local|ThemeDockSkinHost.armored.joined-left.joined-right Border#ArmoredBayRim">
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="local|ThemeDockSkinHost.armored dc|ToolChromeControl /template/ Border#PART_Border">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="BoxShadow" Value="0 0 0 0 Transparent" />
+  </Style>
+  <Style Selector="local|ThemeDockSkinHost.armored dc|ToolControl /template/ Border#PART_Border">
+    <Setter Property="CornerRadius" Value="0" />
+  </Style>
+  <Style Selector="local|ThemeDockSkinHost.armored dc|ToolChromeControl /template/ TextBlock#PART_Title">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="LetterSpacing" Value="0.2" />
+  </Style>
+  <Style Selector="local|ThemeDockSkinHost.armored dc|ToolChromeControl /template/ Button Viewbox">
+    <Setter Property="Width" Value="12" />
+    <Setter Property="Height" Value="12" />
+  </Style>
+  <Style Selector="local|ThemeDockSkinHost.armored dc|ToolChromeControl /template/ Button">
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="Padding" Value="5" />
+  </Style>
+</Styles>

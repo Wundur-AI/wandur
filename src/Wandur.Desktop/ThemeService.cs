@@ -280,6 +280,7 @@ public static class ThemeService
         resources.Color("ToolbarIconBrush", Mix(chrome, Colors.Black, light ? .16 : .28));
         if (referencePalette) FleetSkin.Apply(resources);
         FleetSkin.SynchronizeMaterials(resources, skin, referencePalette);
+        resources.Brush("ArmoredBayHighlightBrush", FleetSkin.RimHighlight);
         if (!ActiveWindowSkin.CustomChrome)
         {
             // Native chrome owns the outside; the application keeps its chosen colors.

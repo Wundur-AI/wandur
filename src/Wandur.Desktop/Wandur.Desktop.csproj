@@ -10,6 +10,7 @@
     <AvaloniaResource Include="Assets/Skins/armored-wear.png" />
     <AvaloniaResource Include="Styles/ThemeDockSkin.axaml" />
     <AvaloniaResource Include="Styles/Fleet.axaml" />
+    <AvaloniaResource Include="Styles/ArmoredDocks.axaml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Wandur.Core/Wandur.Core.csproj" />

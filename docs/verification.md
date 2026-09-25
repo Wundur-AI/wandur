@@ -1,5 +1,36 @@
 # Client foundation verification
 
+## Armored recessed docking bays (2026-09-25)
+
+- Armored now uses compact 30-DIP dock headers, shared header/toolbar surfaces,
+  thin inset rims and a short active-dock accent marker. Dock grips, commands and
+  drop targets remain intact; the decorative overlay cannot receive pointer input.
+  No dock texture, terminal heading, outer-frame enlargement or Fleet/System
+  redesign was added. Floating panels retain native captions.
+- New headless coverage exercises Hull, Slate and Paper at 1040/1536 DIPs and
+  1x/2x scale, contrast, focus movement, a real close-button click through the
+  overlay, joined edges, floating windows and skin restoration. Initial cases
+  failed before implementation; a rejected XAML shadow value was corrected during
+  the first implementation run.
+- Independent review identified a corner-precedence risk. A new regression
+  reproduced Fleet remaining square after Armored; radius handling now derives
+  header/body patterns from Dock alignment rather than already-styled corners.
+  Post-fix focused tests passed 19/19, including the seven new cases.
+- Initial full run passed 778 Core and 619/620 Desktop tests, with one Avalonia
+  test-session cleanup threading error in the existing mapped-vitals test. That
+  test passed in the focused rerun. Final post-fix run passed all 621 Desktop tests
+  and 777/778 Core tests; the remaining existing script-worker test timed out on
+  startup, then passed its isolated rerun (1/1). There was not a single all-green
+  solution run in this pass. No unrelated runtime code or timeouts were changed.
+- Release build passed with zero warnings/errors. Localization and whitespace
+  checks passed. Follow-up independent review approved the corner fix with no
+  remaining actionable findings; native GUI behavior remains unverified.
+- Actual renders are in `/private/tmp/wandur-armored-bays/`. Hull/Slate widescreen,
+  narrow 2x Paper, active focus and floating-panel captures were visually inspected.
+  Tests use temporary settings and the offline demo. No owner app restart,
+  personal data, or public server connection was used. Native macOS/Windows
+  drag/resize and caption interaction were not manually reverified in this pass.
+
 ## Armored refinement and System quick appearance controls (2026-09-25)
 
 - Restored the separate Skin/palette buttons (and adjacent fullscreen action) in

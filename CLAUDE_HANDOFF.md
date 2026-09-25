@@ -10,7 +10,9 @@ Armored (layered vector plates, continuous accent rails and subtle tiled wear), 
 toolbar integrated into the titlebar with native caption buttons). Skin and color
 theme have separate menus and independent settings. Floating panels retain native
 captions and compact themed dock headers. System also retains quick Skin/palette
-buttons in its integrated toolbar. Armored uses one original alpha-only PNG for
+buttons in its integrated toolbar. Armored docks are recessed bays with compact
+30-DIP headers, integrated toolbar surfaces and a short active accent marker;
+their decorative overlay is not hit-testable. Armored uses one original alpha-only PNG for
 neutral wear; its geometry stays drawn. No SDK/schema changes, history changes, or
 new packages. MUD-recommended skin defaults were discussed but
 are not yet implemented; an explicit local skin remains authoritative.

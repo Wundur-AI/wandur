@@ -27,10 +27,15 @@ are hosted in that toolbar; custom skins move the same controls to their titleba
 Long System titles yield space to the measured action group. It does not turn Avalonia widgets
 into native AppKit/WinUI controls.
 
-Dock headers share compact controls and palette resources, with 38/32/30-DIP heights
+Dock headers share compact controls and palette resources, with 38/30/30-DIP heights
 for Fleet/Armored/System. Side docks join the window edge; floating docks retain
 native OS captions and compact themed content headers. `SkinnedDockHostWindow`
 subscribes only while open. Skin changes retain the same session and Dock content.
+Armored's `ArmoredDocks.axaml` adds a non-interactive recessed rim and a short
+accent marker bound to the dock's active state. Its host scopes the header and
+toolbar brushes to the panel surface, removing those overrides on other skins.
+The original Dock grip, commands, drop targets and content remain intact; no
+texture is added to the bays and the terminal retains no heading.
 Fullscreen releases decorative insets and preserves an exit even with the toolbar
 hidden; restoration resolves the current skin rather than a saved geometry snapshot.
 

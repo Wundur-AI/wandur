@@ -474,5 +474,6 @@
       <Setter Property="MaxWidth" Value="320" />
     </Style>
     <StyleInclude Source="avares://Wandur/Styles/Fleet.axaml" />
+    <StyleInclude Source="avares://Wandur/Styles/ArmoredDocks.axaml" />
   </Application.Styles>
 </Application>
