@@ -240,6 +240,7 @@ public sealed partial class MainWindow : Window
 
     private void OnThemeApplied()
     {
+        _fullScreenChromeDirty = true;
         Classes.Set("fleet", ThemeService.ActiveWindowSkin.CustomChrome);
         _fleetToolbarSurfaceKey = null;
         _fleetSettings.IsVisible = ThemeService.ActiveWindowSkin.CustomChrome;
@@ -472,7 +473,7 @@ public sealed partial class MainWindow : Window
 
     private void ApplyTitleChrome()
     {
-        if (WindowState == WindowState.FullScreen)
+        if (WantsFullScreenChrome)
         {
             ApplyFullScreenChrome();
             return;
@@ -636,7 +637,7 @@ public sealed partial class MainWindow : Window
 
     private void UpdateTitleBarInsets()
     {
-        if (WindowState == WindowState.FullScreen)
+        if (WantsFullScreenChrome)
         {
             _toolbar.Padding = new Thickness(12, 5);
             _toolbar.MinHeight = 42;
@@ -732,7 +733,7 @@ public sealed partial class MainWindow : Window
     private void ApplyFleetToolbarSurface()
     {
         if (!ThemeService.ActiveWindowSkin.CustomChrome) return;
-        if (WindowState == WindowState.FullScreen)
+        if (WantsFullScreenChrome)
         {
             _toolbar.Background = FleetSkin.Toolbar;
             return;

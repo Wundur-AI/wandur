@@ -21,7 +21,12 @@ public sealed partial class MainWindow
     private ThemeMenuButton _themeMenuButton = null!;
     private SkinMenuButton _skinMenuButton = null!;
     private bool _fullScreenChrome;
+    private bool _fullScreenChromeDirty = true;
+    private WindowState? _fullScreenRequest;
     private WindowState _beforeFullScreen = WindowState.Normal;
+
+    private bool WantsFullScreenChrome =>
+        _fullScreenRequest == WindowState.FullScreen || WindowState == WindowState.FullScreen;
 
     private double TitleActionsRightInset =>
         Math.Max(WindowDecorationMargin.Right, OperatingSystem.IsWindows() ? 144 : 0) + 12;
@@ -76,12 +81,41 @@ public sealed partial class MainWindow
         _titleActions.Margin = custom ? new Thickness(0, 10, TitleActionsRightInset, 0) : new Thickness(6, 0, 0, 0);
     }
 
-    internal void ToggleFullScreen() =>
-        WindowState = WindowState == WindowState.FullScreen ? _beforeFullScreen : WindowState.FullScreen;
+    internal void ToggleFullScreen()
+    {
+        if (_closed || _fullScreenRequest.HasValue) return;
+        var target = WindowState == WindowState.FullScreen ? _beforeFullScreen : WindowState.FullScreen;
+        _fullScreenRequest = target;
+        try
+        {
+            if (target == WindowState.FullScreen)
+            {
+                // Prepare the content before AppKit/Win32 starts its window transition,
+                // rather than leaving the old title and frame for a later dispatcher pass.
+                ApplyFullScreenChrome();
+                UpdateLayout();
+            }
+            WindowState = target;
+        }
+        finally
+        {
+            _fullScreenRequest = null;
+            // Reconcile with the actual reported state, including a refused request.
+            // Native setters can notify synchronously, so keep restoration deferred.
+            RequestTitleChromeUpdate();
+        }
+    }
 
     private void ApplyFullScreenChrome()
     {
+        if (_fullScreenChrome && !_fullScreenChromeDirty)
+        {
+            UpdateTitleBarInsets();
+            PlaceFullScreenExit();
+            return;
+        }
         _fullScreenChrome = true;
+        _fullScreenChromeDirty = false;
         _themeMenuButton.Flyout?.Hide();
         _skinMenuButton.Flyout?.Hide();
         _titleActions.IsVisible = false;

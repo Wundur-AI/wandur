@@ -45,6 +45,12 @@ The original Dock grip, commands, drop targets and content remain intact; no
 texture is added to the bays and the terminal retains no heading.
 Fullscreen releases decorative insets and preserves an exit even with the toolbar
 hidden; restoration resolves the current skin rather than a saved geometry snapshot.
+The app's fullscreen command clears chrome and performs the resulting layout before
+requesting the native state transition. A short-lived request guard keeps layout
+callbacks in fullscreen mode during preparation; reconciliation stays deferred to
+avoid nesting inside native property setters. Fullscreen chrome setup is reused
+across resize callbacks and invalidated by theme changes, while the exit button
+still follows toolbar visibility. The native fullscreen animation is unchanged.
 
 ## Dependency injection and ownership
 

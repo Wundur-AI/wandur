@@ -1,5 +1,30 @@
 # Client foundation verification
 
+## Fullscreen chrome preparation (2026-09-25)
+
+- The fullscreen command now hides title/frame decorations, releases their insets
+  and updates layout before requesting the native window-state change. It retains
+  deferred state reconciliation and a synchronous request guard, without sleeps,
+  new animation settings or a borderless-fullscreen replacement.
+- Fullscreen resize callbacks reuse chrome setup instead of clearing/rebinding the
+  toolbar background. Theme changes invalidate that setup; hidden-toolbar exit
+  access and restoration from current settings remain intact.
+- New pre-state-change tests failed for Fleet, Armored and System before the fix.
+  A resize regression observed four background changes for two resizes before the
+  fix, then zero afterward. Focused checks passed 24/24, including simulated native
+  state correction, rapid toggles from normal/maximized, skin changes and hidden
+  toolbar restoration. The platform-correction test invokes Avalonia's internal
+  callback receiver via test-only reflection; production has no testing hooks.
+- Independent static review approved the change with no findings. Native animation
+  timing and silent platform refusal without a corrected state report remain
+  outside automated verification; reconciliation uses the state Avalonia reports.
+- Full Release solution run passed 778 Core + 633 Desktop = 1,411 tests, with no
+  failures or skips. Final Release build passed with zero warnings/errors;
+  localization and whitespace checks passed.
+- This verifies event ordering/layout and removes redundant work, not elapsed
+  native animation time. Headless tests cannot validate AppKit/Win32 compositor
+  timing. No owner app restart, active-session changes or bundle replacement.
+
 ## Armored header and corner construction (2026-09-25)
 
 - Bounded rendering refinement, with the existing 80-DIP band, 86-DIP plaque,
