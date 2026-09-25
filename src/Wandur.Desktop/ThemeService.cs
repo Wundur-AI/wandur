@@ -71,7 +71,7 @@ public static class ThemeService
     public const double LightDisabledOpacity = 0.60, DarkDisabledOpacity = 0.45;
     /// <summary>Raised once per applied palette, for views that read brush colors rather than binding them.</summary>
     public static event Action? Applied;
-    private static (Application App, string Theme, string? Foreground, string? Background, WorldTheme? World, UserTheme? Personal, UserTheme? AnsiTheme, IReadOnlyDictionary<string, Bitmap>? Images)? _lastAppearance;
+    private static (Application App, string Theme, string Skin, string? Foreground, string? Background, WorldTheme? World, UserTheme? Personal, UserTheme? AnsiTheme, IReadOnlyDictionary<string, Bitmap>? Images)? _lastAppearance;
     /// <summary>The world theme currently on screen, for tests that assert what the palette came from.</summary>
     internal static WorldTheme? AppliedWorldTheme => _lastAppearance?.World;
     /// <summary>
@@ -79,7 +79,8 @@ public static class ThemeService
     /// Read this rather than raw world metadata, whose legacy geometry is no longer rendered.
     /// </summary>
     internal static WorldThemeSkin? AppliedSkin { get; private set; }
-    internal static bool UsesFleetSkin { get; private set; }
+    internal static WindowSkinDefinition ActiveWindowSkin { get; private set; } = WindowSkinDefinition.Resolve(null);
+    internal static bool UsesFleetSkin => ActiveWindowSkin.Id == WindowSkinId.Fleet;
     /// <summary>Decoded theme bitmaps for the appearance on screen (chrome, shell, frame-border).</summary>
     internal static IReadOnlyDictionary<string, Bitmap>? AppliedImages => _lastAppearance?.Images;
     private static ThemeResources? _resources;
@@ -97,7 +98,7 @@ public static class ThemeService
         var personal = worldTheme is null ? settings.CustomThemes.FirstOrDefault(t => t.Id == settings.Theme) : null;
         if (personal is not null) { worldTheme = personal.ToWorldTheme(); images = null; }
         var ansiTheme = settings.CustomThemes.FirstOrDefault(t => t.Id == settings.Theme);
-        var appearance = (app, settings.Theme, settings.Foreground, settings.Background, worldTheme, personal, ansiTheme, images);
+        var appearance = (app, settings.Theme, WindowSkinId.Normalize(settings.Skin), settings.Foreground, settings.Background, worldTheme, personal, ansiTheme, images);
         // Repainting an appearance already on screen changes nothing, and a session open raises this
         // a dozen times or more, so the identical case leaves without validating or writing a brush.
         if (_lastAppearance == appearance) return;
@@ -170,12 +171,13 @@ public static class ThemeService
         // A world whose chrome is a texture keeps it: the default's shaded surfaces would paint straight
         // over the material the world chose, which is the one thing a textured theme exists to show.
         var textured = worldTheme?.Surface == "metallic" || worldTheme?.Images?.Chrome is not null;
-        UsesFleetSkin = true;
+        ActiveWindowSkin = WindowSkinDefinition.Resolve(settings.Skin);
         var referencePalette = settings.Theme == "Hull" && worldTheme is null && personal is null;
         var fallback = referencePalette
             ? FleetSkin.Create() : DefaultSkin.For(panel, text, background, terminalText, accent);
         var skin = DefaultSkin.Merge(worldTheme?.Skin, fallback,
             keepSurfaces: textured);
+        skin = ActiveWindowSkin.ApplyGeometry(skin);
         skin = skin with { Radii = new WorldThemeSkinRadii { Panel = panelRadius, Control = controlRadius } };
         AppliedSkin = skin;
         // Dimming by opacity costs far more contrast over a light surface than a dark one: the same 0.35
@@ -281,8 +283,8 @@ public static class ThemeService
         var mapBackground = ((ISolidColorBrush)resources.Read("MapCanvasBrush")).Color;
         resources.Color("MapLabelBrush", ReadableInk(mapBackground, mapBackground));
         resources.Brush("InstrumentBarBrush", FleetSkin.Instrument);
-        resources.Brush("InstrumentTextBrush", resources.Read(FleetSkin.IsActive ? "TerminalTextBrush" : "TextBrush"));
-        resources.Brush("ChannelBodyBrush", resources.Read(FleetSkin.IsActive ? "TerminalBrush" : "PanelBrush"));
+        resources.Brush("InstrumentTextBrush", resources.Read("TerminalTextBrush"));
+        resources.Brush("ChannelBodyBrush", resources.Read("TerminalBrush"));
         _lastAppearance = appearance;
         Applied?.Invoke();
     }
