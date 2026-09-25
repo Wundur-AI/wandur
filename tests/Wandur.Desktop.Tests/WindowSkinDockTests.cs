@@ -81,6 +81,9 @@ public sealed class WindowSkinDockTests
                 Assert.Equal(second == "System" ? 0 : second == "Armored" ? 1 : 2, dock.Child!.Bounds.Left);
                 Assert.Contains(dock.GetVisualDescendants().OfType<Button>(), b => b.Name == "PART_CloseButton");
             }
+            // Opened fires again for an existing host after Hide/Show.
+            floating.Hide(); floating.Show(); WindowSkinTransitionTests.Settle(floating);
+            floating.Hide(); floating.Show(); WindowSkinTransitionTests.Settle(floating);
             window.ResetLayout(); WindowSkinTransitionTests.Settle(window);
             var closedClasses = floating.Classes.ToArray();
             window.Sessions.PreviewAppearanceSettings(new() { Skin = "Armored" });

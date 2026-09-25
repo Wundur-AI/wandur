@@ -249,7 +249,7 @@ public sealed partial class MainWindow : Window
         _fleetSettings.Content = FleetIcons.Action(FleetIcons.Settings, nameof(L.SettingsTitle), true);
         // On Windows the fallback menu remains available, below the overlapping title/toolbar pair.
         _headerStack.Children.Remove(_menus.Fallback);
-        _headerStack.Children.Insert(ThemeService.ActiveWindowSkin.CustomChrome ? _headerStack.Children.Count : 0, _menus.Fallback);
+        _headerStack.Children.Add(_menus.Fallback);
         _headerStack.Margin = default;
         _worldPicker.FontSize = ThemeService.ActiveWindowSkin.CustomChrome ? 13 : 12;
         _worldPicker.Height = ThemeService.ActiveWindowSkin.CustomChrome ? 32 : 28;
@@ -652,11 +652,12 @@ public sealed partial class MainWindow : Window
             _headerStack.Margin = _toolbar.IsVisible ? default : new Thickness(0, 14, 0, 0);
             return;
         }
-        if (!ThemeService.ActiveWindowSkin.CustomChrome || !OperatingSystem.IsMacOS())
+        if (!ThemeService.ActiveWindowSkin.CustomChrome)
         {
-            _toolbar.Padding = new Thickness(12, 5);
-            _toolbar.MinHeight = ToolbarHeight;
-            _windowHeader.MinHeight = 0;
+            _toolbar.Padding = new Thickness(OperatingSystem.IsMacOS() ? 88 : 12, 7,
+                Math.Max(WindowDecorationMargin.Right, OperatingSystem.IsWindows() ? 144 : 0) + 12, 7);
+            _toolbar.MinHeight = 48;
+            _windowHeader.MinHeight = 48;
             _headerStack.Margin = default;
             return;
         }
@@ -687,6 +688,7 @@ public sealed partial class MainWindow : Window
         // Run on every platform, not just the macOS native-decoration callback.
         UpdateTitleBarInsets();
         _appTitle.FontSize = 20;
+        _appTitle.MaxWidth = double.PositiveInfinity;
         _appTitle.FontWeight = FontWeight.Normal;
         _appTitle.LetterSpacing = 1.8;
         _plaque.Fill = FleetSkin.Plaque;
@@ -728,6 +730,7 @@ public sealed partial class MainWindow : Window
 
     private void ApplyFleetToolbarSurface()
     {
+        if (!ThemeService.ActiveWindowSkin.CustomChrome) return;
         if (WindowState == WindowState.FullScreen)
         {
             _toolbar.Background = FleetSkin.Toolbar;

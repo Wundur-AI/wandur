@@ -1,5 +1,33 @@
 # Client architecture
 
+## Window skins and color themes
+
+`ClientSettings.Skin` independently selects Fleet (the default), Armored, or System.
+Missing, null, or future identifiers render as Fleet without dropping other settings.
+The separate Skin and palette titlebar buttons, View > Skin, and Settings > Appearance
+share the same persisted choice. Selecting a skin does not disable MUD colors.
+
+`ThemeService` resolves colors first, then `WindowSkinDefinition` supplies geometry;
+the normalized skin participates in the appearance cache. MUD material metadata
+cannot replace local dimensions or shapes. A future MUD-recommended skin should be
+a validated built-in ID with an explicit user override, not downloaded drawing code.
+That directory/schema policy is not implemented in this change.
+
+Fleet retains its existing renderer. `ArmoredTitleLayout` clamps a text-sized plaque
+between native controls and actions; `ArmoredSkinRenderer` draws clean plates,
+recesses, continuous lights and fixed-size details using paths and gradients, without
+image assets or animation timers. The logo remains the existing app asset.
+System removes ornamental chrome and places a plain 48-DIP toolbar in the native
+caption area, reserving platform button space. It does not turn Avalonia widgets
+into native AppKit/WinUI controls.
+
+Dock headers share compact controls and palette resources, with 38/32/30-DIP heights
+for Fleet/Armored/System. Side docks join the window edge; floating docks retain
+native OS captions and compact themed content headers. `SkinnedDockHostWindow`
+subscribes only while open. Skin changes retain the same session and Dock content.
+Fullscreen releases decorative insets and preserves an exit even with the toolbar
+hidden; restoration resolves the current skin rather than a saved geometry snapshot.
+
 ## Dependency injection and ownership
 
 `App` is the composition root. Microsoft.Extensions.DependencyInjection registers one `ClientDatabase` and the settings, map, script, directory-cache, and protocol-history stores that use it, plus one singleton `IPasswordVault`; vault registration selects macOS Keychain, Windows Credential Manager, or Linux Secret Service. `MainWindow`, `SessionWorkspace`, and each `WorkspaceController` require those services by constructor injection. Consumers never resolve services from a global container and have no fallback constructor that creates a vault.

@@ -1,7 +1,7 @@
 # Selectable window skins
 
 Date: September 25, 2026
-Status: Design approved September 25, 2026; implementation pending plan review
+Status: Implemented September 25, 2026; automated acceptance passed, native QA partial
 Baseline: main at 4de1e66, confirmed pushed before starting this work
 
 ## Intent and scope
@@ -31,7 +31,7 @@ geometry language would expand the scope and validation burden unnecessarily.
 ## User experience and persistence
 
 - Add a Skin choice alongside the color theme in Settings > Appearance.
-- Add a separate Skin submenu to the existing appearance menu; expose the same
+- Add a separate Skin titlebar button alongside the color menu; expose the same
   action from a normal application menu when System hides custom title actions.
 - Persist a stable local Skin identifier: Fleet, Armored or System. Missing or
   unrecognized values resolve to Fleet without discarding other preferences.
@@ -97,11 +97,13 @@ its current measurements. Avoid animated glows and per-frame timers.
 
 ## System and platform behavior
 
-System restores standard platform window decoration and removes the custom title
-plaque, accent rails and metal frame. It retains themed application controls,
+System uses native caption controls and removes the custom title
+plaque, accent rails and metal frame. Per the later user request, its plain toolbar
+lives in the extended native titlebar, reserving native button safe areas rather
+than consuming a second toolbar row. It retains themed application controls,
 compact dock headers, existing toolbars and palette-derived content surfaces.
 It does not claim that Avalonia widgets become native AppKit/WinUI widgets.
-The OS owns native titlebar colors, controls and window shadow.
+The OS owns native buttons and window shadow; the integrated toolbar follows the palette.
 
 Custom skins retain native button behavior and appropriate platform safe areas.
 Window dragging, double-click, resizing, maximize, restore and fullscreen must
@@ -142,7 +144,8 @@ History improvements, embeddings, site changes, skin downloads/plugins, new MUD
 schema fields, arbitrary user-authored geometry, animated machinery, bitmap frame
 assets, and claims of pixel-identical rendering across platform font systems.
 
-## Next step
+## Implementation record
 
-Review the implementation plan before product code changes. The existing working
-baseline is already on origin/main.
+Implemented in the normal main checkout. See `../../verification.md` for actual
+test results, review fixes and native-platform limitations. The existing working
+baseline was already on origin/main; the new skin commits remain local.

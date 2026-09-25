@@ -4,13 +4,20 @@
 
 **Goal:** Ship independent Fleet, Armored and System skin selection without changing sessions, docking state or existing color choices.
 
-**Architecture:** Preserve a single live shell and dock tree. Resolve the local skin into immutable metrics and rendering behavior after resolving colors; share that result across the main window and floating docks. Render Armored with geometry and gradients, while System releases custom titlebar ownership to the platform.
+**Architecture:** Preserve a single live shell and dock tree. Resolve the local skin into immutable metrics and rendering behavior after resolving colors; share that result across the main window and floating docks. Render Armored with geometry and gradients, while System uses a plain integrated toolbar/titlebar with native caption controls.
 
 **Tech Stack:** Existing .NET 10, Avalonia 12, Dock, xUnit and Avalonia headless/Skia rendering. No new packages.
 
 **Spec:** ../specs/2026-09-25-selectable-window-skins-design.md
 
 ## Global Constraints
+
+Execution amendments: the user requested a separate Skin button rather than a
+palette submenu, and System's toolbar integrated into its native-button titlebar
+rather than a separate native title row. These supersede the earlier seeds below.
+Floating windows retain native captions in every skin plus compact matching Dock
+headers. MUD-default selection policy remains deferred. See `../../verification.md`
+for acceptance results and native checks not completed.
 
 - Fleet stays the default. History changes are explicitly out of scope.
 - No recursive property/update callbacks or new recursive routines.
@@ -87,7 +94,7 @@ internal sealed record WindowSkinDefinition(string Id, bool CustomChrome,
 
 Resolve Fleet frame/header metrics from the actual baseline resources if they differ from the seed above; preserve the baseline exactly and pin actual values in tests before refactoring. Expose `ThemeService.ActiveWindowSkin` as the resolved definition. Keep `UsesFleetSkin` true only for Fleet; audit consumers and replace usages that really mean custom chrome or readable terminal surfaces, not Fleet geometry.
 
-- [ ] Write Core RED tests: missing/null/unknown Skin resolves to Fleet, each known ID persists through JSON settings and SQLite settings, and unknown Skin does not discard Theme, profiles or font size. Use temporary stores and existing SettingsTests patterns.
+- [x] Write Core RED tests: missing/null/unknown Skin resolves to Fleet, each known ID persists through JSON settings and SQLite settings, and unknown Skin does not discard Theme, profiles or font size. Use temporary stores and existing SettingsTests patterns.
 
 ```csharp
 [Theory]
@@ -104,10 +111,10 @@ public void UnknownSkinFallsBackWithoutChangingOtherSettings(string? skin)
 }
 ```
 
-- [ ] Write Desktop RED test for repeated ThemeService.Apply with the same palette and different Skin; assert ActiveWindowSkin changes and Applied fires once for each real change, never for an identical repeat. Assert applying world materials does not alter the selected ID/metrics.
-- [ ] Run `dotnet test Wandur.sln -c Release --no-restore --filter 'FullyQualifiedName~WindowSkinSettingsTests|FullyQualifiedName~WindowSkinSelectionTests'` and confirm the intended failure.
-- [ ] Implement normalization and add normalized skin to ThemeService's appearance cache key. Resolve geometry independently of `DefaultSkin.Merge` world geometry. Preserve palette precedence and brush reuse. Publish the resolved definition before Applied fires. Keep map/channel/input contrast based on actual surface, not skin identity.
-- [ ] Run the new tests plus `FleetPaletteTests`, `ThemeSwitchContrastTests`, `SettingsTests` and `SqliteSettingsScriptTests`. Confirm existing missing-Skin fixtures still look like Fleet. Commit only this task's files with message `Separate local skin selection from color themes`.
+- [x] Write Desktop RED test for repeated ThemeService.Apply with the same palette and different Skin; assert ActiveWindowSkin changes and Applied fires once for each real change, never for an identical repeat. Assert applying world materials does not alter the selected ID/metrics.
+- [x] Run `dotnet test Wandur.sln -c Release --no-restore --filter 'FullyQualifiedName~WindowSkinSettingsTests|FullyQualifiedName~WindowSkinSelectionTests'` and confirm the intended failure.
+- [x] Implement normalization and add normalized skin to ThemeService's appearance cache key. Resolve geometry independently of `DefaultSkin.Merge` world geometry. Preserve palette precedence and brush reuse. Publish the resolved definition before Applied fires. Keep map/channel/input contrast based on actual surface, not skin identity.
+- [x] Run the new tests plus `FleetPaletteTests`, `ThemeSwitchContrastTests`, `SettingsTests` and `SqliteSettingsScriptTests`. Confirm existing missing-Skin fixtures still look like Fleet. Commit only this task's files with message `Separate local skin selection from color themes`.
 
 ### Task 2: Preferences and accessible appearance menus
 
@@ -115,7 +122,7 @@ public void UnknownSkinFallsBackWithoutChangingOtherSettings(string? skin)
 
 **Interfaces:** Consumes ClientSettings.Skin and WindowSkinId.Normalize. PreferencesViewModel exposes observable `string Skin`, persisted by its existing settings-copy builder and preview callback. Menus call `active.SaveSettings(active.Settings with { Skin = id })`; this must not turn off UseWorldThemes or change Theme. Share the list of stable IDs and localized labels between both menu presentations.
 
-- [ ] Add RED preferences tests using the existing `Store : IClientSettingsStore` fixture. Assert preview changes resolved skin, save persists, and Dispose/Cancel restores. Add a connected fake/demo session with a command draft and assert neither draft nor transcript changes during preview.
+- [x] Add RED preferences tests using the existing `Store : IClientSettingsStore` fixture. Assert preview changes resolved skin, save persists, and Dispose/Cancel restores. Add a connected fake/demo session with a command draft and assert neither draft nor transcript changes during preview.
 
 ```csharp
 [AvaloniaFact]
@@ -132,11 +139,11 @@ public void CancellingSkinPreviewRestoresSavedSkin()
 }
 ```
 
-- [ ] Add menu RED tests for selection against the active controller at click time, checked state on reopening, preserved world color following, and Skin availability through the standard View menu when custom title actions are absent. Append menu items where possible to preserve unrelated positional test assumptions.
-- [ ] Run focused preferences/menu tests and confirm missing behavior fails.
-- [ ] Add observable preference, selection UI, Skin submenu and View menu counterpart. Add keys `Skin`, `SkinFleet`, `SkinArmored`, `SkinSystem`, `SkinHelp` with complete translations. Regenerate with `python3 scripts/generate-localization.py`.
-- [ ] Add the review-focus regression: preview Armored, switch active world/session, then cancel. Call `EndAppearanceSettingsPreview` through the existing dialog lifecycle and verify the current world's colors plus saved skin, not the original world's palette.
-- [ ] Run focused tests and `python3 scripts/generate-localization.py --check`. Commit with message `Expose independent skin selection in appearance controls`.
+- [x] Add menu RED tests for selection against the active controller at click time, checked state on reopening, preserved world color following, and Skin availability through the standard View menu when custom title actions are absent. Append menu items where possible to preserve unrelated positional test assumptions.
+- [x] Run focused preferences/menu tests and confirm missing behavior fails.
+- [x] Add observable preference, selection UI, Skin submenu and View menu counterpart. Add keys `Skin`, `SkinFleet`, `SkinArmored`, `SkinSystem`, `SkinHelp` with complete translations. Regenerate with `python3 scripts/generate-localization.py`.
+- [x] Add the review-focus regression: preview Armored, switch active world/session, then cancel. Call `EndAppearanceSettingsPreview` through the existing dialog lifecycle and verify the current world's colors plus saved skin, not the original world's palette.
+- [x] Run focused tests and `python3 scripts/generate-localization.py --check`. Commit with message `Expose independent skin selection in appearance controls`.
 
 ### Task 3: Native/System chrome and safe window transitions
 
@@ -144,7 +151,7 @@ public void CancellingSkinPreviewRestoresSavedSkin()
 
 **Interfaces:** `MainWindow.ApplyWindowSkin()` is a private idempotent transition called by the existing appearance update path. It consumes ThemeService.ActiveWindowSkin. Native button inset eligibility becomes `ActiveWindowSkin.CustomChrome && normalWindowState`; no titlebar height writes are added to MacTrafficLightInset.
 
-- [ ] Add RED tests for Fleet -> System -> Fleet and every pair of skin IDs. System must have client-area extension off, the decorative frame/plaque/title actions hidden, native decorations enabled and no decorative content insets. Changing only colors must not alter native titlebar metrics.
+- [x] Add RED tests for Fleet -> System -> Fleet and every pair of skin IDs. System must have client-area extension off, the decorative frame/plaque/title actions hidden, native decorations enabled and no decorative content insets. Changing only colors must not alter native titlebar metrics.
 
 ```csharp
 // Inside a window fixture using the same temporary stores as TitleActionsTests.
@@ -160,10 +167,10 @@ Assert.True(window.ExtendClientAreaToDecorationsHint);
 Assert.True(plaque.IsEffectivelyVisible);
 ```
 
-- [ ] Run the new transition tests RED. Add a deterministic MacTrafficLightPosition test that applies inset=true, then inset=false and verifies the original coordinates on both flipped/unflipped parents.
-- [ ] Implement decoration routing. System uses Avalonia 12's normal decoration configuration and clears all custom frame state, including legacy bitmap/ornament hosts. Move native-vs-custom decisions into ApplyWindowSkin; leave Fleet drawing intact. Ensure simplified System brushes do not inherit metallic Fleet styles after a switch.
-- [ ] Update fullscreen restoration to consult the current definition. Add tests for entering fullscreen from each skin, switching while fullscreen, hiding/showing toolbar, then restoring. Reuse the existing footer exit behavior and verify the native menu remains available.
-- [ ] Check event subscriptions and finite transition counts with repeated resize/theme changes; no recursive Apply calls and no window recreation. Run TitleActionsTests, FleetSkinTests, ThemeSwitchTests and new transition tests GREEN. Commit `Support standard system chrome and safe skin transitions`.
+- [x] Run the new transition tests RED. Add a deterministic MacTrafficLightPosition test that applies inset=true, then inset=false and verifies the original coordinates on both flipped/unflipped parents.
+- [x] Implement decoration routing. System uses Avalonia 12's normal decoration configuration and clears all custom frame state, including legacy bitmap/ornament hosts. Move native-vs-custom decisions into ApplyWindowSkin; leave Fleet drawing intact. Ensure simplified System brushes do not inherit metallic Fleet styles after a switch.
+- [x] Update fullscreen restoration to consult the current definition. Add tests for entering fullscreen from each skin, switching while fullscreen, hiding/showing toolbar, then restoring. Reuse the existing footer exit behavior and verify the native menu remains available.
+- [x] Check event subscriptions and finite transition counts with repeated resize/theme changes; no recursive Apply calls and no window recreation. Run TitleActionsTests, FleetSkinTests, ThemeSwitchTests and new transition tests GREEN. Commit `Support standard system chrome and safe skin transitions`.
 
 ### Task 4: Clean vector Armored renderer
 
@@ -182,7 +189,7 @@ internal static IBrush CreateToolbar(Size size, Rect title,
 
 The renderer is a static class with no window, settings, network or session access. Geometry is recomputed from bounds; cache only by size/title/material revision, never allocate a timer. Existing title text/icon remain real controls and noninteractive decoration stays out of hit testing.
 
-- [ ] Add RED geometry tests for widths 0, 320, 800 and 1536, unequal native/action exclusions, empty title, a 4000-DIP measured title and nonfinite inputs. Assert nonnegative finite bounds, centered placement when space permits and PlainTitle fallback before text/actions collide.
+- [x] Add RED geometry tests for widths 0, 320, 800 and 1536, unequal native/action exclusions, empty title, a 4000-DIP measured title and nonfinite inputs. Assert nonnegative finite bounds, centered placement when space permits and PlainTitle fallback before text/actions collide.
 
 ```csharp
 [Fact]
@@ -196,11 +203,11 @@ public void ArmoredTitleLeavesActionAndCaptionSpace()
 }
 ```
 
-- [ ] Run geometry tests RED; implement fixed cap/bevel measurements and clamped center width with 40-DIP interior text padding, a 64-DIP band and a restrained toolbar overlap. The fallback must remain usable even when no plaque fits.
-- [ ] Draw clean nested plate paths with dark edge then bright inner edge, a recessed title rectangle, paired vertical accent lights and continuous side rails. Anchor bottom shoulders within the frame/footer safe space; repeat only small fixed-size vent marks inside those shoulders. No scratches, random seams, labels or separate bitmap panels.
-- [ ] Draw the toolbar's receiving notch from the same title rectangle translated to toolbar coordinates. Use an edge shadow plus highlight to convey depth. Do not put a rectangular image behind the plaque or distort the corner details when resizing.
-- [ ] Add headless RED/GREEN integration assertions: title labels/actions unobscured, lights visible down both sides, no central Terminal heading, no image needed by frame/plaque hosts, no frame overlay intercepting clicks. Use representative pixel samples away from text/antialiasing boundaries plus layout assertions, not one brittle full-screen hash.
-- [ ] Render actual Armored Hull and Slate at narrow/wide sizes. Inspect with view_image and tune geometry while preserving fixed cap sizes. Run FleetReferenceCaptureTests and Fleet title tests to prove unchanged geometry. Commit `Draw the clean scalable Armored window skin`.
+- [x] Run geometry tests RED; implement fixed cap/bevel measurements and clamped center width with 40-DIP interior text padding, a 64-DIP band and a restrained toolbar overlap. The fallback must remain usable even when no plaque fits.
+- [x] Draw clean nested plate paths with dark edge then bright inner edge, a recessed title rectangle, paired vertical accent lights and continuous side rails. Anchor bottom shoulders within the frame/footer safe space; repeat only small fixed-size vent marks inside those shoulders. No scratches, random seams, labels or separate bitmap panels.
+- [x] Draw the toolbar's receiving notch from the same title rectangle translated to toolbar coordinates. Use an edge shadow plus highlight to convey depth. Do not put a rectangular image behind the plaque or distort the corner details when resizing.
+- [x] Add headless RED/GREEN integration assertions: title labels/actions unobscured, lights visible down both sides, no central Terminal heading, no image needed by frame/plaque hosts, no frame overlay intercepting clicks. Use representative pixel samples away from text/antialiasing boundaries plus layout assertions, not one brittle full-screen hash.
+- [x] Render actual Armored Hull and Slate at narrow/wide sizes. Inspect with view_image and tune geometry while preserving fixed cap sizes. Run FleetReferenceCaptureTests and Fleet title tests to prove unchanged geometry. Commit `Draw the clean scalable Armored window skin`.
 
 ### Task 5: Compact matching docks and floating-window lifecycle
 
@@ -208,11 +215,11 @@ public void ArmoredTitleLeavesActionAndCaptionSpace()
 
 **Interfaces:** SkinnedDockHostWindow derives from the same Dock HostWindow type currently constructed in WorkspaceFactory. Its constructor takes no parameters; it subscribes to ThemeService.Applied on open and unsubscribes on close. Its custom header uses the resolved definition and real native window controls, not a second user preference. The existing dock content remains the child.
 
-- [ ] Add RED tests using existing DockChromeTests floating fixtures: create dock, change skin, close it, create another. Verify both old and new windows follow the selected skin, title/close actions remain usable, and closed windows stop receiving theme callbacks.
-- [ ] Add RED tests for left only, right only, both and neither dock. Assert no orphan decorative bars and no double-thick outer edge at the window boundary. Dock layout and content object identity must remain unchanged during switching.
-- [ ] Route HostWindowLocator to SkinnedDockHostWindow. System floating windows use normal platform decorations; custom floating windows use a compact matching header, not the large main-window plaque. Scope the selected skin to its header/control styles and make the current title accessible.
-- [ ] Drive dock header height and border resources from the definition. Armored gets a clean recessed header and thin separator; System gets a simple flat header; Fleet retains its current resources. Keep compact 24-DIP action targets and meaningful focus/hover states. Dock drag gestures continue using the existing Dock mechanisms.
-- [ ] Run dock, floating, title and transition tests GREEN, including all six cross-skin transitions while a floating dock is open. Commit `Apply selected skins consistently to docked and floating panels`.
+- [x] Add RED tests using existing DockChromeTests floating fixtures: create dock, change skin, close it, create another. Verify both old and new windows follow the selected skin, title/close actions remain usable, and closed windows stop receiving theme callbacks.
+- [x] Add RED tests for left only, right only, both and neither dock. Assert no orphan decorative bars and no double-thick outer edge at the window boundary. Dock layout and content object identity must remain unchanged during switching.
+- [x] Route HostWindowLocator to SkinnedDockHostWindow. System floating windows use normal platform decorations; custom floating windows use a compact matching header, not the large main-window plaque. Scope the selected skin to its header/control styles and make the current title accessible.
+- [x] Drive dock header height and border resources from the definition. Armored gets a clean recessed header and thin separator; System gets a simple flat header; Fleet retains its current resources. Keep compact 24-DIP action targets and meaningful focus/hover states. Dock drag gestures continue using the existing Dock mechanisms.
+- [x] Run dock, floating, title and transition tests GREEN, including all six cross-skin transitions while a floating dock is open. Commit `Apply selected skins consistently to docked and floating panels`.
 
 ### Task 6: Visual acceptance, platform verification and final review
 
@@ -220,8 +227,8 @@ public void ArmoredTitleLeavesActionAndCaptionSpace()
 
 **Interfaces:** Use existing `WANDUR_CAPTURE_DIR` capture convention and temporary/mock session setup from FleetReferenceCaptureTests and site screenshot tests. Capture fixtures must use fictional MUD content and never read the owner's database.
 
-- [ ] Add a theory matrix over Fleet/Armored/System with Hull/Slate/Paper and a test world palette. Reuse the existing ThemeSwitchContrastTests checks for terminal, map, command input, diagnostics and disabled controls. Include switching back to the first skin to expose stale resource state.
-- [ ] Capture all three skins at 800 and 1536 logical pixels, short/long titles, optional docks, and scale factors 1 and 2. Use the headless platform's render scaling support; verify output pixel dimensions rather than enlarging an existing bitmap. Include a floating dock. Inspect actual screenshots and correct clipping, excess padding and mismatched seams.
+- [x] Add a theory matrix over Fleet/Armored/System with Hull/Slate/Paper and a test world palette. Reuse the existing ThemeSwitchContrastTests checks for terminal, map, command input, diagnostics and disabled controls. Include switching back to the first skin to expose stale resource state.
+- [x] Capture all three skins at 800 and 1536 logical pixels and scale factors 1 and 2, plus maximum-supported long titles at 1040/2x. Optional dock combinations are layout-tested. Verify output pixel dimensions rather than enlarging an existing bitmap. Include a floating dock and diagnostics. Inspect representative actual screenshots and correct skin clipping, padding and seams; existing long footer-label overlap is documented.
 
 ```csharp
 // Existing headless capture idiom, after Show/UpdateLayout/ForceRenderTimerTick.
@@ -232,9 +239,10 @@ frame.Save(Path.Combine(directory, $"{skin}-{theme}-{width}.png"),
 ```
 
 - [ ] Use an isolated native Mac test instance, with temporary settings and mock/demo content, for drag, double-click, resize, native buttons, floating docks and fullscreen. Read the computer-use skill before GUI interaction. Do not replace or restart the owner's app bundle. If no Windows host is available, explicitly record native Windows checks as unverified.
-- [ ] Run `WANDUR_DIRECTORY_URL=http://127.0.0.1:1 dotnet test Wandur.sln -c Release --no-restore`, `dotnet build Wandur.sln -c Release --no-restore`, `python3 scripts/generate-localization.py --check`, and `git diff --check`. Use scoped elevation when required for .NET pipes/loopback fixtures.
-- [ ] Request a fresh independent review focused on the five failure modes above, native lifecycle, settings cancellation, contrast and Fleet preservation. Reproduce actionable findings with failing regressions before fixing them. Rerun affected tests and the final full suite after fixes.
-- [ ] Update docs with actual counts, capture paths, native checks performed and limitations. Commit exact owned files with `Verify and document selectable window skins`. Confirm clean main and report how to choose each skin; no automatic push or owner-session restart.
+  Partial native acceptance only: Armored double-click maximize, fullscreen and persistence exercised. Updated System native behavior, measured drag, manual resize/minimize/floating and Windows checks remain unverified. See verification.md.
+- [x] Run `WANDUR_DIRECTORY_URL=http://127.0.0.1:1 dotnet test Wandur.sln -c Release --no-restore`, `dotnet build Wandur.sln -c Release --no-restore`, `python3 scripts/generate-localization.py --check`, and `git diff --check`. Use scoped elevation when required for .NET pipes/loopback fixtures.
+- [x] Request a fresh independent review focused on the five failure modes above, native lifecycle, settings cancellation, contrast and Fleet preservation. Reproduce actionable findings with failing regressions before fixing them. Reviewer closed all findings after the focused tests passed; full suite rerun recorded in verification.md.
+- [x] Update docs with actual counts, capture paths, native checks performed and limitations. Commit exact owned files with `Verify and document selectable window skins`. Confirm clean main and report how to choose each skin; no automatic push or owner-session restart.
 
 ## Plan self-review
 

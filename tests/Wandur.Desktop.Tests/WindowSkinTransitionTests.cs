@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Chrome;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Wandur.Core.Settings;
@@ -30,7 +32,7 @@ public sealed class WindowSkinTransitionTests
                 window.Sessions.PreviewAppearanceSettings(new() { Skin = first }); Settle(window);
                 window.Sessions.PreviewAppearanceSettings(new() { Skin = second }); Settle(window);
                 Assert.Same(controller, window.Controller);
-                Assert.Equal(second != "System", window.ExtendClientAreaToDecorationsHint);
+                Assert.True(window.ExtendClientAreaToDecorationsHint);
                 Assert.Equal(second != "System", Named<Border>(window, "PlaqueTitleHost").IsEffectivelyVisible);
                 Assert.Equal(second != "System", Named<StackPanel>(window, "TitleActions").IsEffectivelyVisible);
                 var frame = window.GetVisualDescendants().OfType<ThemeWindowSkinHost>().Single();
@@ -41,6 +43,14 @@ public sealed class WindowSkinTransitionTests
                     Assert.Equal(default, frame.Inset);
                     Assert.Null(frame.BorderBitmap);
                     Assert.Equal(WindowDecorations.Full, window.WindowDecorations);
+                    var toolbar = Named<Border>(window, "MainToolbar");
+                    Assert.Equal(0, toolbar.TranslatePoint(default, window)!.Value.Y);
+                    Assert.Equal(48, window.ExtendClientAreaTitleBarHeightHint);
+                    Assert.True(toolbar.Padding.Left >= (OperatingSystem.IsMacOS() ? 88 : 12));
+                    // The Windows fallback menu lives below the toolbar in the same header.
+                    // It must override the ancestor caption role even on a Mac test host.
+                    var menu = Assert.Single(window.GetVisualDescendants().OfType<Menu>());
+                    Assert.Equal(WindowDecorationsElementRole.User, WindowDecorationProperties.GetElementRole(menu));
                 }
             }
         }
@@ -67,8 +77,9 @@ public sealed class WindowSkinTransitionTests
                 var frame = window.GetVisualDescendants().OfType<ThemeWindowSkinHost>().Single();
                 Assert.Equal(0, frame.BandHeight);
                 Assert.Equal(0, frame.EdgeThickness);
+                if (target == "System") Assert.IsAssignableFrom<Avalonia.Media.ISolidColorBrush>(Named<Border>(window, "MainToolbar").Background);
                 window.ToggleFullScreen(); Settle(window);
-                Assert.Equal(target != "System", window.ExtendClientAreaToDecorationsHint);
+                Assert.True(window.ExtendClientAreaToDecorationsHint);
                 Assert.Equal(target == "System" ? 0 : target == "Fleet" ? 50 : 64, frame.BandHeight);
                 window.ToolbarVisible = true; Settle(window);
             }

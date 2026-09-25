@@ -75,7 +75,7 @@ public static class ThemeService
     /// <summary>The world theme currently on screen, for tests that assert what the palette came from.</summary>
     internal static WorldTheme? AppliedWorldTheme => _lastAppearance?.World;
     /// <summary>
-    /// The skin actually on screen: shared Fleet geometry with the active palette and world materials.
+    /// The skin actually on screen: selected client geometry with the active palette and world materials.
     /// Read this rather than raw world metadata, whose legacy geometry is no longer rendered.
     /// </summary>
     internal static WorldThemeSkin? AppliedSkin { get; private set; }
@@ -107,7 +107,7 @@ public static class ThemeService
         if (_resources is null || !ReferenceEquals(_resources.App, app))
         { _resources = new(app); _lastFluentPalette = null; _gripColor = null; }
         var resources = _resources;
-        // Themes customize materials, never the shared Fleet corner geometry.
+        // Color themes customize materials, never the selected client's corner geometry.
         var panelRadius = DefaultSkin.Radii.Panel!.Value;
         var controlRadius = DefaultSkin.Radii.Control!.Value;
         Converters.DockChromeConverter.Radius = panelRadius;

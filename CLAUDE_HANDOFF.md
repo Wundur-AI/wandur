@@ -1,9 +1,17 @@
 # Claude handoff: Wandur client
 
-Updated September 24, 2026. This file is the entry point for a fresh session.
+Updated September 25, 2026. This file is the entry point for a fresh session.
 Read it, then `docs/verification.md` for what has been verified and when.
 The September 18 handoff about Icesus resource bars and directory refresh is
 complete and recorded in `docs/verification.md`; it no longer needs action.
+
+Selectable window skins are implemented in this normal main checkout: Fleet,
+Armored (clean vector plates and continuous accent rails), and System (plain
+toolbar integrated into the titlebar with native caption buttons). Skin and color
+theme have separate menus and independent settings. Floating panels retain native
+captions and compact themed dock headers. No new image assets, SDK/schema changes,
+history changes, or new packages. MUD-recommended skin defaults were discussed but
+are not yet implemented; an explicit local skin remains authoritative.
 
 Local session history is implemented on main. View > Session history opens the
 read-only browser; Settings > General controls recording and 30/90/365-day or

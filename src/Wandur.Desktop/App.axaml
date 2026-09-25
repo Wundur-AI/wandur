@@ -196,6 +196,9 @@
     <Style Selector="ListBox.world-list ListBoxItem:selected">
       <Setter Property="Background" Value="{DynamicResource WorldSelectionBrush}" />
     </Style>
+    <Style Selector="ListBox.world-list ListBoxItem:selected TextBlock.muted">
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    </Style>
     <Style Selector="ListBox.world-list ListBoxItem:focus-visible">
       <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}" />
     </Style>
@@ -389,6 +392,9 @@
     <Style Selector="Button.tab-close:pointerover">
       <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
       <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="ListBox.world-list ListBoxItem:selected Button.tab-close">
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     </Style>
     <Style Selector="Button.tab-close:pressed">
       <Setter Property="Opacity" Value="0.65" />

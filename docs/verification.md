@@ -1,5 +1,45 @@
 # Client foundation verification
 
+## Selectable window skins (2026-09-25)
+
+- Fleet, Armored and System are independent of the color palette. Fleet remains
+  the default; select geometry through the separate Skin button or View > Skin,
+  and colors through the palette menu. No history, SDK/site schema or package changes.
+- Armored uses clean vector plates, an embedded title/toolbar joint and continuous
+  accent rails. System places its plain toolbar directly in a 48-DIP titlebar
+  with native caption controls and platform safe areas, per the updated request.
+  All floating panels retain native captions plus compact, palette-aware Dock headers.
+- Automated coverage includes every skin transition, world-palette precedence,
+  saved and canceled previews, fullscreen with hidden toolbar, optional docks,
+  floating-window identity and lifecycle, contrast and actual 1x/2x render scaling.
+  Maximum supported 100-character world titles have logo/action separation checks
+  at the normal 1040-DIP minimum and 2x scale. An 800-DIP stress size deliberately
+  bypasses the production minimum; it is not a promise of comfortable layout.
+- Captures are under `/private/tmp/wandur-skin-captures/`, including Hull, Slate,
+  Paper, a world palette, diagnostics, long titles and floating panels. Representative
+  Armored Hull/Slate, System Slate, diagnostics and long-title images were inspected.
+  Headless screenshots do not contain native caption buttons.
+- Independent review found a System fallback-menu caption-role bug and duplicate
+  theme subscriptions after floating-window Hide/Show. Both were reproduced RED
+  and fixed GREEN. Its long-title coverage finding was addressed with live loopback
+  session tests. Post-review focused tests passed 11/11.
+- Final post-review Release suite passed: 778 Core and 607 Desktop, 1,385 total,
+  zero failures or skips. Release build passed with zero warnings/errors.
+  Localization facade and whitespace checks passed.
+- Visual QA also fixed the directory's transparent background exposing the dark
+  chassis, selected Paper workspace text contrast, and System title/fullscreen
+  brush leakage. Existing Fleet style aliases remain for standalone panel hosts.
+- Isolated native Mac QA used `dev.wandur.skin-qa`, temporary settings and the offline
+  demo. Armored rendering, persisted skin choice, titlebar double-click maximize and
+  fullscreen entry/exit were exercised. Drag was attempted, but displacement was not
+  measured. Updated System native interactions, manual floating/resize/minimize and
+  native Windows behavior remain unverified. The owner's bundle and sessions were
+  not restarted or modified.
+- Known limits: very long footer session labels can overlap the right-side hints;
+  native floating captions use OS colors rather than metal. MUD-recommended skin
+  defaults remain deferred pending preference-policy agreement; only local selection
+  currently controls geometry.
+
 ## Local session history (2026-09-24)
 
 - Implemented on main: View > Session history, literal FTS5 keyword/phrase search,

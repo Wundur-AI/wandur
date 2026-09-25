@@ -8,7 +8,13 @@ internal sealed class SkinnedDockHostWindow : HostWindow
 {
     public SkinnedDockHostWindow()
     {
-        Opened += (_, _) => { ThemeService.Applied += ApplySkin; ApplySkin(); };
+        Opened += (_, _) =>
+        {
+            // Hide/Show raises Opened again on the same live host.
+            ThemeService.Applied -= ApplySkin;
+            ThemeService.Applied += ApplySkin;
+            ApplySkin();
+        };
         Closed += (_, _) => ThemeService.Applied -= ApplySkin;
         ApplySkin();
     }

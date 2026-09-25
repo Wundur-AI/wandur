@@ -54,6 +54,8 @@ public sealed partial class WorldBrowserView : UserControl
     public WorldBrowserView(WorldBrowserViewModel model, WorldCatalog catalog)
     {
         _catalog = catalog; _model = model; DataContext = model;
+        // The shell chassis is intentionally dark. Directory labels need their own palette surface.
+        Bind(BackgroundProperty, new DynamicResourceExtension("PanelBrush"));
         var heading = Ui.TextKey(nameof(L.FindAMUD), 22);
         heading.Name = "DirectoryHeading";
         heading.FontWeight = FontWeight.SemiBold;

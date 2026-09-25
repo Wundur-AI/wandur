@@ -81,6 +81,7 @@ public sealed partial class MainWindow
         _titleBarIdentity.IsVisible = false;
         _appTitle.IsVisible = false;
         _ornaments.IsVisible = false;
+        WindowDecorationProperties.SetElementRole(_windowHeader, WindowDecorationsElementRole.User);
         // Keep content and its theme intact, but release all decorative title/frame insets.
         // The next windowed pass reloads these values from the current theme, not an old snapshot.
         _windowSkin.BandHeight = 0;
@@ -93,7 +94,7 @@ public sealed partial class MainWindow
         ApplyToolbarSlot(null);
         UpdateTitleBarInsets();
         ExtendClientAreaTitleBarHeightHint = 0;
-        _toolbar.Background = FleetSkin.Toolbar;
+        BindToolbarBackground();
         PlaceFullScreenExit();
     }
 
