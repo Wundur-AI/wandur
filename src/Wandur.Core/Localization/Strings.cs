@@ -955,4 +955,9 @@ public static class Strings
     public static string HistorySent => Get(nameof(HistorySent));
     public static string HistoryScript => Get(nameof(HistoryScript));
     public static string HistoryPrivate => Get(nameof(HistoryPrivate));
+    public static string Skin => Get(nameof(Skin));
+    public static string SkinFleet => Get(nameof(SkinFleet));
+    public static string SkinArmored => Get(nameof(SkinArmored));
+    public static string SkinSystem => Get(nameof(SkinSystem));
+    public static string SkinHelp => Get(nameof(SkinHelp));
 }

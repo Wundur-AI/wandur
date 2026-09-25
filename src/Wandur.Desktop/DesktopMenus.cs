@@ -71,6 +71,21 @@ internal sealed class DesktopMenus
         Check(view, 1, () => window.IsMapVisible);
         Check(view, 2, () => window.IsChannelsVisible);
         Check(view, 5, () => window.ToolbarVisible);
+        var nativeSkins = new NativeMenu();
+        var fallbackSkins = new MenuItem { [!MenuItem.HeaderProperty] = LocalizedText.Binding(nameof(L.Skin)) };
+        view.Native.Items.Add(new NativeMenuItem { [!NativeMenuItem.HeaderProperty] = LocalizedText.Binding(nameof(L.Skin)), Menu = nativeSkins });
+        view.Fallback.Items.Add(fallbackSkins);
+        foreach (var id in Wandur.Core.Settings.WindowSkinId.All)
+        {
+            var action = Action(Wandur.Core.Settings.WindowSkinId.LabelKey(id), () =>
+            {
+                window.Controller.SaveSettings(window.Controller.Settings with { Skin = id });
+                return Task.CompletedTask;
+            });
+            AddItems(nativeSkins, fallbackSkins, [action]);
+            Check((nativeSkins, fallbackSkins), nativeSkins.Items.Count - 1,
+                () => Wandur.Core.Settings.WindowSkinId.Normalize(window.Controller.Settings.Skin) == id);
+        }
 
         Connect = Action(nameof(L.ConnectToSelectedWorld), window.ConnectSelectedAsync, Key.Return, enabled: () => window.SelectedProfile is not null);
         Disconnect = Action(nameof(L.Disconnect2), () => window.Controller.DisconnectAsync(), Key.D, enabled: () => window.Controller.IsConnected || window.Controller.IsConnecting);

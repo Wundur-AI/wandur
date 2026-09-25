@@ -22,6 +22,24 @@ namespace Wandur.Desktop.Tests;
 public sealed class ThemeMenuButtonTests
 {
     [AvaloniaFact]
+    public async Task SkinSubmenuSavesForCurrentControllerAndKeepsWorldColors()
+    {
+        await using var fixture = new Fixture(new() { Theme = "Slate", UseWorldThemes = true });
+        await using var other = new Fixture(new() { Theme = "Paper", UseWorldThemes = true });
+        var submenu = fixture.Open().Items.OfType<MenuItem>().SingleOrDefault(i => i.Name == "SkinMenu");
+        Assert.NotNull(submenu);
+        var armored = submenu.Items.OfType<MenuItem>().Single(i => i.Name == "SkinArmored");
+        fixture.Current = other.Controller;
+        Select(armored);
+        Assert.Equal("Armored", other.Store.Load().Settings.Skin);
+        Assert.Equal("Fleet", fixture.Store.Load().Settings.Skin);
+        Assert.Equal("Paper", other.Store.Load().Settings.Theme);
+        Assert.True(other.Store.Load().Settings.UseWorldThemes);
+        var reopened = fixture.Open().Items.OfType<MenuItem>().Single(i => i.Name == "SkinMenu");
+        Assert.True(reopened.Items.OfType<MenuItem>().Single(i => i.Name == "SkinArmored").IsChecked);
+    }
+
+    [AvaloniaFact]
     public async Task OpeningShowsAccessibleSwatchesAndTheFallbackWithoutSaving()
     {
         await using var fixture = new Fixture(new() { Theme = "Paper", UseWorldThemes = true });
@@ -32,7 +50,7 @@ public sealed class ThemeMenuButtonTests
         Assert.Equal(L.Theme, ToolTip.GetTip(fixture.Button));
         Assert.Equal(44, fixture.Button.Bounds.Width);
         Assert.Equal(30, fixture.Button.Bounds.Height);
-        Assert.Equal(UserTheme.PresetNames.Count + 1, menu.Items.OfType<MenuItem>().Count());
+        Assert.Equal(UserTheme.PresetNames.Count + 2, menu.Items.OfType<MenuItem>().Count());
         Assert.True(Item(menu, L.FollowMudTheme).IsChecked);
         var paper = Item(menu, UserTheme.DisplayName("Paper"));
         Assert.True(paper.IsChecked);

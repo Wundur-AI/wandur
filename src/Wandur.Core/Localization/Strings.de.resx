@@ -1924,4 +1924,9 @@ Stoppe nach einer Inventarliste.</value></data>
   <data name="HistorySent" xml:space="preserve"><value>Gesendet</value></data>
   <data name="HistoryScript" xml:space="preserve"><value>Skript</value></data>
   <data name="HistoryPrivate" xml:space="preserve"><value>Privat</value></data>
+  <data name="Skin" xml:space="preserve"><value>Fensterstil</value></data>
+  <data name="SkinFleet" xml:space="preserve"><value>Flotte</value></data>
+  <data name="SkinArmored" xml:space="preserve"><value>Panzerung</value></data>
+  <data name="SkinSystem" xml:space="preserve"><value>System</value></data>
+  <data name="SkinHelp" xml:space="preserve"><value>Wählen Sie die Fensterform unabhängig von den Farben. MUD-Themes ändern Ihren Fensterstil nicht.</value></data>
 </root>

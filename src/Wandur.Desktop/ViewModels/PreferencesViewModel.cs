@@ -19,6 +19,7 @@ public sealed partial class PreferencesViewModel : ObservableObject, IDisposable
     private bool _saved, _loading;
     private readonly string _originalLanguage = UiLanguage.Culture.Name;
     public ObservableCollection<ThemeChoiceViewModel> Themes { get; } = [];
+    public ObservableCollection<ThemeChoiceViewModel> Skins { get; } = [];
     public ObservableCollection<ThemeColorViewModel> Colors { get; } = [];
     public IReadOnlyList<ThemeChoiceViewModel> Sections { get; } = [new("General", L.SettingsGeneral), new("Appearance", L.SettingsAppearance), new("MudColors", L.SettingsMudColors), new("Terminal", L.SettingsTerminal), new("Input", L.SettingsInput)];
     public ObservableCollection<ThemeColorViewModel> AnsiColors { get; } = [];
@@ -32,6 +33,7 @@ public sealed partial class PreferencesViewModel : ObservableObject, IDisposable
     public string SectionTitle => Sections[Math.Clamp(SectionIndex, 0, Sections.Count - 1)].Name;
     public bool IsCustom => _drafts.Any(t => t.Id == Theme);
     [ObservableProperty] private string _theme;
+    [ObservableProperty] private string _skin;
     [ObservableProperty] private string _themeName = "";
     [ObservableProperty] private bool _isLight;
     [ObservableProperty] private bool _useWorldThemes;
@@ -64,6 +66,8 @@ public sealed partial class PreferencesViewModel : ObservableObject, IDisposable
         foreach (var id in UserTheme.PresetNames) Themes.Add(new(id, PresetName(id)));
         foreach (var theme in _drafts) Themes.Add(new(theme.Id, theme.Name));
         _theme = _original.Theme; _fontSize = (decimal)_original.FontSize;
+        _skin = WindowSkinId.Normalize(_original.Skin);
+        foreach (var id in WindowSkinId.All) Skins.Add(new(id, WindowSkinId.DisplayName(id)));
         _foreground = _original.Foreground; _background = _original.Background; _localEcho = _original.LocalEcho;
         _useWorldThemes = _original.UseWorldThemes;
         _allowBlinkingText = _original.AllowBlinkingText;
@@ -79,7 +83,7 @@ public sealed partial class PreferencesViewModel : ObservableObject, IDisposable
     private static string PresetName(string id) => UserTheme.DisplayName(id);
     private ClientSettings Values() => _store.Settings with
     {
-        Theme = Theme, FontSize = PreviewFontSize, Foreground = string.IsNullOrWhiteSpace(Foreground) ? null : Foreground.Trim(),
+        Theme = Theme, Skin = Skin, FontSize = PreviewFontSize, Foreground = string.IsNullOrWhiteSpace(Foreground) ? null : Foreground.Trim(),
         Background = string.IsNullOrWhiteSpace(Background) ? null : Background.Trim(), LocalEcho = LocalEcho, Language = Language.Code,
         HistoryEnabled = HistoryEnabled, HistoryRetentionDays = HistoryRetentionDays,
         AllowBlinkingText = AllowBlinkingText, UseWorldThemes = UseWorldThemes, ShowChannelsPanel = ShowChannelsPanel, ComposerSuggestions = ComposerSuggestions, ScrollTailShare = TailShare, CustomThemes = _drafts.Select(t => t with { Colors = new(t.Colors), AnsiColors = new(t.AnsiColors) }).ToList()
@@ -114,6 +118,7 @@ public sealed partial class PreferencesViewModel : ObservableObject, IDisposable
         var names = new[] { L.SettingsGeneral, L.SettingsAppearance, L.SettingsMudColors, L.SettingsTerminal, L.SettingsInput };
         for (var i = 0; i < Sections.Count; i++) Sections[i].Name = names[i];
         foreach (var choice in Themes.Where(t => UserTheme.PresetNames.Contains(t.Id))) choice.Name = PresetName(choice.Id);
+        foreach (var choice in Skins) choice.Name = WindowSkinId.DisplayName(choice.Id);
         foreach (var color in Colors.Concat(AnsiColors)) color.RefreshLanguage();
         OnPropertyChanged(nameof(SectionTitle));
         OnPropertyChanged(nameof(HistoryRetentionChoices));
@@ -122,6 +127,7 @@ public sealed partial class PreferencesViewModel : ObservableObject, IDisposable
     partial void OnThemeNameChanged(string value) => EditPalette();
     partial void OnIsLightChanged(bool value) => EditPalette();
     partial void OnUseWorldThemesChanged(bool value) => Preview();
+    partial void OnSkinChanged(string value) => Preview();
     partial void OnSectionIndexChanged(int value)
     { foreach (var property in new[] { nameof(IsGeneral), nameof(IsAppearance), nameof(IsMudColors), nameof(IsTerminal), nameof(IsInput), nameof(SectionTitle) }) OnPropertyChanged(property); }
     partial void OnThemeChanged(string value) { LoadPalette(); Preview(); }

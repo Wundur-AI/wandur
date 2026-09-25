@@ -19,6 +19,34 @@ namespace Wandur.Desktop.Tests;
 [Collection(UiLanguageCollection.Name)]
 public sealed class PreferencesTests
 {
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SkinChoicePreviewsAndOnlyPersistsOnSave(bool save)
+    {
+        var store = new Store { Settings = new() { Theme = "Slate", UseWorldThemes = true } };
+        ThemeService.Apply(store.Settings);
+        var model = new PreferencesViewModel(store, ThemeService.Apply);
+        var window = new OptionsDialog(model); window.Show();
+        try
+        {
+            model.SectionIndex = 1;
+            var choice = window.FindControl<ComboBox>("SkinChoice");
+            Assert.NotNull(choice);
+            choice.SelectedValue = "Armored";
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("Armored", ThemeService.ActiveWindowSkin.Id);
+            Assert.Equal("Fleet", store.Settings.Skin);
+            if (save) model.SaveCommand.Execute(null);
+            window.Close();
+            Assert.Equal(save ? "Armored" : "Fleet", store.Settings.Skin);
+            Assert.Equal(store.Settings.Skin, ThemeService.ActiveWindowSkin.Id);
+            Assert.Equal("Slate", store.Settings.Theme);
+            Assert.True(store.Settings.UseWorldThemes);
+        }
+        finally { window.Close(); ThemeService.Apply(new()); }
+    }
+
     private sealed class Store : IClientSettingsStore
     {
         public ClientSettings Settings { get; set; } = new();

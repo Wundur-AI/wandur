@@ -33,6 +33,11 @@
           </ScrollViewer>
           <ScrollViewer Name="AppearanceScroll" IsVisible="{Binding IsAppearance}" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="0,0,10,24" Spacing="14">
+            <TextBlock Text="{ReflectionBinding [Skin], Source={x:Static loc:LocalizedText.Instance}}" />
+            <ComboBox Name="SkinChoice" ItemsSource="{Binding Skins}" SelectedValueBinding="{Binding Id}" SelectedValue="{Binding Skin}" HorizontalAlignment="Stretch">
+              <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:ThemeChoiceViewModel"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Text="{ReflectionBinding [SkinHelp], Source={x:Static loc:LocalizedText.Instance}}" TextWrapping="Wrap" Classes="muted" FontSize="12" />
             <TextBlock Text="{ReflectionBinding [ColorScheme], Source={x:Static loc:LocalizedText.Instance}}" />
             <ComboBox Name="ThemeChoice" ItemsSource="{Binding Themes}" SelectedValueBinding="{Binding Id}" SelectedValue="{Binding Theme}" HorizontalAlignment="Stretch">
               <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:ThemeChoiceViewModel"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>

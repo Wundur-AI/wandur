@@ -1924,4 +1924,9 @@ Stop after receiving one inventory listing.</value></data>
   <data name="HistorySent" xml:space="preserve"><value>Sent</value></data>
   <data name="HistoryScript" xml:space="preserve"><value>Script</value></data>
   <data name="HistoryPrivate" xml:space="preserve"><value>Private</value></data>
+  <data name="Skin" xml:space="preserve"><value>Skin</value></data>
+  <data name="SkinFleet" xml:space="preserve"><value>Fleet</value></data>
+  <data name="SkinArmored" xml:space="preserve"><value>Armored</value></data>
+  <data name="SkinSystem" xml:space="preserve"><value>System</value></data>
+  <data name="SkinHelp" xml:space="preserve"><value>Choose the window shape independently of colors. MUD themes cannot change your skin.</value></data>
 </root>

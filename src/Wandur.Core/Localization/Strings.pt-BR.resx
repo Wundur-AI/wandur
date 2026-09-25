@@ -1924,4 +1924,9 @@ Pare após receber uma lista do inventário.</value></data>
   <data name="HistorySent" xml:space="preserve"><value>Enviado</value></data>
   <data name="HistoryScript" xml:space="preserve"><value>Script</value></data>
   <data name="HistoryPrivate" xml:space="preserve"><value>Privado</value></data>
+  <data name="Skin" xml:space="preserve"><value>Estilo da janela</value></data>
+  <data name="SkinFleet" xml:space="preserve"><value>Frota</value></data>
+  <data name="SkinArmored" xml:space="preserve"><value>Blindado</value></data>
+  <data name="SkinSystem" xml:space="preserve"><value>Sistema</value></data>
+  <data name="SkinHelp" xml:space="preserve"><value>Escolha o formato da janela independentemente das cores. Os temas do MUD não alteram seu estilo de janela.</value></data>
 </root>
