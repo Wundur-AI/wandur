@@ -1,7 +1,7 @@
 # Selectable window skins
 
 Date: September 25, 2026
-Status: Proposed design for review, not implemented
+Status: Design approved September 25, 2026; implementation pending plan review
 Baseline: main at 4de1e66, confirmed pushed before starting this work
 
 ## Intent and scope
@@ -144,5 +144,5 @@ assets, and claims of pixel-identical rendering across platform font systems.
 
 ## Next step
 
-Review this design, then write and review the implementation plan before product
-code changes. The existing working baseline is already on origin/main.
+Review the implementation plan before product code changes. The existing working
+baseline is already on origin/main.
