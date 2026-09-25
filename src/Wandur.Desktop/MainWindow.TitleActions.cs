@@ -81,6 +81,7 @@ public sealed partial class MainWindow
         // Keep content and its theme intact, but release all decorative title/frame insets.
         // The next windowed pass reloads these values from the current theme, not an old snapshot.
         _windowSkin.BandHeight = 0;
+        _windowSkin.EdgeThickness = 0;
         _windowSkin.BorderBitmap = null;
         _windowSkin.Inset = default;
         _windowSkin.TitleModuleBounds = default;

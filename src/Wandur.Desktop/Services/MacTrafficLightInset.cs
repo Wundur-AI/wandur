@@ -89,7 +89,8 @@ internal sealed class MacTrafficLightInset : IDisposable
         // exposes ObtainNSWindowHandle() with the descriptor "NSWindow" (not NSView).
         if (_window.TryGetPlatformHandle() is not { HandleDescriptor: "NSWindow", Handle: var handle } || handle == 0)
             return;
-        var inset = !restore && _window.WindowState is not (WindowState.FullScreen or WindowState.Minimized)
+        var inset = !restore && ThemeService.ActiveWindowSkin.CustomChrome
+            && _window.WindowState is not (WindowState.FullScreen or WindowState.Minimized)
             && (Native.Send(handle, Native.StyleMask) & (1L << 14)) == 0
             && !Native.Boolean(handle, Native.IsMiniaturized);
         for (var i = 0; i < _buttons.Length; i++)

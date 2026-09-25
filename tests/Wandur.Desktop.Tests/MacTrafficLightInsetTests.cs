@@ -8,6 +8,20 @@ namespace Wandur.Desktop.Tests;
 
 public sealed class MacTrafficLightInsetTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ReturningToSystemRestoresNativePositionOnEitherCoordinateSystem(bool flipped)
+    {
+        var position = new MacTrafficLightPosition();
+        var original = new Rect(8, 8, 14, 14);
+        var bounds = new Rect(0, 0, 300, 40);
+        var inset = position.Resolve(original, bounds, flipped, true);
+        Assert.NotEqual(original.Position, inset);
+        var restored = position.Resolve(new Rect(inset, original.Size), bounds, flipped, false);
+        Assert.Equal(original.Position, restored);
+    }
+
     [AvaloniaFact]
     public void HeadlessWindowAndQueuedWorkAfterCloseAreSafe()
     {

@@ -280,6 +280,15 @@ public static class ThemeService
         resources.Color("ToolbarIconBrush", Mix(chrome, Colors.Black, light ? .16 : .28));
         if (referencePalette) FleetSkin.Apply(resources);
         FleetSkin.SynchronizeMaterials(resources, skin, referencePalette);
+        if (!ActiveWindowSkin.CustomChrome)
+        {
+            // Native chrome owns the outside; the application keeps its chosen colors.
+            foreach (var key in new[] { "ChromeBrush", "ToolbarBrush", "DockHeaderBrush", "DockSurfaceHeaderBrush",
+                         "DockSurfaceHeaderActiveBrush", "DockWindowChromeTitleBarBackgroundBrush", "DockWindowChromeBackgroundBrush" })
+                Set(key, personal?.Colors["Chrome"] ?? panel);
+            Set("FooterBrush", shell);
+            resources.Value("FleetHeaderShadow", default(BoxShadows));
+        }
         var mapBackground = ((ISolidColorBrush)resources.Read("MapCanvasBrush")).Color;
         resources.Color("MapLabelBrush", ReadableInk(mapBackground, mapBackground));
         resources.Brush("InstrumentBarBrush", FleetSkin.Instrument);

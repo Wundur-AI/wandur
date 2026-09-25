@@ -77,7 +77,7 @@ public sealed partial class MainWindow : Window
     private readonly IProfileAutomationFactory _profileAutomationFactory;
     private readonly IAgentClientServices? _agents;
     public ConnectionProfile? SelectedProfile => _worldPicker.SelectedItem as ConnectionProfile;
-    public bool ToolbarVisible { get => _toolbar?.IsVisible ?? true; set { _toolbar.IsVisible = value; if (FleetSkin.IsActive) UpdateTitleBarInsets(); RequestTitleChromeUpdate(); _menus.Refresh(); } }
+    public bool ToolbarVisible { get => _toolbar?.IsVisible ?? true; set { _toolbar.IsVisible = value; if (ThemeService.ActiveWindowSkin.CustomChrome) UpdateTitleBarInsets(); RequestTitleChromeUpdate(); _menus.Refresh(); } }
 
     public MainWindow(Wandur.Desktop.Terminal.ITranscriptDisplayFactory displays, ISettingsStore store, IPasswordVault passwords, IRoomMapStore maps, IScriptRuntimeFactory scriptRuntimes, IWorldScriptLibraryStore scriptLibraryStore, IWorldKnowledgeStore? knowledge = null, WorldCatalog? catalog = null, IProfileAutomationFactory? profileAutomationFactory = null, IAgentClientServices? agents = null, Wandur.Core.Classification.RoomClassificationService? classification = null, IWorldUsageStore? usage = null, Wandur.Core.History.IHistoryStore? history = null)
     {
@@ -240,34 +240,34 @@ public sealed partial class MainWindow : Window
 
     private void OnThemeApplied()
     {
-        Classes.Set("fleet", FleetSkin.IsActive);
+        Classes.Set("fleet", ThemeService.ActiveWindowSkin.CustomChrome);
         _fleetToolbarSurfaceKey = null;
-        _fleetSettings.IsVisible = FleetSkin.IsActive;
-        foreach (var button in new[] { _browse, _fleetSettings }) button.Classes.Set("fleet-action", FleetSkin.IsActive);
-        _connect.Content = FleetSkin.IsActive ? Ui.ChromeGlyph(FleetIcons.Connect) : Ui.ChromeGlyph("M 4,2 L 14,8 L 4,14 Z", true);
-        _browse.Content = FleetSkin.IsActive ? FleetIcons.Action(FleetIcons.Search, nameof(L.FindAMUD)) : Ui.ChromeGlyph(FleetIcons.Search);
+        _fleetSettings.IsVisible = ThemeService.ActiveWindowSkin.CustomChrome;
+        foreach (var button in new[] { _browse, _fleetSettings }) button.Classes.Set("fleet-action", ThemeService.ActiveWindowSkin.CustomChrome);
+        _connect.Content = ThemeService.ActiveWindowSkin.CustomChrome ? Ui.ChromeGlyph(FleetIcons.Connect) : Ui.ChromeGlyph("M 4,2 L 14,8 L 4,14 Z", true);
+        _browse.Content = ThemeService.ActiveWindowSkin.CustomChrome ? FleetIcons.Action(FleetIcons.Search, nameof(L.FindAMUD)) : Ui.ChromeGlyph(FleetIcons.Search);
         _fleetSettings.Content = FleetIcons.Action(FleetIcons.Settings, nameof(L.SettingsTitle), true);
         // On Windows the fallback menu remains available, below the overlapping title/toolbar pair.
         _headerStack.Children.Remove(_menus.Fallback);
-        _headerStack.Children.Insert(FleetSkin.IsActive ? _headerStack.Children.Count : 0, _menus.Fallback);
+        _headerStack.Children.Insert(ThemeService.ActiveWindowSkin.CustomChrome ? _headerStack.Children.Count : 0, _menus.Fallback);
         _headerStack.Margin = default;
-        _worldPicker.FontSize = FleetSkin.IsActive ? 13 : 12;
-        _worldPicker.Height = FleetSkin.IsActive ? 32 : 28;
+        _worldPicker.FontSize = ThemeService.ActiveWindowSkin.CustomChrome ? 13 : 12;
+        _worldPicker.Height = ThemeService.ActiveWindowSkin.CustomChrome ? 32 : 28;
         if (_toolbar.Child is Grid toolbarGrid)
         {
-            if (FleetSkin.IsActive && _connectionControls.Parent == _toolbarActions)
+            if (ThemeService.ActiveWindowSkin.CustomChrome && _connectionControls.Parent == _toolbarActions)
             {
                 _toolbarActions.Children.Remove(_connectionControls);
                 Grid.SetColumn(_connectionControls, 0);
                 toolbarGrid.Children.Add(_connectionControls);
             }
-            else if (!FleetSkin.IsActive && _connectionControls.Parent == toolbarGrid)
+            else if (!ThemeService.ActiveWindowSkin.CustomChrome && _connectionControls.Parent == toolbarGrid)
             {
                 toolbarGrid.Children.Remove(_connectionControls);
                 _toolbarActions.Children.Insert(0, _connectionControls);
             }
         }
-        if (!FleetSkin.IsActive)
+        if (!ThemeService.ActiveWindowSkin.CustomChrome)
         {
             WindowDecorationProperties.SetElementRole(_metalDrag, WindowDecorationsElementRole.User);
             WindowDecorationProperties.SetElementRole(_plaqueTitleHost, WindowDecorationsElementRole.User);
@@ -364,7 +364,7 @@ public sealed partial class MainWindow : Window
         _toolbarBackground = null;
         _fleetToolbarSurfaceKey = null;
         _toolbar.ClearValue(Border.BackgroundProperty);
-        if (FleetSkin.IsActive)
+        if (ThemeService.ActiveWindowSkin.CustomChrome)
         {
             ApplyFleetToolbarSurface();
             return;
@@ -428,7 +428,7 @@ public sealed partial class MainWindow : Window
             _chrome.Children.Remove(_toolbar);
             if (!_headerStack.Children.Contains(_toolbar))
             {
-                if (FleetSkin.IsActive) _headerStack.Children.Insert(0, _toolbar);
+                if (ThemeService.ActiveWindowSkin.CustomChrome) _headerStack.Children.Insert(0, _toolbar);
                 else _headerStack.Children.Add(_toolbar);
             }
             BindToolbarBackground();
@@ -478,7 +478,9 @@ public sealed partial class MainWindow : Window
             return;
         }
         RestoreWindowedChrome();
-        _titleBarLogo.IsVisible = FleetSkin.IsActive;
+        ApplyWindowSkin();
+        if (!ThemeService.ActiveWindowSkin.CustomChrome) return;
+        _titleBarLogo.IsVisible = ThemeService.ActiveWindowSkin.CustomChrome;
         _appTitle.FontWeight = FontWeight.SemiBold;
         SkinSize? header = null;
         SkinRect? headerText = null;
@@ -577,7 +579,7 @@ public sealed partial class MainWindow : Window
                 _appTitle.VerticalAlignment = VerticalAlignment.Center;
                 _appTitle.HorizontalAlignment = HorizontalAlignment.Center;
                 _appTitle.Bind(TextBlock.ForegroundProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension(plated ? "PlaqueTextBrush" : "TerminalTextBrush"));
-                if (FleetSkin.IsActive) ApplyFleetTitle(width);
+                if (ThemeService.ActiveWindowSkin.CustomChrome) ApplyFleetTitle(width);
             }
             else
             {
@@ -607,8 +609,8 @@ public sealed partial class MainWindow : Window
 
         // Resolve the native height once. macOS reports changed decoration margins synchronously,
         // which re-enters this method; competing Fleet (50) and legacy (52) writes recurse forever.
-        if (FleetSkin.IsActive)
-            ExtendClientAreaTitleBarHeightHint = FleetTitleLayout.BandHeight;
+        if (ThemeService.ActiveWindowSkin.CustomChrome)
+            ExtendClientAreaTitleBarHeightHint = ThemeService.ActiveWindowSkin.TitleHeight;
         else if (OperatingSystem.IsMacOS())
         {
             ExtendClientAreaTitleBarHeightHint = _skinTitleActive
@@ -642,7 +644,7 @@ public sealed partial class MainWindow : Window
             _headerStack.Margin = default;
             return;
         }
-        if (FleetSkin.IsActive)
+        if (ThemeService.ActiveWindowSkin.CustomChrome)
         {
             _toolbar.Padding = new Thickness(12, 13, 12, 5);
             _toolbar.MinHeight = 54;
@@ -650,11 +652,12 @@ public sealed partial class MainWindow : Window
             _headerStack.Margin = _toolbar.IsVisible ? default : new Thickness(0, 14, 0, 0);
             return;
         }
-        if (!OperatingSystem.IsMacOS())
+        if (!ThemeService.ActiveWindowSkin.CustomChrome || !OperatingSystem.IsMacOS())
         {
             _toolbar.Padding = new Thickness(12, 5);
             _toolbar.MinHeight = ToolbarHeight;
             _windowHeader.MinHeight = 0;
+            _headerStack.Margin = default;
             return;
         }
         // Native traffic lights occupy the left of the extended titlebar. With a skin plaque they sit in
@@ -669,7 +672,7 @@ public sealed partial class MainWindow : Window
     private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         // Fleet uses Avalonia's non-client hit testing, including native double-click behavior.
-        if (FleetSkin.IsActive) return;
+        if (ThemeService.ActiveWindowSkin.CustomChrome) return;
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed || e.Source is not Visual source) return;
         if (source.GetSelfAndVisualAncestors().Any(v => v is Button or ComboBox or TextBox or MenuItem)) return;
         if (e.ClickCount == 2 && WindowState != WindowState.FullScreen)
@@ -728,7 +731,7 @@ public sealed partial class MainWindow : Window
             _toolbar.Background = FleetSkin.Toolbar;
             return;
         }
-        if (!FleetSkin.IsActive || _chrome is null || _windowSkin is null ||
+        if (!ThemeService.ActiveWindowSkin.CustomChrome || _chrome is null || _windowSkin is null ||
             _toolbar.TranslatePoint(default, _chrome) is not { } origin) return;
         var title = _windowSkin.TitleModuleBounds.Translate(new Vector(-origin.X, -origin.Y));
         var key = (_toolbar.Bounds.Size, title);
@@ -884,7 +887,7 @@ public sealed partial class MainWindow : Window
         var oldPlaqueLabel = _plaqueLabel;
         _plaqueLabel = !Controller.HasSession || Controller.WorldName.Length == 0 ? "Wandur" : $"Wandur - {Controller.WorldName}";
         _appTitle.Text = _skinTitleActive ? PlateTitle() : Title;
-        if (FleetSkin.IsActive && oldPlaqueLabel != _plaqueLabel) ApplyTitleChrome();
+        if (ThemeService.ActiveWindowSkin.CustomChrome && oldPlaqueLabel != _plaqueLabel) ApplyTitleChrome();
         var connected = Sessions.Tabs.Count(t => t.Controller.IsConnected);
         var count = Sessions.Tabs.Count(t => t.Controller.HasSession);
         _status.Text = L.Format(count == 1 ? L.SessionsOne : L.SessionsMany, count, connected);
