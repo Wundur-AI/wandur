@@ -1,5 +1,41 @@
 # Client foundation verification
 
+## Armored enclosure proportions and paint (2026-09-25)
+
+- User approved spending more area on the outer housing: 24-DIP side rails,
+  30-DIP foot, 80-DIP title band and 86-DIP center assembly. Added fixed-size
+  collars, recessed receiver layers, plate bevels, service hatches, rail joints,
+  foot seams and deeper vents. Continuous side lights remain extendable. Dock
+  metrics, Fleet/System geometry, terminal colors and native caption roles remain
+  unchanged. No new image assets, packages or schema changes.
+- Hull uses pale cool painted metal; other palettes retain their chosen Chrome
+  and Toolbar hues under the matte treatment. Authored image brushes are retained.
+- The three frame-clearance cases failed before implementation and passed after
+  the changes. A distinct blue-Chrome/red-Panel regression caught a paint-source
+  error and passed after correction. Focused palette, skin transition, fullscreen,
+  long-title and render checks passed 34/34.
+- Independent review identified a service hatch behind Windows title actions at
+  minimum width with a long title. A rendered regression reproduced the intrusion
+  at x=880; the renderer now receives the measured caption/action exclusions and
+  omits hatches that cannot fit. The regression and post-fix focused checks passed
+  20/20. Follow-up static review approved the change with no remaining findings.
+- The full solution run passed all 778 Core tests. Its first Desktop attempt
+  passed 621/622, with a `NullReferenceException` during disposal in the existing
+  `ScriptSessionTests.EnteringPrivateModeInvalidatesEffectsEvenIfPrivacyEndsBeforeTheWorkerReplies`.
+  The settled post-fix Desktop rerun passed all 623 tests, including that case and
+  the new Windows regression. Verified totals: 778 Core + 623 Desktop = 1,401 tests,
+  no final failures or skips. No script runtime code was changed for this skin pass.
+- Final Release build passed with zero warnings/errors; localization and whitespace
+  checks passed.
+- Actual captures are in `/private/tmp/wandur-armored-enclosure/`, including Hull,
+  Slate and Paper at 1040/1536 DIPs and 1x/2x. Hull widescreen, narrow Slate and a
+  2x long-title capture were inspected. This is a functional rendering, not a claim
+  of pixel-perfect reproduction of the supplied concept image. The known very-long
+  footer-label overlap remains outside this enclosure pass.
+- No owner app restart, bundle replacement or personal-data access. Tests use
+  temporary profiles, offline demo and loopback fixtures. Native macOS/Windows
+  caption, drag and resize interactions have not been manually reverified.
+
 ## Armored recessed docking bays (2026-09-25)
 
 - Armored now uses compact 30-DIP dock headers, shared header/toolbar surfaces,

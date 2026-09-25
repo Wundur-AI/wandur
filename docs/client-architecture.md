@@ -16,7 +16,11 @@ That directory/schema policy is not implemented in this change.
 Fleet retains its existing renderer. `ArmoredTitleLayout` clamps a text-sized plaque
 between native controls and actions; `ArmoredSkinRenderer` draws clean plates,
 recesses, continuous lights and fixed-size details using paths and gradients. The
-frame reserves 12-DIP side rails and an 18-DIP foot for shallow vents. `ArmoredWear`
+frame reserves 24-DIP side rails and a 30-DIP vented foot. Its 80-DIP title band
+supports an 86-DIP center assembly, inset receivers, fixed-size collars and service
+plates. Straight spans extend with the window; the lights stay continuous and
+details retain their size. Armored's matte treatment preserves separate chrome and
+toolbar hues (and authored image brushes), with pale cool paint for Hull. `ArmoredWear`
 adds a fixed-scale alpha-only PNG tile in neutral light/dark passes, clipped to the
 metal. This explicitly approved texture does not supply geometry or palette color;
 there are no animation timers. Asset provenance and prompt are in

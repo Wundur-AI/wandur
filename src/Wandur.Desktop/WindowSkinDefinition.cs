@@ -7,8 +7,12 @@ namespace Wandur.Desktop;
 internal sealed record WindowSkinDefinition(string Id, bool CustomChrome,
     double TitleHeight, Thickness FrameInset, double DockHeaderHeight)
 {
+    internal const double ArmoredBandHeight = 80;
+    internal const double ArmoredRailWidth = 24;
+    internal const double ArmoredFootHeight = 30;
     private static readonly WindowSkinDefinition Fleet = new(WindowSkinId.Fleet, true, 50, new(6, 0, 6, 6), 38);
-    private static readonly WindowSkinDefinition Armored = new(WindowSkinId.Armored, true, 64, new(12, 0, 12, 18), 30);
+    private static readonly WindowSkinDefinition Armored = new(WindowSkinId.Armored, true, ArmoredBandHeight,
+        new(ArmoredRailWidth, 0, ArmoredRailWidth, ArmoredFootHeight), 30);
     private static readonly WindowSkinDefinition System = new(WindowSkinId.System, false, 0, default, 30);
     public bool IsArmored => Id == WindowSkinId.Armored;
 

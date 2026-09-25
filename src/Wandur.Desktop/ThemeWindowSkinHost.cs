@@ -22,6 +22,9 @@ internal sealed class ThemeWindowSkinHost : Decorator
     public static readonly StyledProperty<Rect> TitleModuleBoundsProperty =
         AvaloniaProperty.Register<ThemeWindowSkinHost, Rect>(nameof(TitleModuleBounds));
     public Rect TitleModuleBounds { get => GetValue(TitleModuleBoundsProperty); set => SetValue(TitleModuleBoundsProperty, value); }
+    public static readonly StyledProperty<Thickness> CaptionExclusionProperty =
+        AvaloniaProperty.Register<ThemeWindowSkinHost, Thickness>(nameof(CaptionExclusion));
+    public Thickness CaptionExclusion { get => GetValue(CaptionExclusionProperty); set => SetValue(CaptionExclusionProperty, value); }
 
     public Bitmap? BorderBitmap
     {
@@ -42,7 +45,7 @@ internal sealed class ThemeWindowSkinHost : Decorator
     static ThemeWindowSkinHost()
     {
         AffectsRender<ThemeWindowSkinHost>(EdgeBrushProperty, EdgeThicknessProperty, EdgeOutlineProperty, GroundBrushProperty, BandBrushProperty,
-            BandHeightProperty, BorderBitmapProperty, BorderMetaProperty, InsetProperty, TitleModuleBoundsProperty);
+            BandHeightProperty, BorderBitmapProperty, BorderMetaProperty, InsetProperty, TitleModuleBoundsProperty, CaptionExclusionProperty);
         AffectsMeasure<ThemeWindowSkinHost>(BorderBitmapProperty, BandHeightProperty, InsetProperty,
             EdgeOutlineProperty, EdgeThicknessProperty);
         AffectsArrange<ThemeWindowSkinHost>(BorderBitmapProperty, BandHeightProperty, InsetProperty,
@@ -159,7 +162,7 @@ internal sealed class ThemeWindowSkinHost : Decorator
         // The band is painted before anything else so the title, the toolbar and any art sit on it.
         if (ThemeService.ActiveWindowSkin.IsArmored && BandHeight > 0)
         {
-            ArmoredSkinRenderer.DrawFrame(context, Bounds.Size, TitleModuleBounds, FleetSkin.Metal,
+            ArmoredSkinRenderer.DrawFrame(context, Bounds.Size, TitleModuleBounds, CaptionExclusion, FleetSkin.Metal,
                 FleetSkin.RimEdge, FleetSkin.RimHighlight, _edgeAccent ?? Brushes.Transparent);
             return;
         }

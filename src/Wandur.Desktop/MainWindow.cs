@@ -699,6 +699,7 @@ public sealed partial class MainWindow : Window
         measure.Measure(new Size(double.PositiveInfinity, FleetTitleLayout.PlaqueHeight));
         var left = Math.Max(WindowDecorationMargin.Left, OperatingSystem.IsMacOS() ? 88 : 0);
         var right = TitleActionsRightInset + TitleActionsWidth;
+        _windowSkin.CaptionExclusion = new Thickness(left, 0, right, 0);
         PositionTitleActions();
         var identityWidth = measure.DesiredSize.Width + TitleLogoSize + TitleLogoGap;
         var armored = ThemeService.ActiveWindowSkin.IsArmored;

@@ -12,6 +12,45 @@ namespace Wandur.Desktop.Tests;
 
 public sealed class SkinRefinementTests
 {
+    private sealed class WindowsCaptionFrame : Control
+    {
+        public override void Render(DrawingContext context) => ArmoredSkinRenderer.DrawFrame(context, Bounds.Size,
+            ArmoredTitleLayout.Calculate(1040, 88, 276, 9999).Bounds, new Thickness(88, 0, 276, 0),
+            Brushes.LightGray, Brushes.DimGray, Brushes.White, Brushes.Cyan);
+    }
+
+    [AvaloniaFact]
+    public void LongWindowsTitleLeavesTheActionAreaFreeOfServiceHatches()
+    {
+        var window = new Window { Width = 1040, Height = 900, Content = new WindowsCaptionFrame() };
+        try
+        {
+            window.Show(); WindowSkinTransitionTests.Settle(window);
+            using var pixels = Pixels(window);
+            // 144-DIP Windows caption reservation plus the action group/insets.
+            // The face behind these glyphs must not contain the hatch's dark cutout.
+            for (var x = 764; x < 882; x++)
+                Assert.True(pixels.GetPixel(x, 20).Red >= 150, $"Service hatch intrudes behind action at x={x}.");
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void ArmoredPaintKeepsTheChosenChromeHueInsteadOfUsingPanelColor()
+    {
+        var custom = Wandur.Core.Settings.UserTheme.FromPreset("Slate") with { Name = "Armor colors" };
+        custom.Colors["Chrome"] = "#354759";
+        custom.Colors["Panel"] = "#593535";
+        try
+        {
+            ThemeService.Apply(new() { Skin = "Armored", Theme = custom.Id, CustomThemes = [custom] });
+            var paint = Assert.IsAssignableFrom<IGradientBrush>(FleetSkin.Metal);
+            Assert.All(paint.GradientStops, stop => Assert.True(stop.Color.B > stop.Color.R,
+                "A blue chrome override must not become the panel's red hue."));
+        }
+        finally { ThemeService.Apply(new()); }
+    }
+
     [AvaloniaTheory]
     [InlineData(1040)]
     [InlineData(1536)]
@@ -147,9 +186,15 @@ public sealed class SkinRefinementTests
                 window.Width = width; window.Height = 900; window.SetRenderScaling(scale);
                 WindowSkinTransitionTests.Settle(window);
                 var host = Assert.Single(window.GetVisualDescendants().OfType<ThemeWindowSkinHost>());
-                // The vented feet occupy 18 DIP, never draw over status/content.
-                Assert.True(host.Bounds.Height - host.Child!.Bounds.Bottom >= 18);
-                Assert.True(host.Child.Bounds.Left >= 12);
+                // The layered enclosure owns its space, never paints over status/content.
+                Assert.True(host.Bounds.Height - host.Child!.Bounds.Bottom >= 30);
+                Assert.True(host.Child.Bounds.Left >= 24);
+                Assert.True(host.Bounds.Width - host.Child.Bounds.Right >= 24);
+                Assert.True(host.Child.Bounds.Top >= 80);
+                var title = WindowSkinTransitionTests.Named<Border>(window, "PlaqueTitleHost");
+                Assert.InRange(title.Bounds.Height, 84, 90);
+                var toolbar = WindowSkinTransitionTests.Named<Border>(window, "MainToolbar");
+                Assert.True(toolbar.Bounds.Height >= 40);
                 var failures = ContrastProbe.Scan(window);
                 Assert.Empty(failures);
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);

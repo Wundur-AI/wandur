@@ -72,6 +72,17 @@ internal static class FleetSkin
         var light = Wandur.Core.Settings.UserTheme.IsLightBackground($"#{panel.R:X2}{panel.G:X2}{panel.B:X2}");
         RimHighlight = new SolidColorBrush(Mix(panel, Colors.White, light ? .45 : .15));
         RimShadow = new SolidColorBrush(Mix(panel, Colors.Black, .72));
+        if (ThemeService.ActiveWindowSkin.IsArmored)
+        {
+            // Painted armor has broad, quiet faces; depth belongs to its bevels and joints.
+            // Preserve independent Chrome/Toolbar colors and any authored image brush.
+            Metal = referencePalette ? Matte(Color.Parse("#D9DDE0")) : Matte(Metal);
+            Wings = Metal;
+            Toolbar = referencePalette ? Matte(Color.Parse("#D1D6DA")) : Matte(Toolbar);
+            resources.Brush("ChromeBrush", Metal);
+            resources.Brush("ToolbarBrush", Toolbar);
+            resources.Brush("FooterBrush", Toolbar);
+        }
         resources.Brush("FleetRimEdgeBrush", RimEdge);
         resources.Value("FleetHeaderShadow", new BoxShadows(new BoxShadow
         {
@@ -100,6 +111,20 @@ internal static class FleetSkin
     {
         StartPoint = new(0, 0, RelativeUnit.Relative), EndPoint = new(0, 1, RelativeUnit.Relative),
         GradientStops = [new(Mix(color, Colors.White, .10), 0), new(color, .15), new(Mix(color, Colors.Black, .12), 1)]
+    };
+
+    private static IBrush Matte(Color color) => new LinearGradientBrush
+    {
+        StartPoint = new(0, 0, RelativeUnit.Relative), EndPoint = new(0, 1, RelativeUnit.Relative),
+        GradientStops = [new(Mix(color, Colors.White, .045), 0), new(color, .55), new(Mix(color, Colors.Black, .025), 1)]
+    };
+
+    private static IBrush Matte(IBrush brush) => brush switch
+    {
+        ISolidColorBrush solid => Matte(solid.Color),
+        IGradientBrush gradient when gradient.GradientStops.Count > 0 =>
+            Matte(gradient.GradientStops.MinBy(stop => Math.Abs(stop.Offset - .5))!.Color),
+        _ => brush
     };
 
     private static Color Mix(Color a, Color b, double amount) => Color.FromRgb(
