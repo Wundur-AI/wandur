@@ -21,7 +21,8 @@ internal sealed record WindowSkinDefinition(string Id, bool CustomChrome,
     {
         Layout = skin.Layout! with
         {
-            TitleBar = skin.Layout!.TitleBar! with { Height = TitleHeight },
+            TitleBar = skin.Layout!.TitleBar! with { Height = TitleHeight,
+                Plaque = skin.Layout.TitleBar!.Plaque! with { Shape = IsArmored ? "armored" : "fleet" } },
             PanelHeader = skin.Layout.PanelHeader! with { Height = DockHeaderHeight }
         },
         Edge = skin.Edge! with { Thickness = FrameInset.Left }

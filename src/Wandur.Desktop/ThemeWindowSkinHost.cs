@@ -155,6 +155,12 @@ internal sealed class ThemeWindowSkinHost : Decorator
             if (inner.Width > 0 && inner.Height > 0) context.FillRectangle(chassis, inner);
         }
         // The band is painted before anything else so the title, the toolbar and any art sit on it.
+        if (ThemeService.ActiveWindowSkin.IsArmored && BandHeight > 0)
+        {
+            ArmoredSkinRenderer.DrawFrame(context, Bounds.Size, TitleModuleBounds, FleetSkin.Metal,
+                FleetSkin.RimEdge, FleetSkin.RimHighlight, _edgeAccent ?? Brushes.Transparent);
+            return;
+        }
         if (BorderBitmap is null && BandBrush is { } band && BandHeight > 0 && Bounds.Width > 0)
         {
             context.FillRectangle(band, new Rect(0, 0, Bounds.Width, BandHeight));

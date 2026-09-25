@@ -71,6 +71,12 @@ public sealed class ThemePlaque : Decorator
         base.Render(context);
         var size = Bounds.Size;
         if (size.Width <= 1 || size.Height <= 1 || Fill is null) return;
+        if (Shape == "armored")
+        {
+            ArmoredSkinRenderer.DrawPlaque(context, new Rect(size), WingFill ?? FleetSkin.Metal,
+                Fill, Edge ?? FleetSkin.RimEdge, Accent ?? Brushes.Transparent);
+            return;
+        }
         if (Shape == "fleet")
         {
             DrawFleet(context, size);

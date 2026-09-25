@@ -699,7 +699,9 @@ public sealed partial class MainWindow : Window
         var right = TitleActionsRightInset + TitleActionsWidth;
         PositionTitleActions();
         var identityWidth = measure.DesiredSize.Width + TitleLogoSize + TitleLogoGap;
-        var place = FleetTitleLayout.Calculate(width, left, right, identityWidth);
+        var armored = ThemeService.ActiveWindowSkin.IsArmored;
+        var place = armored ? ArmoredTitleLayout.Calculate(width, left, right, identityWidth)
+            : FleetTitleLayout.Calculate(width, left, right, identityWidth);
         _windowSkin.TitleModuleBounds = place.Bounds;
         ApplyFleetToolbarSurface();
         _plaqueTitleHost.HorizontalAlignment = HorizontalAlignment.Left;
@@ -708,7 +710,7 @@ public sealed partial class MainWindow : Window
         _plaqueTitleHost.Width = place.Bounds.Width;
         _plaqueTitleHost.Height = place.Bounds.Height;
         _plaqueTitleHost.Margin = new Thickness(place.Bounds.X, place.Bounds.Y, 0, 0);
-        _plaque.Padding = new Thickness(place.PlainTitle ? 4 : FleetTitleLayout.TextInset, 0);
+        _plaque.Padding = new Thickness(place.PlainTitle ? 4 : armored ? ArmoredTitleLayout.TextInset : FleetTitleLayout.TextInset, 0);
         _plaqueIdentity.Width = Math.Min(identityWidth, Math.Max(0, place.Bounds.Width - _plaque.Padding.Left - _plaque.Padding.Right));
         if (place.PlainTitle)
         {
@@ -738,7 +740,9 @@ public sealed partial class MainWindow : Window
         if (_fleetToolbarSurfaceKey == key) return;
         _toolbarBackground?.Dispose();
         _toolbarBackground = null;
-        _toolbar.Background = FleetToolbarSurface.Create(key.Size, title);
+        _toolbar.Background = ThemeService.ActiveWindowSkin.IsArmored
+            ? ArmoredSkinRenderer.CreateToolbar(key.Size, title, FleetSkin.Toolbar, FleetSkin.RimEdge, FleetSkin.RimHighlight)
+            : FleetToolbarSurface.Create(key.Size, title);
         _fleetToolbarSurfaceKey = key;
     }
 
