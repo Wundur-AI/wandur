@@ -28,7 +28,7 @@ public sealed class ArmoredSkinTests
             Assert.True(place.Bounds.Left >= 100);
             Assert.True(place.Bounds.Right <= 640);
         }
-        if (width == 1536) Assert.Equal(280, place.Bounds.Width);
+        if (width == 1536) Assert.Equal(320, place.Bounds.Width);
         if (available == 0) Assert.True(place.PlainTitle);
     }
 

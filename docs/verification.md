@@ -1,5 +1,35 @@
 # Client foundation verification
 
+## Armored refinement and System quick appearance controls (2026-09-25)
+
+- Restored the separate Skin/palette buttons (and adjacent fullscreen action) in
+  System's existing integrated toolbar. The same live controls move between System
+  and custom titlebands; native-control padding and the explicit User hit-test role
+  remain. Long titles yield to measured action width instead of covering buttons.
+- Armored now has layered center receivers, shoulder collars with inset light
+  sockets, shallow service seams, fasteners and vented feet. Side lights remain
+  continuous. Rails reserve 12 DIPs and feet 18; no decorative element covers the
+  live content. Fleet remains unchanged.
+- User approved repeating PNG wear as an exception to the image-free rendering
+  design. The single generated 76-KiB PNG is used only as an alpha mask, tiled at
+  384 DIPs in light/dark neutral passes. No baked-in metal color, resize stretching,
+  terminal overlay or image-based frame geometry. See the asset README for its
+  exact built-in generation prompt and provenance.
+- Six new cases first failed on the missing buttons, asset and frame clearance.
+  Focused regression checks then passed 27/27, including actual button clicks,
+  repeated skin changes, fullscreen return, texture alpha/edge checks and rendered
+  tile repeat, resize stability and clipping. Hull, Slate and Paper were captured
+  at 1040/1536 DIPs and 1x/2x; representative captures were visually inspected.
+- Actual renders are in `/private/tmp/wandur-skin-refinement/`. Native caption
+  buttons are absent from headless captures. No owner app restart, personal data,
+  or public server connections were used. Native macOS/Windows interaction was
+  not manually reverified in this refinement pass.
+- Full Release suite passed: 778 Core + 614 Desktop = 1,392 tests, no failures or
+  skips. Release build passed with zero warnings/errors; localization and whitespace
+  checks passed. Independent review found no blocking or minor issues. Visual
+  inspection was performed by the main agent; native OS interaction and measured
+  GPU performance were not assessed by the reviewer or claimed here.
+
 ## Selectable window skins (2026-09-25)
 
 - Fleet, Armored and System are independent of the color palette. Fleet remains

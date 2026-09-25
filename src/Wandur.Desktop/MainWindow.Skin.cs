@@ -13,7 +13,8 @@ public sealed partial class MainWindow
         var custom = ThemeService.ActiveWindowSkin.CustomChrome;
         WindowDecorations = WindowDecorations.Full;
         ExtendClientAreaToDecorationsHint = true;
-        _titleActions.IsVisible = custom;
+        _titleActions.IsVisible = true;
+        PositionTitleActions();
         _appTitle.IsVisible = custom;
         _ornaments.IsVisible = custom;
         WindowDecorationProperties.SetElementRole(_windowHeader,
@@ -47,5 +48,10 @@ public sealed partial class MainWindow
         WindowDecorationProperties.SetElementRole(_plaqueTitleHost, WindowDecorationsElementRole.User);
         WindowDecorationProperties.SetElementRole(_toolbarActions, WindowDecorationsElementRole.User);
         UpdateTitleBarInsets();
+        // Reserve actual control width before allocating space to a long world name.
+        _toolbarActions.Measure(new Size(double.PositiveInfinity, 48));
+        var width = _chrome.Bounds.Width > 0 ? _chrome.Bounds.Width : Width;
+        _appTitle.MaxWidth = Math.Clamp(width - _toolbar.Padding.Left - _toolbar.Padding.Right
+            - _toolbarActions.DesiredSize.Width - 88, 24, 260);
     }
 }

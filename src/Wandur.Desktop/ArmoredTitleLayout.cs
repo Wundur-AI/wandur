@@ -5,7 +5,7 @@ namespace Wandur.Desktop;
 internal static class ArmoredTitleLayout
 {
     public const double PlaqueHeight = 70;
-    public const double TextInset = 80;
+    public const double TextInset = 100;
 
     public static FleetTitlePlacement Calculate(double windowWidth, double leftExclusion,
         double rightExclusion, double measuredTextWidth)

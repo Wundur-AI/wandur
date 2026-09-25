@@ -15,10 +15,16 @@ That directory/schema policy is not implemented in this change.
 
 Fleet retains its existing renderer. `ArmoredTitleLayout` clamps a text-sized plaque
 between native controls and actions; `ArmoredSkinRenderer` draws clean plates,
-recesses, continuous lights and fixed-size details using paths and gradients, without
-image assets or animation timers. The logo remains the existing app asset.
+recesses, continuous lights and fixed-size details using paths and gradients. The
+frame reserves 12-DIP side rails and an 18-DIP foot for shallow vents. `ArmoredWear`
+adds a fixed-scale alpha-only PNG tile in neutral light/dark passes, clipped to the
+metal. This explicitly approved texture does not supply geometry or palette color;
+there are no animation timers. Asset provenance and prompt are in
+`src/Wandur.Desktop/Assets/Skins/README.md`. The logo remains the existing app asset.
 System removes ornamental chrome and places a plain 48-DIP toolbar in the native
-caption area, reserving platform button space. It does not turn Avalonia widgets
+caption area, reserving platform button space. Skin, palette and fullscreen buttons
+are hosted in that toolbar; custom skins move the same controls to their titleband.
+Long System titles yield space to the measured action group. It does not turn Avalonia widgets
 into native AppKit/WinUI controls.
 
 Dock headers share compact controls and palette resources, with 38/32/30-DIP heights

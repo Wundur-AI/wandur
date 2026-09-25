@@ -120,7 +120,9 @@ internal sealed class ThemeWindowSkinHost : Decorator
     /// window, and the title floated over the transcript.
     /// </summary>
     private Thickness ActiveInset => BorderBitmap is not null ? Inset
-        : new Thickness(FrameWidth, Math.Max(0, BandHeight), FrameWidth, FrameWidth);
+        : new Thickness(FrameWidth, Math.Max(0, BandHeight), FrameWidth,
+            ThemeService.ActiveWindowSkin.IsArmored && BandHeight > 0
+                ? ThemeService.ActiveWindowSkin.FrameInset.Bottom : FrameWidth);
 
     /// <summary>A bevelled edge is a frame with depth, so content starts inside it; a hairline takes no room.</summary>
     private double FrameWidth => EdgeOutline is not null ? EdgeThickness : 0;

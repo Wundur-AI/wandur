@@ -63,8 +63,18 @@ public sealed partial class MainWindow
         _toolbarActions.Children.Add(_exitFullScreenButton);
     }
 
-    private void PositionTitleActions() =>
-        _titleActions.Margin = new Thickness(0, 10, TitleActionsRightInset, 0);
+    private void PositionTitleActions()
+    {
+        var custom = ThemeService.ActiveWindowSkin.CustomChrome;
+        Panel target = custom ? _chrome : _toolbarActions;
+        if (!ReferenceEquals(_titleActions.Parent, target))
+        {
+            if (_titleActions.Parent is Panel old) old.Children.Remove(_titleActions);
+            target.Children.Add(_titleActions);
+        }
+        _titleActions.VerticalAlignment = custom ? VerticalAlignment.Top : VerticalAlignment.Center;
+        _titleActions.Margin = custom ? new Thickness(0, 10, TitleActionsRightInset, 0) : new Thickness(6, 0, 0, 0);
+    }
 
     internal void ToggleFullScreen() =>
         WindowState = WindowState == WindowState.FullScreen ? _beforeFullScreen : WindowState.FullScreen;

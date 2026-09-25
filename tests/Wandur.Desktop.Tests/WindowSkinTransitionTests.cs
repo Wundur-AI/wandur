@@ -34,7 +34,7 @@ public sealed class WindowSkinTransitionTests
                 Assert.Same(controller, window.Controller);
                 Assert.True(window.ExtendClientAreaToDecorationsHint);
                 Assert.Equal(second != "System", Named<Border>(window, "PlaqueTitleHost").IsEffectivelyVisible);
-                Assert.Equal(second != "System", Named<StackPanel>(window, "TitleActions").IsEffectivelyVisible);
+                Assert.True(Named<StackPanel>(window, "TitleActions").IsEffectivelyVisible);
                 var frame = window.GetVisualDescendants().OfType<ThemeWindowSkinHost>().Single();
                 Assert.Equal(second == "System" ? 0 : second == "Fleet" ? 50 : 64, frame.BandHeight);
                 if (second == "System")
