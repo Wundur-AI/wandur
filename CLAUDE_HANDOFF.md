@@ -14,7 +14,10 @@ buttons in its integrated toolbar. Armored docks are recessed bays with compact
 30-DIP headers, integrated toolbar surfaces and a short active accent marker;
 their decorative overlay is not hit-testable. The Armored enclosure now reserves
 24-DIP rails, a 30-DIP foot and an 80-DIP title band, with layered matte plates and
-a deeper 86-DIP center receiver. Armored uses one original alpha-only PNG for
+a deeper 86-DIP center receiver. The latest bounded pass replaces header hatches
+with stepped wing joints, overlapping title shoulders and continuous corner castings;
+directional bevels add depth without increasing any of those dimensions.
+Armored uses one original alpha-only PNG for
 neutral wear; its geometry stays drawn. No SDK/schema changes, history changes, or
 new packages. MUD-recommended skin defaults were discussed but
 are not yet implemented; an explicit local skin remains authoritative.

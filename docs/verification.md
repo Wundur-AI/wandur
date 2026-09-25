@@ -1,5 +1,36 @@
 # Client foundation verification
 
+## Armored header and corner construction (2026-09-25)
+
+- Bounded rendering refinement, with the existing 80-DIP band, 86-DIP plaque,
+  24-DIP rails and 30-DIP foot unchanged. Stepped continuous header joints replace
+  applied service hatches; overlapping painted shoulders sit in front of dark
+  light spines. Directionally lit bevel faces and L-shaped corner castings give
+  the frame depth without changing docks, controls, content, colors or settings.
+- The two new broad-bevel rendering checks failed against the preceding renderer.
+  After implementation they exposed a half-pixel foot-shadow intrusion into live
+  content; the shadow was moved fully into the reserved foot. Focused rendering,
+  palette, System-menu, title-clearance and continuity checks then passed 21/21.
+- Independent static review approved the change with no critical/important issues.
+  Its minor coverage recommendation was addressed with mirrored wing lighting and
+  both corner-channel continuity assertions. Rendering below supported minimum
+  dimensions is outside this pass; native interactions and final reference fidelity
+  were explicitly left to main verification rather than inferred from static review.
+- Full post-review Release solution run passed 778 Core + 627 Desktop = 1,405
+  tests, with no failures or skips, including the additional continuity assertions.
+  Final Release build passed with zero warnings/errors; localization generation
+  and whitespace checks passed.
+- Actual application captures and renderer-only 2x header/corner closeups are in
+  `/private/tmp/wandur-armored-construction/`. Hull widescreen, narrow Slate and
+  both construction closeups were inspected and compared with the previous render.
+  The closeups contain decorative geometry only, not the live title/control layer.
+- No owner app restart, bundle replacement, personal-data access, new assets,
+  packages or schema changes. Tests use temporary profiles and offline/loopback
+  fixtures. Native macOS/Windows dragging, resizing and caption interactions were
+  not manually reverified. This remains a drawn interpretation, not pixel-perfect
+  reproduction of the concept image. Existing very-long footer-label overlap is
+  unchanged and outside this pass.
+
 ## Armored enclosure proportions and paint (2026-09-25)
 
 - User approved spending more area on the outer housing: 24-DIP side rails,
