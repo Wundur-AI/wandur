@@ -9,6 +9,7 @@ public sealed partial class MainWindow
 {
     private void ApplyWindowSkin()
     {
+        Classes.Set("skin-controls", true);
         var custom = ThemeService.ActiveWindowSkin.CustomChrome;
         WindowDecorations = WindowDecorations.Full;
         ExtendClientAreaToDecorationsHint = custom;
@@ -18,6 +19,7 @@ public sealed partial class MainWindow
         if (custom) return;
 
         _themeMenuButton.Flyout?.Hide();
+        _skinMenuButton.Flyout?.Hide();
         _skinTitleActive = false;
         _titleBarLogo.IsVisible = false;
         _plaqueTitleHost.IsVisible = false;

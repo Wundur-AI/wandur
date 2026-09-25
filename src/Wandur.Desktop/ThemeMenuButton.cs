@@ -89,18 +89,6 @@ internal sealed class ThemeMenuButton : Button
             active.SaveSettings(current with { UseWorldThemes = !current.UseWorldThemes });
         });
         _menu.Items.Add(follow);
-        var skins = new MenuItem { Header = L.Skin, Name = "SkinMenu" };
-        AutomationProperties.SetName(skins, L.Skin);
-        foreach (var id in WindowSkinId.All)
-        {
-            var item = new MenuItem { Header = WindowSkinId.DisplayName(id), Name = "Skin" + id,
-                ToggleType = MenuItemToggleType.CheckBox, IsChecked = WindowSkinId.Normalize(settings.Skin) == id };
-            AutomationProperties.SetName(item, WindowSkinId.DisplayName(id));
-            item.Click += (_, _) => WithController(active => active.SaveSettings(active.Settings with { Skin = id }));
-            skins.Items.Add(item);
-        }
-        _menu.Items.Add(new Separator());
-        _menu.Items.Add(skins);
         // The presenter is created before Opening. Publish the rebuilt snapshot so
         // its item view cannot retain the empty backing collection from first use.
         if (_menu.Popup.Child is MenuFlyoutPresenter presenter)

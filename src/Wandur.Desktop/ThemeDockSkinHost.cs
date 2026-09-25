@@ -69,11 +69,12 @@ public sealed class ThemeDockSkinHost : Decorator
         };
     }
 
-    private bool _fleet;
+    private bool _custom;
+    private double _rim;
     private bool _joinsLeft;
     private bool _joinsRight;
-    private Thickness ActiveInset => IsSkinActive ? Inset : _fleet
-        ? new Thickness(_joinsLeft ? 0 : 2, 2, _joinsRight ? 0 : 2, 2) : default;
+    private Thickness ActiveInset => IsSkinActive ? Inset : _custom
+        ? new Thickness(_joinsLeft ? 0 : _rim, _rim, _joinsRight ? 0 : _rim, _rim) : default;
 
     private void UpdateJoinedEdges(object? sender, EventArgs e)
     {
@@ -81,7 +82,7 @@ public sealed class ThemeDockSkinHost : Decorator
         var right = false;
         // Physical adjacency matters: a left-aligned dock can be nested in the middle
         // after dragging. Floating windows always retain a complete frame.
-        if (_fleet && !IsSkinActive && TopLevel.GetTopLevel(this) is MainWindow && Bounds.Width > 0)
+        if (_custom && !IsSkinActive && TopLevel.GetTopLevel(this) is MainWindow && Bounds.Width > 0)
         {
             var workspace = this.GetVisualAncestors().OfType<DockControl>().FirstOrDefault(d => d.Name == "WorkspaceDock");
             if (workspace is not null && workspace.Bounds.Width > 0 && this.TranslatePoint(default, workspace) is { } origin)
@@ -125,8 +126,13 @@ public sealed class ThemeDockSkinHost : Decorator
 
     private void OnThemeApplied()
     {
-        _fleet = FleetSkin.IsActive;
-        Classes.Set("fleet", _fleet);
+        var definition = ThemeService.ActiveWindowSkin;
+        _custom = definition.CustomChrome;
+        _rim = definition.IsArmored ? 1 : 2;
+        Classes.Set("fleet", _custom);
+        Classes.Set("skin-controls", true);
+        Classes.Set("system", !_custom);
+        HeaderHeight = definition.DockHeaderHeight;
         ApplyPanelRadius();
         var skin = ThemeSkinResources.FromApplied();
         if (skin is not { PanelReady: true } || skin.PanelMeta is not { } meta)
@@ -199,7 +205,7 @@ public sealed class ThemeDockSkinHost : Decorator
     public override void Render(DrawingContext context)
     {
         base.Render(context);
-        if (_fleet && !IsSkinActive && Bounds.Width > 6 && Bounds.Height > 6)
+        if (_custom && !IsSkinActive && Bounds.Width > 6 && Bounds.Height > 6)
         {
             var edge = new Pen(FleetSkin.RimEdge, 1);
             if (!_joinsLeft && !_joinsRight)

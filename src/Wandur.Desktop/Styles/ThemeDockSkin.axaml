@@ -65,34 +65,37 @@
     <Setter Property="Margin" Value="0" />
     <Setter Property="CornerRadius" Value="0" />
   </Style>
-  <!-- Code-drawn Fleet panels use the real Dock template, independent of bitmap readiness. -->
-  <Style Selector="local|ThemeDockSkinHost.fleet">
+  <!-- Shared compact controls; geometry and materials are selected independently. -->
+  <Style Selector="local|ThemeDockSkinHost.skin-controls">
     <Setter Property="Margin" Value="1,0,1,0" />
   </Style>
-  <Style Selector="local|ThemeDockSkinHost.fleet.joined-left">
+  <Style Selector="local|ThemeDockSkinHost.skin-controls.joined-left">
     <Setter Property="Margin" Value="0,0,1,0" />
   </Style>
-  <Style Selector="local|ThemeDockSkinHost.fleet.joined-right">
+  <Style Selector="local|ThemeDockSkinHost.skin-controls.joined-right">
     <Setter Property="Margin" Value="1,0,0,0" />
   </Style>
-  <Style Selector="local|ThemeDockSkinHost.fleet.joined-left.joined-right">
+  <Style Selector="local|ThemeDockSkinHost.skin-controls.joined-left.joined-right">
     <Setter Property="Margin" Value="0" />
   </Style>
-  <Style Selector="local|ThemeDockSkinHost.fleet dc|ToolChromeControl /template/ Border#PART_Border">
+  <Style Selector="local|ThemeDockSkinHost.skin-controls.system">
+    <Setter Property="Margin" Value="0" />
+  </Style>
+  <Style Selector="local|ThemeDockSkinHost.skin-controls dc|ToolChromeControl /template/ Border#PART_Border">
     <Setter Property="Margin" Value="0" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
     <Setter Property="BorderBrush" Value="{DynamicResource FleetRimEdgeBrush}" />
   </Style>
-  <Style Selector="local|ThemeDockSkinHost.fleet dc|ToolChromeControl /template/ Grid#PART_Grip">
+  <Style Selector="local|ThemeDockSkinHost.skin-controls dc|ToolChromeControl /template/ Grid#PART_Grip">
     <Setter Property="Height" Value="{DynamicResource DockHeaderHeight}" />
     <Setter Property="MinHeight" Value="30" />
     <Setter Property="Margin" Value="0" />
     <Setter Property="Background" Value="{DynamicResource DockHeaderBrush}" />
   </Style>
-  <Style Selector="local|ThemeDockSkinHost.fleet dc|ToolChromeControl /template/ TextBlock#PART_Title">
+  <Style Selector="local|ThemeDockSkinHost.skin-controls dc|ToolChromeControl /template/ TextBlock#PART_Title">
     <Setter Property="FontSize" Value="14" />
   </Style>
-  <Style Selector="local|ThemeDockSkinHost.fleet dc|ToolChromeControl /template/ Button">
+  <Style Selector="local|ThemeDockSkinHost.skin-controls dc|ToolChromeControl /template/ Button">
     <Setter Property="Width" Value="24" />
     <Setter Property="Height" Value="24" />
     <Setter Property="MinWidth" Value="0" />
@@ -101,7 +104,7 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
   </Style>
-  <Style Selector="local|ThemeDockSkinHost.fleet dc|ToolControl /template/ Border#PART_Border">
+  <Style Selector="local|ThemeDockSkinHost.skin-controls dc|ToolControl /template/ Border#PART_Border">
     <Setter Property="Margin" Value="0" />
     <Setter Property="BorderThickness" Value="0" />
   </Style>

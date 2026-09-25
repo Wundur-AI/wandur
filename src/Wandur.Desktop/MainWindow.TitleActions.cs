@@ -9,7 +9,7 @@ namespace Wandur.Desktop;
 
 public sealed partial class MainWindow
 {
-    private const double TitleActionsWidth = 80;
+    private const double TitleActionsWidth = 120;
     private const double TitleLogoSize = 32;
     private const double TitleLogoGap = 10;
     private const string FullScreenGlyph = "M 1,6 V 1 H 6 M 10,1 H 15 V 6 M 15,10 V 15 H 10 M 6,15 H 1 V 10";
@@ -19,6 +19,7 @@ public sealed partial class MainWindow
     private Grid _plaqueIdentity = null!;
     private Button _exitFullScreenButton = null!;
     private ThemeMenuButton _themeMenuButton = null!;
+    private SkinMenuButton _skinMenuButton = null!;
     private bool _fullScreenChrome;
     private WindowState _beforeFullScreen = WindowState.Normal;
 
@@ -42,6 +43,7 @@ public sealed partial class MainWindow
             IsHitTestVisible = false, Children = { _titleBarLogo }
         };
         _themeMenuButton = new ThemeMenuButton(() => Controller);
+        _skinMenuButton = new SkinMenuButton(() => Controller);
         var fullScreen = ToolbarButton(FullScreenGlyph, "TitleFullScreenButton", nameof(Strings.FullScreen));
         fullScreen.Width = fullScreen.Height = 30;
         fullScreen.Click += (_, _) => ToggleFullScreen();
@@ -49,7 +51,7 @@ public sealed partial class MainWindow
         {
             Name = "TitleActions", Orientation = Orientation.Horizontal, Spacing = 4,
             Width = TitleActionsWidth, HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Top, Children = { _themeMenuButton, fullScreen }
+            VerticalAlignment = VerticalAlignment.Top, Children = { _skinMenuButton, _themeMenuButton, fullScreen }
         };
         WindowDecorationProperties.SetElementRole(_titleActions, WindowDecorationsElementRole.User);
         _chrome.Children.Add(_titleActions);
@@ -71,6 +73,7 @@ public sealed partial class MainWindow
     {
         _fullScreenChrome = true;
         _themeMenuButton.Flyout?.Hide();
+        _skinMenuButton.Flyout?.Hide();
         _titleActions.IsVisible = false;
         _titleBarLogo.IsVisible = false;
         _plaqueTitleHost.IsVisible = false;

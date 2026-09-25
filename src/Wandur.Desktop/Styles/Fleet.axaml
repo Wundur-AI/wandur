@@ -20,39 +20,39 @@
     <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
   <!-- Keep the Dock command bindings and hit targets; replace only their vector faces. -->
-  <Style Selector=":is(Control).fleet dc|ToolChromeControl /template/ Grid#PART_Grid">
+  <Style Selector=":is(Control).skin-controls dc|ToolChromeControl /template/ Grid#PART_Grid">
     <Setter Property="Grid.Column" Value="0" />
     <Setter Property="HorizontalAlignment" Value="Left" />
     <Setter Property="Margin" Value="8,0,0,0" />
   </Style>
-  <Style Selector=":is(Control).fleet dc|ToolChromeControl /template/ TextBlock#PART_Title">
+  <Style Selector=":is(Control).skin-controls dc|ToolChromeControl /template/ TextBlock#PART_Title">
     <Setter Property="Margin" Value="26,0,0,0" />
   </Style>
-  <Style Selector=":is(Control).fleet dc|ToolChromeControl /template/ Button Viewbox">
+  <Style Selector=":is(Control).skin-controls dc|ToolChromeControl /template/ Button Viewbox">
     <Setter Property="Width" Value="14" />
     <Setter Property="Height" Value="14" />
   </Style>
-  <Style Selector=":is(Control).fleet dc|ToolChromeControl /template/ Path#PART_PinPath">
+  <Style Selector=":is(Control).skin-controls dc|ToolChromeControl /template/ Path#PART_PinPath">
     <Setter Property="Data" Value="M 10,1 L 15,6 L 13,7 L 10,10 L 10,13 L 7,10 L 2,15 L 1,14 L 6,9 L 3,6 L 6,6 L 9,3 Z" />
     <Setter Property="Fill" Value="{DynamicResource ToolbarIconBrush}" />
   </Style>
-  <Style Selector=":is(Control).fleet dc|ToolChromeControl /template/ Path#PART_ClosePath">
+  <Style Selector=":is(Control).skin-controls dc|ToolChromeControl /template/ Path#PART_ClosePath">
     <Setter Property="Data" Value="M 2,1 L 8,7 L 14,1 L 15,2 L 9,8 L 15,14 L 14,15 L 8,9 L 2,15 L 1,14 L 7,8 L 1,2 Z" />
     <Setter Property="Fill" Value="{DynamicResource ToolbarIconBrush}" />
   </Style>
-  <Style Selector=":is(Control).fleet dc|ToolChromeControl /template/ Path#PART_MenuPath">
+  <Style Selector=":is(Control).skin-controls dc|ToolChromeControl /template/ Path#PART_MenuPath">
     <Setter Property="Data" Value="M 2,4 L 8,10 L 14,4 L 15,5 L 8,12 L 1,5 Z" />
     <Setter Property="Fill" Value="{DynamicResource ToolbarIconBrush}" />
   </Style>
-  <Style Selector=":is(Control).fleet dc|ToolChromeControl /template/ Border#PART_Border">
+  <Style Selector=":is(Control).skin-controls dc|ToolChromeControl /template/ Border#PART_Border">
     <Setter Property="BoxShadow" Value="{DynamicResource FleetHeaderShadow}" />
   </Style>
-  <Style Selector=":is(Control).fleet Border#MapToolbar :is(Button).command-bar-button, :is(Control).fleet Border#MapToolsPanel :is(Button).command-bar-button, :is(Control).fleet Border#MapEditorInspector :is(Button).command-bar-button">
+  <Style Selector=":is(Control).skin-controls Border#MapToolbar :is(Button).command-bar-button, :is(Control).skin-controls Border#MapToolsPanel :is(Button).command-bar-button, :is(Control).skin-controls Border#MapEditorInspector :is(Button).command-bar-button">
     <Setter Property="Width" Value="26" />
     <Setter Property="Height" Value="26" />
     <Setter Property="Padding" Value="4" />
   </Style>
-  <Style Selector=":is(Control).fleet Border#MapToolbar :is(Button).command-bar-button">
+  <Style Selector=":is(Control).skin-controls Border#MapToolbar :is(Button).command-bar-button">
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
@@ -61,28 +61,28 @@
   <Style Selector="Window.fleet Border#Composer">
     <Setter Property="BoxShadow" Value="inset 0 2 2 0 #080E12, inset 0 -1 0 0 #6D7A7E" />
   </Style>
-  <Style Selector=":is(Control).fleet Border#MapToolbar ToggleButton:checked">
+  <Style Selector=":is(Control).skin-controls Border#MapToolbar ToggleButton:checked">
     <Setter Property="Background" Value="{DynamicResource ToolbarPressedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
-  <Style Selector=":is(Control).fleet Border#MapToolbar :is(Button).command-bar-button:pointerover">
+  <Style Selector=":is(Control).skin-controls Border#MapToolbar :is(Button).command-bar-button:pointerover">
     <Setter Property="Background" Value="{DynamicResource ToolbarHoverBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
-  <Style Selector=":is(Control).fleet Border#MapToolbar :is(Button).command-bar-button:pressed">
+  <Style Selector=":is(Control).skin-controls Border#MapToolbar :is(Button).command-bar-button:pressed">
     <Setter Property="Background" Value="{DynamicResource ToolbarPressedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
-  <Style Selector=":is(Control).fleet Border#MapToolbar :is(Button).command-bar-button:focus-visible">
+  <Style Selector=":is(Control).skin-controls Border#MapToolbar :is(Button).command-bar-button:focus-visible">
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
-  <Style Selector=":is(Control).fleet Border#MapToolbar TextBlock.muted">
+  <Style Selector=":is(Control).skin-controls Border#MapToolbar TextBlock.muted">
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
   </Style>
-  <Style Selector=":is(Control).fleet TextBlock#ChannelsMirrorNote">
+  <Style Selector=":is(Control).skin-controls TextBlock#ChannelsMirrorNote">
     <Setter Property="Foreground" Value="{DynamicResource TerminalPlaceholderForeground}" />
   </Style>
-  <Style Selector=":is(Control).fleet ListBox#ChannelTabs ListBoxItem">
+  <Style Selector=":is(Control).skin-controls ListBox#ChannelTabs ListBoxItem">
     <Setter Property="MinHeight" Value="26" />
     <Setter Property="Padding" Value="6,2" />
     <Setter Property="Margin" Value="0" />
@@ -100,37 +100,37 @@
       </ControlTemplate>
     </Setter>
   </Style>
-  <Style Selector=":is(Control).fleet ListBox#ChannelTabs ListBoxItem:selected">
+  <Style Selector=":is(Control).skin-controls ListBox#ChannelTabs ListBoxItem:selected">
     <Setter Property="Background" Value="{DynamicResource ToolbarPressedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="BorderThickness" Value="0,0,0,2" />
   </Style>
-  <Style Selector=":is(Control).fleet ListBox#ChannelTabs ListBoxItem:pointerover">
+  <Style Selector=":is(Control).skin-controls ListBox#ChannelTabs ListBoxItem:pointerover">
     <Setter Property="Background" Value="{DynamicResource ToolbarHoverBrush}" />
   </Style>
-  <Style Selector=":is(Control).fleet ListBox#ChannelTabs ListBoxItem:focus-visible">
+  <Style Selector=":is(Control).skin-controls ListBox#ChannelTabs ListBoxItem:focus-visible">
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="BorderThickness" Value="1" />
   </Style>
-  <Style Selector=":is(Control).fleet Slider#MapZoomSlider">
+  <Style Selector=":is(Control).skin-controls Slider#MapZoomSlider">
     <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
     <Setter Property="Background" Value="{DynamicResource LineBrush}" />
   </Style>
-  <Style Selector=":is(Control).fleet Slider#MapZoomSlider /template/ Thumb">
+  <Style Selector=":is(Control).skin-controls Slider#MapZoomSlider /template/ Thumb">
     <Setter Property="Background" Value="{DynamicResource FleetInstrumentAccentBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="1" />
   </Style>
-  <Style Selector=":is(Control).fleet Slider#MapZoomSlider:pointerover /template/ Thumb">
+  <Style Selector=":is(Control).skin-controls Slider#MapZoomSlider:pointerover /template/ Thumb">
     <Setter Property="Background" Value="{DynamicResource TextBrush}" />
   </Style>
-  <Style Selector=":is(Control).fleet Slider#MapZoomSlider:pressed /template/ Thumb">
+  <Style Selector=":is(Control).skin-controls Slider#MapZoomSlider:pressed /template/ Thumb">
     <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
   </Style>
-  <Style Selector=":is(Control).fleet Slider#MapZoomSlider:pointerover /template/ RepeatButton#PART_DecreaseButton, :is(Control).fleet Slider#MapZoomSlider:pressed /template/ RepeatButton#PART_DecreaseButton">
+  <Style Selector=":is(Control).skin-controls Slider#MapZoomSlider:pointerover /template/ RepeatButton#PART_DecreaseButton, :is(Control).skin-controls Slider#MapZoomSlider:pressed /template/ RepeatButton#PART_DecreaseButton">
     <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
   </Style>
-  <Style Selector=":is(Control).fleet Slider#MapZoomSlider:disabled /template/ Thumb">
+  <Style Selector=":is(Control).skin-controls Slider#MapZoomSlider:disabled /template/ Thumb">
     <Setter Property="Background" Value="{DynamicResource MutedBrush}" />
   </Style>
 </Styles>

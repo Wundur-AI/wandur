@@ -86,7 +86,8 @@ public sealed partial class WorkspaceFactory(SessionWorkspace sessions, Action e
 
     public override void InitLayout(IDockable layout)
     {
-        HostWindowLocator = new Dictionary<string, Func<IHostWindow?>> { ["DockWindow"] = () => new HostWindow() };
+        DefaultHostWindowLocator = () => new SkinnedDockHostWindow();
+        HostWindowLocator = new Dictionary<string, Func<IHostWindow?>> { ["DockWindow"] = () => new SkinnedDockHostWindow() };
         base.InitLayout(layout);
     }
 }
