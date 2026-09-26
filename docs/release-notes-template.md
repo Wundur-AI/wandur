@@ -19,18 +19,22 @@ to install. The changes since the previous release are listed at the end of thes
 
 ## First run
 
-**Windows.** Unzip the folder somewhere you keep programs and run `Wandur.exe`. The build is not
-code-signed yet, so SmartScreen may say "Windows protected your PC". Click **More info**, then
-**Run anyway**. Windows asks once per download.
+**Windows.** The zip holds one folder, `Wandur-{{VERSION}}-windows-x64`, and `Wandur.exe` is
+inside it, next to the files it needs. Extract the whole zip somewhere you keep programs (not
+just `Wandur.exe`), open the folder and run `Wandur.exe`. The build is not code-signed yet, so
+SmartScreen may say "Windows protected your PC". Click **More info**, then **Run anyway**.
+Windows asks once per download.
 
 **macOS.** Open the `.dmg` and drag Wandur onto Applications.
 
 <!-- macos-first-run:start -->
-Until a signed and notarized build is attached to this release, macOS says the app is from an
-unidentified developer and will not open it with a double-click. Right-click (or
-Control-click) Wandur in Applications, choose **Open**, then **Open** again in the dialog. On
-macOS 15 and later, if there is no Open button, go to System Settings, Privacy & Security, and
-click **Open Anyway** next to the message about Wandur. You only do this once.
+Until a signed and notarized build is attached to this release, macOS blocks the first launch.
+On macOS 15 and later: open Wandur once and click **Done** in the dialog that says "Apple could
+not verify "Wandur" is free of malware that may harm your Mac or compromise your privacy." Then
+open System Settings > Privacy & Security, scroll to Security, click **Open Anyway** next to
+the message about Wandur, confirm with your password, and click **Open Anyway** once more.
+On macOS 14 and earlier: right-click (or Control-click) Wandur in Applications, choose
+**Open**, then **Open** again in the dialog. You only do this once.
 <!-- macos-first-run:end -->
 
 **Linux.** Unpack and run it from the folder:

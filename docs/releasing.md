@@ -18,8 +18,10 @@ builds self-contained downloads for every platform and publishes a GitHub Releas
 
 1. **Bump nothing by hand.** The tag is the version. The workflow passes it to
    `dotnet publish -p:Version=... -p:InformationalVersion=...` and writes it into the Mac
-   `Info.plist` (`CFBundleShortVersionString` and `CFBundleVersion` get the numeric part, so
-   `0.1.0-beta.1` becomes `0.1.0` there; macOS reads those as numbers only).
+   `Info.plist`: `CFBundleShortVersionString` gets the numeric part (`0.1.0-beta.1` becomes
+   `0.1.0`; macOS reads it as numbers only), and `CFBundleVersion` identifies the build: the
+   workflow's run number in CI, the numeric part plus a UTC timestamp
+   (`0.1.0.202609261730`) for a local or signed build.
 2. From an up-to-date `main` that has passed CI:
 
    ```sh
@@ -30,9 +32,22 @@ builds self-contained downloads for every platform and publishes a GitHub Releas
 3. **Wait for the workflow** (Actions, Release). It runs the full test matrix from
    `build.yml`, then builds four downloads, starts each one once (`--script-worker`, no window,
    no network), writes `SHA256SUMS.txt` and creates the release titled `Wandur 0.1.0`, with notes
-   from `docs/release-notes-template.md` followed by GitHub's generated list of changes. If a
-   job fails, no release is created; fix, delete the tag (`git push origin :refs/tags/v0.1.0` and
-   `git tag -d v0.1.0`), and tag again.
+   from `docs/release-notes-template.md` followed by GitHub's generated list of changes.
+
+   **If it goes wrong.** A failed build creates no release. A release that went out broken,
+   or a tag on the wrong commit, is undone the same way: delete the release if there is one,
+   delete the tag on GitHub and locally, fix, then tag and push again.
+
+   ```sh
+   gh release delete v0.1.0 --yes            # only if the release was created; run as YouCantGoThatWay
+   git push origin :refs/tags/v0.1.0         # delete the tag on GitHub
+   git tag -d v0.1.0                          # and locally
+   # fix and commit on main, then:
+   git tag v0.1.0 && git push origin v0.1.0
+   ```
+
+   Anyone who already downloaded the broken build keeps it; if that matters, use the next
+   version number instead of reusing this one.
 4. **Optional: signed Mac builds.** On your Mac, with a Developer ID Application certificate in
    the login keychain and a notarytool profile:
 
@@ -52,7 +67,15 @@ builds self-contained downloads for every platform and publishes a GitHub Releas
    because an asset uploaded from another account shows that account on the release page. It
    prints the commands to switch (`gh auth switch`, `gh auth login`, or `GH_TOKEN=...` for one
    command). Other settings: `WANDUR_SIGN_IDENTITY` (default: the first "Developer ID
-   Application:" identity), `WANDUR_NOTARY_PROFILE` (default `wandur-notary`).
+   Application:" identity; anything else is refused unless `WANDUR_ALLOW_NON_DEVELOPER_ID=1`,
+   which is only useful for testing the signing steps), `WANDUR_NOTARY_PROFILE` (default
+   `wandur-notary`).
+
+   The script builds exactly the tag, not your working tree: `v0.1.0` must exist in the
+   clone you run it from (`git fetch --tags` if you tagged elsewhere). It exports the tag's
+   tree and the SDK commit the tag pins (from your local `external/wandur-sdk`) with
+   `git archive` into a temporary directory, builds there, and deletes it afterwards, so
+   uncommitted changes and other branches in your checkout do not matter.
 
    For each architecture the script signs the app inside out, builds the disk image
    (`scripts/macos/make-dmg.sh`), signs the image, notarizes and staples it, then mounts it
@@ -64,15 +87,20 @@ builds self-contained downloads for every platform and publishes a GitHub Releas
 
 ## What users see
 
-- **Windows:** `Wandur-<version>-windows-x64.zip`, a folder with `Wandur.exe`. Unsigned, so
-  SmartScreen shows "Windows protected your PC" until they click More info, Run anyway.
+- **Windows:** `Wandur-<version>-windows-x64.zip`, holding one folder,
+  `Wandur-<version>-windows-x64`, with `Wandur.exe` inside it among the files it needs.
+  Unsigned, so SmartScreen shows "Windows protected your PC" until they click More info, Run
+  anyway.
 - **macOS:** `Wandur-<version>-macos-arm64.dmg` and `...-macos-x64.dmg`, each a disk image
   with `Wandur.app` and an Applications shortcut to drag it onto.
   From the workflow they are ad-hoc signed: Gatekeeper calls the app from an unidentified
-  developer and the user right-clicks, Open (or on macOS 15, System Settings, Privacy & Security,
-  Open Anyway). After the signed script has replaced them, the app opens with a double-click.
-- **Linux:** `Wandur-<version>-linux-x64.tar.gz`, a folder with an executable `Wandur`, a
-  `.desktop` file, its icon and `install-desktop-entry.sh` to add a menu entry.
+  developer. On macOS 15 and later the user opens it once, dismisses "Apple could not verify
+  ...", then clicks Open Anyway in System Settings > Privacy & Security; on macOS 14 and earlier,
+  right-click, Open. After the signed script has replaced them, the app opens with a
+  double-click.
+- **Linux:** `Wandur-<version>-linux-x64.tar.gz`, a folder with an executable `Wandur`,
+  `install-desktop-entry.sh` to add a menu entry, the `.desktop.in` template it fills in with
+  the folder's path, and the icon.
 - `SHA256SUMS.txt` for all four.
 
 All downloads are folders rather than single-file executables: the app starts itself again as

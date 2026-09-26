@@ -85,8 +85,10 @@ open artifacts/macos/Wandur.app
 ```
 
 Downloads for Windows, macOS and Linux are built by `.github/workflows/release.yml` when a `v*`
-tag is pushed; `scripts/package-portable.sh` and `scripts/package-macos.sh --rid ...
---self-contained` build the same packages locally. See [docs/releasing.md](docs/releasing.md).
+tag is pushed. Locally, `scripts/package-portable.sh` builds the Windows zip and the Linux
+tarball the same way, and `scripts/package-macos.sh --rid osx-arm64 --version 0.1.0
+--self-contained` builds the ad-hoc signed `Wandur.app` that the workflow then wraps with
+`scripts/macos/make-dmg.sh`. See [docs/releasing.md](docs/releasing.md).
 
 On macOS external drives, keep the NuGet package cache on the internal disk. The normal `~/.nuget/packages` location works; do not put the cache on an exFAT volume. The project excludes `._*` AppleDouble source sidecars. Use the explicit `.csproj` paths above because metadata sidecars can confuse folder-based project discovery.
 
