@@ -1,0 +1,14 @@
+{
+ "colors": {
+  "shell": "#C9CBC8",
+  "panel": "#D1D3D1",
+  "terminal": "#0E181F",
+  "text": "#22282B",
+  "muted": "#51575A",
+  "accent": "#115C73",
+  "accent_secondary": "#8EC1D8",
+  "border": "#8F9294",
+  "terminal_text": "#CBD6E2"
+ },
+ "notes": "Colours only. The structure (title band, nameplate, toolbar row, shaded headers, device edge, dark chassis) is the client's default and is derived from these colours, so this is the whole theme. A world that wants to depart from the default structure adds skin sections; this one does not."
+}

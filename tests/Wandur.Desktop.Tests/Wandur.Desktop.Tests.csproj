@@ -9,6 +9,8 @@
     <None Include="../Fixtures/world-theme-industrial-skin.json" Link="Fixtures/world-theme-industrial-skin.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../Fixtures/world-theme-skin-contract.json" Link="Fixtures/world-theme-skin-contract.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../Fixtures/brushed-gunmetal-v1.png" Link="Fixtures/brushed-gunmetal-v1.png" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Vendored from wandur-site wwwroot/themes/industrial-v2 so CI does not need the private site repository. -->
+    <None Update="Fixtures/industrial-v2/MANIFEST.json" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="../../src/Wandur.Desktop/Wandur.Desktop.csproj" />
     <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

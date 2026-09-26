@@ -28,24 +28,13 @@ public sealed class IndustrialSkinPolishTests
     private static string ColorOf(IBrush? brush) => Assert.IsAssignableFrom<ISolidColorBrush>(brush).Color.ToString().ToLowerInvariant();
     private static string ColorOf(Color color) => color.ToString().ToLowerInvariant();
 
-    private static string IndustrialAssetDir()
-    {
-        // Site hosts production PNGs; walk up from the test bin to the workspace.
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(dir.FullName, "wandur-site", "src", "Wandur.Site", "wwwroot", "themes", "industrial-v2");
-            if (Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "MANIFEST.json")))
-                return candidate;
-            // From wandur-client/tests/.../bin
-            candidate = Path.Combine(dir.FullName, "..", "..", "..", "..", "..", "wandur-site", "src", "Wandur.Site", "wwwroot", "themes", "industrial-v2");
-            candidate = Path.GetFullPath(candidate);
-            if (Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "MANIFEST.json")))
-                return candidate;
-            dir = dir.Parent;
-        }
-        throw new DirectoryNotFoundException("industrial-v2 theme assets not found beside the workspace.");
-    }
+    /// <summary>
+    /// The theme's asset folder, vendored so the test runs without the private site repository beside it.
+    /// Copied from wandur-site src/Wandur.Site/wwwroot/themes/industrial-v2 at ba962af. That theme is colours
+    /// only (its MANIFEST says so), so the manifest is all it serves; the site's bar PNGs are not referenced by
+    /// the theme and are left out. Any request for a file not vendored here fails the test below.
+    /// </summary>
+    private static string IndustrialAssetDir() => Path.Combine(AppContext.BaseDirectory, "Fixtures", "industrial-v2");
 
     [AvaloniaFact]
     public async Task IndustrialSkinUsesDarkTerminalAndTerminalFieldChrome()
@@ -120,11 +109,12 @@ public sealed class IndustrialSkinPolishTests
             // Everything the painted band does (plaque placement, the toolbar in the band, ornament
             // clearance) is exercised by WorldThemeWindowSkinTests against the contract fixture, which has
             // a band. This theme ships no artwork, so there is nothing here to measure.
+            Assert.Empty(handler.Missing);
         }
         finally
         {
             await window.Sessions.DisposeAsync(); window.Close(); http.Dispose();
-            if (Directory.Exists(path)) Directory.Delete(path, true);
+            TestFiles.DeleteDirectory(path);
         }
     }
 
@@ -142,6 +132,9 @@ public sealed class IndustrialSkinPolishTests
 
     private sealed class AssetHandler(string assetDir) : HttpMessageHandler
     {
+        /// <summary>Theme files asked for but not vendored: the fixture would no longer match what the theme uses.</summary>
+        public System.Collections.Concurrent.ConcurrentQueue<string> Missing { get; } = new();
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var file = Path.GetFileName(request.RequestUri!.AbsolutePath);
@@ -151,7 +144,10 @@ public sealed class IndustrialSkinPolishTests
                 {
                     Content = new ByteArrayContent(File.ReadAllBytes(path))
                 });
+            if (IsImage(file)) Missing.Enqueue(request.RequestUri.AbsolutePath);
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         }
+
+        private static bool IsImage(string file) => Path.GetExtension(file).ToLowerInvariant() is ".png" or ".jpg" or ".jpeg" or ".webp" or ".svg";
     }
 }
