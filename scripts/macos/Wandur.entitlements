@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Hardened runtime entitlements for the Developer ID build (scripts/release-macos-signed.sh).
+  The app is not sandboxed, so network, Keychain and file access need no entitlement here.
+  Each key below relaxes one hardened runtime check; keep this list as short as it can be.
+-->
+<plist version="1.0">
+<dict>
+  <!--
+    The .NET JIT compiles IL to machine code at run time into MAP_JIT memory. Without this the
+    hardened runtime refuses that mapping and CoreCLR does not start at all ("Failed to create
+    CoreCLR, HRESULT 0x80070008"; measured on this bundle on September 26, 2026). Required.
+  -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <!--
+    Writable-and-executable memory outside MAP_JIT. Older .NET runtimes and the x64 runtime under
+    Rosetta have needed it for stubs and thunks, and Microsoft's macOS notarization guidance lists
+    it. The arm64 bundle started without it in a local ad-hoc test, so it may be removable: try a
+    signed build of both architectures without it before dropping it.
+  -->
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+  <!--
+    Library validation lets a process load only code signed by Apple or by its own team. The host
+    loads libhostfxr, libcoreclr and the native libraries of NuGet packages (SkiaSharp, HarfBuzz,
+    ONNX Runtime, SQLite, Avalonia.Native) with dlopen. The release script re-signs every one of
+    them with the same Developer ID, which should satisfy validation on its own; this key keeps the
+    app starting if a native library is ever loaded from outside the bundle or missed by signing.
+    An ad-hoc signed test bundle does not start without it.
+  -->
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+</dict>
+</plist>
