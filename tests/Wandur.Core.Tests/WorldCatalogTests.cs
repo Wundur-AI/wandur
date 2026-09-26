@@ -202,13 +202,13 @@ public sealed class WorldCatalogTests : IDisposable
         using var catalog = new WorldCatalog(CachePath, http: http);
         var world = catalog.Worlds.Single(w => w.Id == "mudverse:1");
         Assert.True(world.HasSuppliedArtwork);
-        Assert.NotEqual(previous.ArtKey, world.ArtKey);
-        Assert.Equal(new byte[] { 1, 2, 3 }, await catalog.GetArtAsync(world));
-        Assert.Equal(world.ArtKey, (world with { Description = "Changed description" }).ArtKey);
-        Assert.NotEqual(world.ArtKey, (world with { BannerUrl = "https://assets.mudverse.com/listings/new.jpg" }).ArtKey);
+        Assert.NotEqual(previous.GeneratedArtKey, world.SuppliedArtKey);
+        Assert.Equal(new byte[] { 1, 2, 3 }, await catalog.GetArtAsync(world, WorldArtwork.Supplied));
+        Assert.Equal(world.SuppliedArtKey, (world with { Description = "Changed description" }).SuppliedArtKey);
+        Assert.NotEqual(world.SuppliedArtKey, (world with { BannerUrl = "https://assets.mudverse.com/listings/new.jpg" }).SuppliedArtKey);
         using var offline = new HttpClient(new Handler(_ => throw new HttpRequestException("offline")));
         using var restarted = new WorldCatalog(CachePath, http: offline);
-        Assert.Equal(new byte[] { 1, 2, 3 }, await restarted.GetArtAsync(world));
+        Assert.Equal(new byte[] { 1, 2, 3 }, await restarted.GetArtAsync(world, WorldArtwork.Supplied));
     }
 
     [Fact]
@@ -343,17 +343,191 @@ public sealed class WorldCatalogTests : IDisposable
         await catalog.LoadAsync();
         var both = catalog.Worlds.Single(w => w.Id == "both");
         var generated = catalog.Worlds.Single(w => w.Id == "generated");
-        Assert.Equal(new byte[] { 1 }, await catalog.GetArtAsync(both));
+        // A MUDVerse banner does not outrank the illustration Wandur generated.
+        Assert.Equal(new byte[] { 2 }, await catalog.GetArtAsync(both));
         Assert.Equal(new byte[] { 1 }, await catalog.GetArtAsync(both, WorldArtwork.Supplied));
         Assert.Equal(new byte[] { 2 }, await catalog.GetArtAsync(both, WorldArtwork.Generated));
         Assert.Equal(new byte[] { 3 }, await catalog.GetArtAsync(generated, WorldArtwork.Generated));
         Assert.Null(await catalog.GetArtAsync(generated, WorldArtwork.Supplied));
         Assert.Equal(generated.ArtKey, generated.GeneratedArtKey);
-        Assert.NotEqual(both.ArtKey, both.GeneratedArtKey);
+        Assert.NotEqual(both.SuppliedArtKey, both.GeneratedArtKey);
         var fetched = requests.Count;
         Assert.Equal(new byte[] { 2 }, await catalog.GetArtAsync(both, WorldArtwork.Generated));
         Assert.Equal(new byte[] { 3 }, await catalog.GetArtAsync(generated));
         Assert.Equal(fetched, requests.Count);
+    }
+
+    private static WorldListing Art(string id, bool generated = true, string banner = "", bool? byOwner = null) => new()
+    {
+        Id = id, Name = id, Host = id + ".example.org", Port = 4000, BannerUrl = banner, BannerByOwner = byOwner,
+        GeneratedArtworkPath = generated ? $"worlds/{id}/art" : ""
+    };
+
+    [Fact]
+    public void GeneratedArtOutranksAListingBannerButNotAnOwnersBanner()
+    {
+        const string banner = "https://assets.mudverse.com/listings/x.jpg";
+        Assert.Equal(WorldArtwork.Generated, Art("a", banner: banner).PreferredArtwork);
+        Assert.Equal(WorldArtwork.Supplied, Art("a", banner: banner).SecondaryArtwork);
+        Assert.Equal(WorldArtwork.Supplied, Art("b", banner: banner, byOwner: true).PreferredArtwork);
+        Assert.Equal(WorldArtwork.Generated, Art("b", banner: banner, byOwner: true).SecondaryArtwork);
+        Assert.Equal(WorldArtwork.Supplied, Art("c", generated: false, banner: banner).PreferredArtwork);
+        Assert.Null(Art("c", generated: false, banner: banner).SecondaryArtwork);
+        // An owner flag without a banner changes nothing.
+        Assert.Equal(WorldArtwork.Generated, Art("d", byOwner: true).PreferredArtwork);
+        Assert.Null(Art("d").SecondaryArtwork);
+    }
+
+    [Fact]
+    public async Task BannerByOwnerIsReadAsOptionalAndPreferredArtFollowsIt()
+    {
+        var json = """
+            {"format":"wandur.directory","schema_version":2,"fetched_at":"2026-09-15T20:00:00Z",
+             "worlds":[
+               {"id":"owned","name":"Owned","host":"a.example.org","port":4000,"banner_by_owner":true,
+                "banner_url":"https://cdn.example.org/owned.png","generated_artwork_path":"worlds/owned/art"},
+               {"id":"listed","name":"Listed","host":"b.example.org","port":4000,
+                "banner_url":"https://assets.mudverse.com/listed.jpg","generated_artwork_path":"worlds/listed/art"},
+               {"id":"banner-only","name":"Banner only","host":"c.example.org","port":4000,
+                "banner_url":"https://assets.mudverse.com/only.jpg","generated_artwork_path":null}]}
+            """;
+        var requests = new List<string>();
+        using var http = new HttpClient(new Handler(request =>
+        {
+            var url = request.RequestUri!.AbsoluteUri;
+            lock (requests) requests.Add(url);
+            return url.EndsWith("/directory", StringComparison.Ordinal)
+                ? new(HttpStatusCode.OK) { Content = new StringContent(json) }
+                : new(HttpStatusCode.OK) { Content = new ByteArrayContent([1, 2, 3]) };
+        }));
+        using var catalog = new WorldCatalog(CachePath, new Uri("http://localhost/"), http);
+        await catalog.LoadAsync();
+        Assert.True(catalog.Worlds.Single(w => w.Id == "owned").BannerByOwner);
+        Assert.Null(catalog.Worlds.Single(w => w.Id == "listed").BannerByOwner);
+        foreach (var world in catalog.Worlds) await catalog.GetArtAsync(world, WorldArtwork.Preferred, WorldCatalog.RowSize);
+        Assert.Contains("https://cdn.example.org/owned.png", requests);
+        Assert.Contains("http://localhost/worlds/listed/art?size=400", requests);
+        Assert.Contains("https://assets.mudverse.com/only.jpg", requests);
+        Assert.DoesNotContain("https://assets.mudverse.com/listed.jpg", requests);
+    }
+
+    [Fact]
+    public async Task RowArtAsksForTheRowSizeAndEachSizeIsCachedOnItsOwn()
+    {
+        var requests = new List<string>();
+        using var http = new HttpClient(new Handler(request =>
+        {
+            lock (requests) requests.Add(request.RequestUri!.AbsoluteUri);
+            return new(HttpStatusCode.OK) { Content = new ByteArrayContent(request.RequestUri.Query.Contains("400") ? [4] : [5]) };
+        }));
+        using var catalog = new WorldCatalog(CachePath, new Uri("https://api.example.org/"), http);
+        var world = Art("wolfery");
+        Assert.Equal(new byte[] { 4 }, await catalog.GetArtAsync(world, WorldArtwork.Generated, WorldCatalog.RowSize));
+        Assert.Equal(new byte[] { 5 }, await catalog.GetArtAsync(world, WorldArtwork.Generated, null));
+        Assert.Equal(new byte[] { 4 }, await catalog.GetArtAsync(world, WorldArtwork.Generated, WorldCatalog.RowSize));
+        Assert.Equal(["https://api.example.org/worlds/wolfery/art?size=400", "https://api.example.org/worlds/wolfery/art"], requests);
+        // A path that escapes the directory is still refused, size or not.
+        Assert.Null(await catalog.GetArtAsync(Art("x") with { GeneratedArtworkPath = "https://elsewhere.example/art" }, WorldArtwork.Generated, WorldCatalog.RowSize));
+        Assert.Equal(2, requests.Count);
+    }
+
+    [Theory]
+    [InlineData(404)]
+    [InlineData(200)]
+    public async Task TheHeroFallsBackTo1024WhenTheHeroSizeIsMissingOrNotAPicture(int heroStatus)
+    {
+        var requests = new List<string>();
+        using var http = new HttpClient(new Handler(request =>
+        {
+            var query = request.RequestUri!.Query;
+            lock (requests) requests.Add(query);
+            if (query.Contains("hero"))
+                return heroStatus == 404 ? new(HttpStatusCode.NotFound)
+                    : new(HttpStatusCode.OK) { Content = new StringContent("<html>not here yet</html>", System.Text.Encoding.UTF8, "text/html") };
+            return new(HttpStatusCode.OK) { Content = new ByteArrayContent([0x89, 0x50, 0x4E, 0x47, 1]) };
+        }));
+        using var catalog = new WorldCatalog(CachePath, new Uri("https://api.example.org/"), http);
+        var (bytes, kind) = await catalog.GetHeroArtAsync(Art("wolfery"));
+        Assert.Equal(WorldArtwork.Generated, kind);
+        Assert.Equal(new byte[] { 0x89, 0x50, 0x4E, 0x47, 1 }, bytes);
+        Assert.Equal(["?size=hero", "?size=1024"], requests);
+    }
+
+    [Fact]
+    public async Task AtMostFourPicturesDownloadAtOnce()
+    {
+        var running = 0; var peak = 0; var release = new TaskCompletionSource();
+        using var http = new HttpClient(new AsyncHandler(async _ =>
+        {
+            var now = Interlocked.Increment(ref running);
+            lock (this) peak = Math.Max(peak, now);
+            await release.Task;
+            Interlocked.Decrement(ref running);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent([1]) };
+        }));
+        using var catalog = new WorldCatalog(CachePath, new Uri("https://api.example.org/"), http);
+        var loads = Enumerable.Range(0, 10).Select(i => catalog.GetArtAsync(Art("w" + i), WorldArtwork.Generated, WorldCatalog.RowSize)).ToArray();
+        for (var i = 0; i < 100 && Volatile.Read(ref running) < WorldCatalog.ArtDownloads; i++) await Task.Delay(10);
+        await Task.Delay(50);
+        Assert.Equal(WorldCatalog.ArtDownloads, Volatile.Read(ref running));
+        release.SetResult();
+        var results = await Task.WhenAll(loads);
+        Assert.All(results, bytes => Assert.Equal(new byte[] { 1 }, bytes));
+        Assert.Equal(WorldCatalog.ArtDownloads, peak);
+    }
+
+    [Fact]
+    public async Task ALoadCancelledMidDownloadStillCachesThePicture()
+    {
+        var calls = 0; var release = new TaskCompletionSource();
+        using var http = new HttpClient(new AsyncHandler(async _ =>
+        {
+            Interlocked.Increment(ref calls);
+            await release.Task;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent([7, 7]) };
+        }));
+        using var catalog = new WorldCatalog(CachePath, new Uri("https://api.example.org/"), http);
+        var world = Art("recycled");
+        using var row = new CancellationTokenSource();
+        var load = catalog.GetArtAsync(world, WorldArtwork.Generated, WorldCatalog.RowSize, row.Token);
+        for (var i = 0; i < 100 && Volatile.Read(ref calls) == 0; i++) await Task.Delay(10);
+        row.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => load);
+        release.SetResult();
+        // The row comes back: the finished download is waiting in the cache, fetched once.
+        byte[]? again = null;
+        for (var i = 0; i < 100 && again is null; i++)
+        {
+            await Task.Delay(10);
+            if (File.Exists(Path.Combine(_dir, "directory-art", world.GeneratedArtKeyFor(WorldCatalog.RowSize) + ".png")))
+                again = await catalog.GetArtAsync(world, WorldArtwork.Generated, WorldCatalog.RowSize);
+        }
+        Assert.Equal(new byte[] { 7, 7 }, again);
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public async Task EveryArtFetchIsTracedWithItsStatus()
+    {
+        var lines = new List<string>();
+        void Collect(string line) { lock (lines) lines.Add(line); }
+        Wandur.Core.Diagnostics.ArtTrace.Written += Collect;
+        try
+        {
+            using var http = new HttpClient(new Handler(request => request.RequestUri!.AbsolutePath.Contains("missing")
+                ? new(HttpStatusCode.NotFound) : new(HttpStatusCode.OK) { Content = new ByteArrayContent([1, 2]) }));
+            using var catalog = new WorldCatalog(CachePath, new Uri("https://api.example.org/"), http);
+            Assert.Null(await catalog.GetArtAsync(Art("missing"), WorldArtwork.Generated, WorldCatalog.RowSize));
+            Assert.NotNull(await catalog.GetArtAsync(Art("found"), WorldArtwork.Generated, WorldCatalog.RowSize));
+        }
+        finally { Wandur.Core.Diagnostics.ArtTrace.Written -= Collect; }
+        Assert.Contains(lines, l => l.StartsWith("404 0 bytes https://api.example.org/worlds/missing/art?size=400", StringComparison.Ordinal));
+        Assert.Contains(lines, l => l.StartsWith("200 2 bytes https://api.example.org/worlds/found/art?size=400", StringComparison.Ordinal));
+    }
+
+    private sealed class AsyncHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> respond) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token) => respond(request);
     }
 
     [Fact]

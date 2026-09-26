@@ -608,9 +608,6 @@ Sorties : north · east
   <data name="StartTheLocalDirectoryServerToDiscoverWorlds" xml:space="preserve">
     <value>Démarrez le serveur local de l’annuaire pour découvrir des mondes.</value>
   </data>
-  <data name="OfWorlds" xml:space="preserve">
-    <value>{0} mondes sur {1}</value>
-  </data>
   <data name="AWorldOfPossibilities" xml:space="preserve">
     <value>Un monde de possibilités</value>
   </data>
@@ -990,10 +987,10 @@ Sorties : north · east
     <value>Fiche sur {0} ↗</value>
   </data>
   <data name="SourceDetails" xml:space="preserve">
-    <value>Détails fournis par {0}. L’état et le nombre de joueurs proviennent des rapports de l’annuaire, et non de vérifications en direct.</value>
+    <value>Détails fournis par {0}. L'état en ligne est le dernier rapport de l'annuaire. Un nombre de joueurs n'est affiché en direct que si Wandur l'a compté dans les 2 dernières heures ; les autres nombres sont de l'historique.</value>
   </data>
   <data name="SourceDetailsUpdated" xml:space="preserve">
-    <value>Détails fournis par {0} · Fiche mise à jour le {1:d}. L’état et le nombre de joueurs proviennent des rapports de l’annuaire, et non de vérifications en direct.</value>
+    <value>Détails fournis par {0} · Fiche mise à jour le {1:d}. L'état en ligne est le dernier rapport de l'annuaire. Un nombre de joueurs n'est affiché en direct que si Wandur l'a compté dans les 2 dernières heures ; les autres nombres sont de l'historique.</value>
   </data>
   <data name="SourceReviews" xml:space="preserve">
     <value>Avis sur {0}</value>
@@ -1967,4 +1964,8 @@ Arrêtez après réception d’une liste d’inventaire.</value></data>
   <data name="ShowAdultWorlds" xml:space="preserve"><value>Afficher les mondes pour adultes</value></data>
   <data name="AdultChip" xml:space="preserve"><value>Adultes</value></data>
   <data name="AdultWorldsHint" xml:space="preserve"><value>Les mondes que l'annuaire signale comme contenu pour adultes restent masqués sauf si vous activez ceci. Vos mondes enregistrés ne sont jamais masqués.</value></data>
+  <data name="PlayersOnlineCountOne" xml:space="preserve"><value>{0} joueur en ligne</value></data>
+  <data name="DaysAgoOne" xml:space="preserve"><value>il y a {0} jour</value></data>
+  <data name="WorldsToExploreOne" xml:space="preserve"><value>{0} monde à explorer</value></data>
+  <data name="AdultWorlds" xml:space="preserve"><value>Mondes pour adultes</value></data>
 </root>

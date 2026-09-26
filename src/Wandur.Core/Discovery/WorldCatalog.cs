@@ -2,6 +2,7 @@ using L = Wandur.Core.Localization.Strings;
 using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Wandur.Core.Diagnostics;
 
 namespace Wandur.Core.Discovery;
 
@@ -25,9 +26,9 @@ public sealed partial class WorldCatalog : IWorldDirectory, IDisposable
     public IReadOnlyList<WorldListing> Worlds { get; private set; } = [];
     /// <summary>The snapshot's own timestamp, which describes the source listings, not when this process fetched it.</summary>
     public DateTimeOffset? FetchedAt { get; private set; }
-    /// <summary>How long ago this process fetched the snapshot in use, or null when it came from the cache on disk.</summary>
     /// <summary>The clock the catalog runs on; views ask it what "now" is, so tests can hold it still.</summary>
     public TimeProvider Clock => _time;
+    /// <summary>How long ago this process fetched the snapshot in use, or null when it came from the cache on disk.</summary>
     public TimeSpan? SnapshotAge => _lastLoaded is { } loaded ? _time.GetElapsedTime(loaded) : null;
     public string? Warning { get; private set; }
     public bool Loading { get; private set; }
@@ -131,13 +132,23 @@ public sealed partial class WorldCatalog : IWorldDirectory, IDisposable
         {
             if (ids.Contains(old.Id) || old.WebOnly || old.Host.Length == 0 || (old.Port ?? old.TlsPort) is null) continue;
             var renamed = current.Where(world => !world.WebOnly && SameHost(world.Host, old.Host) && world.Port == old.Port && world.TlsPort == old.TlsPort).Take(2).ToArray();
-            // Only the id moved: a picture regenerated for a changed description is still fetched afresh.
-            if (renamed.Length != 1 || renamed[0].ArtKey == old.ArtKey || (old with { Id = renamed[0].Id }).ArtKey != renamed[0].ArtKey) continue;
-            try
+            if (renamed.Length != 1) continue;
+            var moved = old with { Id = renamed[0].Id };
+            // Only the id moved: a picture regenerated for a changed description is still fetched afresh. The banner
+            // and each generated size are re-keyed on their own.
+            var keys = new List<(string From, string To)>();
+            if (old.HasSuppliedArtwork && moved.SuppliedArtKey == renamed[0].SuppliedArtKey) keys.Add((old.SuppliedArtKey, renamed[0].SuppliedArtKey));
+            if (moved.GeneratedArtKey == renamed[0].GeneratedArtKey)
+                foreach (var size in new string?[] { null, RowSize, HeroSize, HeroFallbackSize })
+                    keys.Add((old.GeneratedArtKeyFor(size), renamed[0].GeneratedArtKeyFor(size)));
+            foreach (var (from, to) in keys.Where(k => k.From != k.To))
             {
-                if (_cache.ReadArtwork(renamed[0].ArtKey) is null && _cache.ReadArtwork(old.ArtKey) is { } art) _cache.WriteArtwork(renamed[0].ArtKey, art);
+                try
+                {
+                    if (_cache.ReadArtwork(to) is null && _cache.ReadArtwork(from) is { } art) _cache.WriteArtwork(to, art);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { }
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { }
         }
     }
     private static bool SameHost(string left, string right) => string.Equals(left.TrimEnd('.'), right.TrimEnd('.'), StringComparison.OrdinalIgnoreCase);
@@ -198,21 +209,29 @@ public sealed partial class WorldCatalog : IWorldDirectory, IDisposable
         return matches.Length == 1 && Uri.TryCreate(matches[0].Source.ListingUrl, UriKind.Absolute, out var uri) ? new(matches[0].Name, uri) : null;
     }
     public Task<byte[]?> GetArtAsync(WorldListing world, CancellationToken token = default) =>
-        GetArtAsync(world, WorldArtwork.Preferred, token);
+        GetArtAsync(world, WorldArtwork.Preferred, null, token);
 
-    /// <summary>One picture of a world. <see cref="WorldArtwork.Preferred"/> is the supplied banner when the listing
-    /// has one, else the generated illustration; the other two ask for one kind only and return null without it.</summary>
-    public async Task<byte[]?> GetArtAsync(WorldListing world, WorldArtwork kind, CancellationToken token = default)
+    public Task<byte[]?> GetArtAsync(WorldListing world, WorldArtwork kind, CancellationToken token = default) =>
+        GetArtAsync(world, kind, null, token);
+
+    /// <summary>Generated art sizes the directory serves: the site's 400 wide row plate, and the page hero.</summary>
+    public const string RowSize = "400", HeroSize = "hero", HeroFallbackSize = "1024";
+
+    /// <summary>
+    /// One picture of a world. <see cref="WorldArtwork.Preferred"/> resolves through
+    /// <see cref="WorldListing.PreferredArtwork"/>; the other two ask for one kind only and return null without it.
+    /// <paramref name="size"/> asks the directory for a smaller generated picture (<c>?size=400</c>); each size is
+    /// cached under its own key. A banner is fetched as it is.
+    /// </summary>
+    /// <remarks>Cancelling <paramref name="token"/> stops the wait, not the download: a fetch that has started runs to
+    /// the end and is cached, so a row recycled mid-download finds the picture waiting when it comes back.</remarks>
+    public async Task<byte[]?> GetArtAsync(WorldListing world, WorldArtwork kind, string? size, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-        var supplied = kind switch
-        {
-            WorldArtwork.Generated => false,
-            WorldArtwork.Supplied => true,
-            _ => world.HasSuppliedArtwork
-        };
-        if (supplied && !world.HasSuppliedArtwork) return null;
-        var key = supplied ? world.ArtKey : world.GeneratedArtKey;
+        if (kind == WorldArtwork.Preferred) kind = world.PreferredArtwork;
+        var supplied = kind == WorldArtwork.Supplied;
+        if (supplied ? !world.HasSuppliedArtwork : !world.HasGeneratedArtwork) return null;
+        var key = supplied ? world.SuppliedArtKey : world.GeneratedArtKeyFor(size);
         if (_cache.ReadArtwork(key) is { } cached) return cached;
         Uri artUri;
         if (supplied)
@@ -222,17 +241,83 @@ public sealed partial class WorldCatalog : IWorldDirectory, IDisposable
         }
         else
         {
-            if (string.IsNullOrWhiteSpace(world.GeneratedArtworkPath)) return null;
             artUri = new Uri(BaseUri, world.GeneratedArtworkPath);
             if (!BaseUri.IsBaseOf(artUri)) return null;
+            // The size goes on the resolved address, so the base check above has already passed on the path itself.
+            if (size is { Length: > 0 }) artUri = new UriBuilder(artUri) { Query = "size=" + Uri.EscapeDataString(size) }.Uri;
         }
-        using var response = await _http.GetAsync(artUri, token);
-        if (response.StatusCode == HttpStatusCode.NotFound) return null;
-        response.EnsureSuccessStatusCode();
-        var data = await response.Content.ReadAsByteArrayAsync(token);
-        token.ThrowIfCancellationRequested();
-        _cache.WriteArtwork(key, data);
-        return data;
+        Task<byte[]?> fetch;
+        lock (_fetches)
+        {
+            if (!_fetches.TryGetValue(key, out fetch!))
+            {
+                _fetches[key] = fetch = FetchAsync(artUri, key);
+                _ = fetch.ContinueWith(_ => { lock (_fetches) _fetches.Remove(key); }, TaskScheduler.Default);
+            }
+        }
+        return await fetch.WaitAsync(token);
+    }
+
+    /// <summary>The world page's hero: the owner's banner when they set one, else the generated picture at the hero
+    /// size, falling back to 1024 when the directory has no hero size yet (a 404 or something that is not an image).</summary>
+    public async Task<(byte[]? Bytes, WorldArtwork Kind)> GetHeroArtAsync(WorldListing world, CancellationToken token = default)
+    {
+        var kind = world.PreferredArtwork;
+        if (kind == WorldArtwork.Supplied) return (await GetArtAsync(world, WorldArtwork.Supplied, null, token), kind);
+        var bytes = await GetArtAsync(world, WorldArtwork.Generated, HeroSize, token)
+            ?? await GetArtAsync(world, WorldArtwork.Generated, HeroFallbackSize, token);
+        return (bytes, kind);
+    }
+
+    private readonly Dictionary<string, Task<byte[]?>> _fetches = new(StringComparer.Ordinal);
+
+    /// <summary>At most this many pictures download at once, whoever asks.</summary>
+    public const int ArtDownloads = 4;
+    private readonly SemaphoreSlim _downloads = new(ArtDownloads, ArtDownloads);
+
+    private async Task<byte[]?> FetchAsync(Uri artUri, string key)
+    {
+        await Task.Yield();
+        var url = artUri.AbsoluteUri;
+        await _downloads.WaitAsync(_lifetime.Token);
+        try
+        {
+            return await DownloadAsync(artUri, key, url);
+        }
+        finally { _downloads.Release(); }
+    }
+
+    private async Task<byte[]?> DownloadAsync(Uri artUri, string key, string url)
+    {
+        try
+        {
+            using var response = await _http.GetAsync(artUri, _lifetime.Token);
+            var status = (int)response.StatusCode;
+            if (!response.IsSuccessStatusCode) { ArtTrace.Write(url, status, 0); return null; }
+            var data = await response.Content.ReadAsByteArrayAsync(_lifetime.Token);
+            if (!LooksLikeImage(response.Content.Headers.ContentType?.MediaType, data)) { ArtTrace.Write(url, status, data.Length, "not an image"); return null; }
+            _cache.WriteArtwork(key, data);
+            ArtTrace.Write(url, status, data.Length);
+            return data;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
+        {
+            ArtTrace.Write(url, 0, 0, ex.GetType().Name + ": " + ex.Message);
+            if (ex is TaskCanceledException && _lifetime.IsCancellationRequested) throw;
+            return null;
+        }
+    }
+
+    /// <summary>An answer that says it is something other than a picture (an HTML page served with 200, JSON, plain
+    /// text), or that is empty, or that opens like markup, is not one. An untyped or image answer is taken as given;
+    /// the view still falls back if it cannot be decoded.</summary>
+    internal static bool LooksLikeImage(string? mediaType, ReadOnlySpan<byte> data)
+    {
+        if (data.IsEmpty) return false;
+        if (mediaType is { Length: > 0 } type && !type.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+            && !type.Equals("application/octet-stream", StringComparison.OrdinalIgnoreCase)) return false;
+        var start = data.TrimStart(" \t\r\n"u8);
+        return !start.IsEmpty && start[0] != (byte)'<' && start[0] != (byte)'{';
     }
     public void Dispose() { _lifetime.Cancel(); if (_ownsHttp) _http.Dispose(); }
 }

@@ -25,18 +25,22 @@ public sealed class WorldThumbnails : IDisposable
     private readonly bool _cover;
     private readonly WorldCatalog _catalog;
     private readonly Dictionary<string, Task<Bitmap?>> _loads = new(StringComparer.Ordinal);
-    private readonly SemaphoreSlim _oneAtATime = new(1, 1);
+    /// <summary>How many pictures load at once. The catalog caps the downloads themselves at the same number.</summary>
+    public const int Parallel = 4;
+    private readonly SemaphoreSlim _slots = new(Parallel, Parallel);
+    private readonly string? _size;
     private readonly CancellationTokenSource _lifetime = new();
     private bool _disposed;
 
-    /// <param name="kind">Which picture to use. The directory rows ask for the generated illustration first, as the site does.</param>
+    /// <param name="kind">Which picture to use; <see cref="WorldArtwork.Preferred"/> follows the world's own preference.</param>
+    /// <param name="size">The generated art size to ask the directory for, such as <see cref="WorldCatalog.RowSize"/>.</param>
     /// <param name="cover">Scale so the picture covers the pixel box (it will be cropped to fill a plate), rather than fit inside it.</param>
     public WorldThumbnails(WorldCatalog catalog, int pixelWidth = PixelWidth, int pixelHeight = PixelHeight, bool cacheBitmaps = true,
-        WorldArtwork kind = WorldArtwork.Preferred, bool cover = false)
+        WorldArtwork kind = WorldArtwork.Preferred, bool cover = false, string? size = null)
     {
         _catalog = catalog;
         _pixelWidth = pixelWidth; _pixelHeight = pixelHeight;
-        _cacheBitmaps = cacheBitmaps; _kind = kind; _cover = cover;
+        _cacheBitmaps = cacheBitmaps; _kind = kind; _cover = cover; _size = size;
         // A refreshed catalog may carry artwork a world lacked before; only the misses are forgotten.
         _catalog.Changed += ForgetMisses;
     }
@@ -65,9 +69,10 @@ public sealed class WorldThumbnails : IDisposable
     /// <summary>Browser rows use uncached bitmaps they own and dispose; the catalog still caches image bytes on disk.</summary>
     public Task<Bitmap?> GetAsync(WorldListing listing, CancellationToken cancellationToken = default)
     {
-        if (_disposed || (!listing.HasSuppliedArtwork && string.IsNullOrWhiteSpace(listing.GeneratedArtworkPath))) return Task.FromResult<Bitmap?>(null);
+        if (_disposed || (!listing.HasSuppliedArtwork && !listing.HasGeneratedArtwork)) return Task.FromResult<Bitmap?>(null);
         if (!_cacheBitmaps) return LoadAsync(listing, cancellationToken);
-        var key = listing.ArtKey;
+        // The kind and size are part of the key: the same world's banner and illustration are different pictures.
+        var key = $"{_kind}:{_size}:{listing.ArtKey}:{listing.SuppliedArtKey}";
         lock (_loads)
         {
             if (!_loads.TryGetValue(key, out var load)) _loads[key] = load = LoadAsync(listing);
@@ -81,18 +86,22 @@ public sealed class WorldThumbnails : IDisposable
         var token = lifetime.Token;
         try
         {
-            await _oneAtATime.WaitAsync(token);
+            // A row recycled while it waits for a slot never starts a download; one recycled mid-download stops
+            // waiting, but the catalog finishes and caches the picture for when the row comes back.
+            await _slots.WaitAsync(token);
             try
             {
-                var bytes = _kind == WorldArtwork.Generated && listing.HasGeneratedArtwork
-                    ? await _catalog.GetArtAsync(listing, WorldArtwork.Generated, token) ?? await _catalog.GetArtAsync(listing, WorldArtwork.Supplied, token)
-                    : await _catalog.GetArtAsync(listing, token);
+                var kind = _kind == WorldArtwork.Preferred ? listing.PreferredArtwork : _kind;
+                var bytes = await _catalog.GetArtAsync(listing, kind, kind == WorldArtwork.Generated ? _size : null, token);
+                // A world whose preferred picture is missing still shows the other one before falling back to initials.
+                if (bytes is null && _kind == WorldArtwork.Preferred && listing.SecondaryArtwork is { } other)
+                    bytes = await _catalog.GetArtAsync(listing, other, other == WorldArtwork.Generated ? _size : null, token);
                 if (bytes is null) return null;
                 var bitmap = await Task.Run(() => Shrink(bytes), token);
                 if (_disposed) { bitmap?.Dispose(); return null; }
                 return bitmap;
             }
-            finally { _oneAtATime.Release(); }
+            finally { _slots.Release(); }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException) { return null; }
     }

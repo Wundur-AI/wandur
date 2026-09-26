@@ -608,9 +608,6 @@ Ausgänge: Norden · Osten
   <data name="StartTheLocalDirectoryServerToDiscoverWorlds" xml:space="preserve">
     <value>Starte den lokalen Verzeichnisserver, um Welten zu entdecken.</value>
   </data>
-  <data name="OfWorlds" xml:space="preserve">
-    <value>{0} von {1} Welten</value>
-  </data>
   <data name="AWorldOfPossibilities" xml:space="preserve">
     <value>Eine Welt voller Möglichkeiten</value>
   </data>
@@ -990,10 +987,10 @@ Ausgänge: Norden · Osten
     <value>Eintrag bei {0} ↗</value>
   </data>
   <data name="SourceDetails" xml:space="preserve">
-    <value>Details bereitgestellt von {0}. Status und Spielerzahlen sind Verzeichnisberichte, keine Live-Prüfungen.</value>
+    <value>Details bereitgestellt von {0}. Der Online-Status ist die letzte Meldung des Verzeichnisses. Eine Spielerzahl gilt nur dann als live, wenn Wandur sie in den letzten 2 Stunden gezählt hat; andere Zahlen sind Verlauf.</value>
   </data>
   <data name="SourceDetailsUpdated" xml:space="preserve">
-    <value>Details bereitgestellt von {0} · Eintrag aktualisiert am {1:d}. Status und Spielerzahlen sind Verzeichnisberichte, keine Live-Prüfungen.</value>
+    <value>Details bereitgestellt von {0} · Eintrag aktualisiert am {1:d}. Der Online-Status ist die letzte Meldung des Verzeichnisses. Eine Spielerzahl gilt nur dann als live, wenn Wandur sie in den letzten 2 Stunden gezählt hat; andere Zahlen sind Verlauf.</value>
   </data>
   <data name="SourceReviews" xml:space="preserve">
     <value>Rezensionen bei {0}</value>
@@ -1967,4 +1964,8 @@ Stoppe nach einer Inventarliste.</value></data>
   <data name="ShowAdultWorlds" xml:space="preserve"><value>Welten für Erwachsene zeigen</value></data>
   <data name="AdultChip" xml:space="preserve"><value>Erwachsene</value></data>
   <data name="AdultWorldsHint" xml:space="preserve"><value>Welten, die das Verzeichnis als Inhalte für Erwachsene kennzeichnet, bleiben verborgen, bis du dies einschaltest. Deine gespeicherten Welten werden nie verborgen.</value></data>
+  <data name="PlayersOnlineCountOne" xml:space="preserve"><value>{0} Spieler online</value></data>
+  <data name="DaysAgoOne" xml:space="preserve"><value>vor {0} Tag</value></data>
+  <data name="WorldsToExploreOne" xml:space="preserve"><value>{0} Welt zu entdecken</value></data>
+  <data name="AdultWorlds" xml:space="preserve"><value>Welten für Erwachsene</value></data>
 </root>

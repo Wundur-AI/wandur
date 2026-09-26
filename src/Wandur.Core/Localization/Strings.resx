@@ -608,9 +608,6 @@ Exits: north · east
   <data name="StartTheLocalDirectoryServerToDiscoverWorlds" xml:space="preserve">
     <value>Start the local directory server to discover worlds.</value>
   </data>
-  <data name="OfWorlds" xml:space="preserve">
-    <value>{0} of {1} worlds</value>
-  </data>
   <data name="AWorldOfPossibilities" xml:space="preserve">
     <value>A world of possibilities</value>
   </data>
@@ -990,10 +987,10 @@ Exits: north · east
     <value>{0} listing ↗</value>
   </data>
   <data name="SourceDetails" xml:space="preserve">
-    <value>Details supplied by {0}. Status and player counts are directory reports, not live checks.</value>
+    <value>Details supplied by {0}. Online status is the directory's latest report. A player count is shown as live only when Wandur counted it in the last 2 hours; other counts are history.</value>
   </data>
   <data name="SourceDetailsUpdated" xml:space="preserve">
-    <value>Details supplied by {0} · Listing updated {1:d}. Status and player counts are directory reports, not live checks.</value>
+    <value>Details supplied by {0} · Listing updated {1:d}. Online status is the directory's latest report. A player count is shown as live only when Wandur counted it in the last 2 hours; other counts are history.</value>
   </data>
   <data name="SourceReviews" xml:space="preserve">
     <value>{0} reviews</value>
@@ -1967,4 +1964,8 @@ Stop after receiving one inventory listing.</value></data>
   <data name="ShowAdultWorlds" xml:space="preserve"><value>Show adult worlds</value></data>
   <data name="AdultChip" xml:space="preserve"><value>Adult</value></data>
   <data name="AdultWorldsHint" xml:space="preserve"><value>Worlds the directory marks as adult content are hidden unless you turn this on. Your saved worlds are never hidden.</value></data>
+  <data name="PlayersOnlineCountOne" xml:space="preserve"><value>{0} player online</value></data>
+  <data name="DaysAgoOne" xml:space="preserve"><value>{0} day ago</value></data>
+  <data name="WorldsToExploreOne" xml:space="preserve"><value>{0} world to explore</value></data>
+  <data name="AdultWorlds" xml:space="preserve"><value>Adult worlds</value></data>
 </root>

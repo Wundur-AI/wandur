@@ -207,7 +207,6 @@ public static class Strings
     public static string LoadingTheDirectoryTheFirstFullDownloadMayTake => Get(nameof(LoadingTheDirectoryTheFirstFullDownloadMayTake));
     public static string DirectorySavedSearchWorksOfflineRefreshedEvery24Hours => Get(nameof(DirectorySavedSearchWorksOfflineRefreshedEvery24Hours));
     public static string StartTheLocalDirectoryServerToDiscoverWorlds => Get(nameof(StartTheLocalDirectoryServerToDiscoverWorlds));
-    public static string OfWorlds => Get(nameof(OfWorlds));
     public static string AWorldOfPossibilities => Get(nameof(AWorldOfPossibilities));
     public static string NoWorldsFound => Get(nameof(NoWorldsFound));
     public static string YourDirectoryWillAppearHereWhenItIsAvailable => Get(nameof(YourDirectoryWillAppearHereWhenItIsAvailable));
@@ -998,4 +997,8 @@ public static class Strings
     public static string ShowAdultWorlds => Get(nameof(ShowAdultWorlds));
     public static string AdultChip => Get(nameof(AdultChip));
     public static string AdultWorldsHint => Get(nameof(AdultWorldsHint));
+    public static string PlayersOnlineCountOne => Get(nameof(PlayersOnlineCountOne));
+    public static string DaysAgoOne => Get(nameof(DaysAgoOne));
+    public static string WorldsToExploreOne => Get(nameof(WorldsToExploreOne));
+    public static string AdultWorlds => Get(nameof(AdultWorlds));
 }

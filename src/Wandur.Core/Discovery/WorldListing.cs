@@ -27,6 +27,9 @@ public sealed record WorldListing
     /// <summary>The directory's adult content flag, once the directory ships it. Null when a record does not carry it.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public bool? AdultContent { get; init; }
+    /// <summary>True when the world's banner was set by its owner on the site. Null when a record does not carry it.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public bool? BannerByOwner { get; init; }
     public WorldSource Source { get; init; } = new();
     public WorldAvailability Availability { get; init; } = new();
     public WorldPopulation Population { get; init; } = new();
@@ -82,7 +85,7 @@ public sealed record WorldListing
         if (age < TimeSpan.FromMinutes(1)) return L.JustNow;
         if (age < TimeSpan.FromHours(1)) return L.Format(L.MinutesAgo, (int)age.TotalMinutes);
         if (age < TimeSpan.FromDays(1)) return L.Format(L.HoursAgo, (int)age.TotalHours);
-        if (age < TimeSpan.FromDays(60)) return L.Format(L.DaysAgo, (int)age.TotalDays);
+        if (age < TimeSpan.FromDays(60)) return L.Format((int)age.TotalDays == 1 ? L.DaysAgoOne : L.DaysAgo, (int)age.TotalDays);
         return then.ToLocalTime().ToString("d", CultureInfo.CurrentCulture);
     }
 
@@ -107,10 +110,20 @@ public sealed record WorldListing
     /// <summary>The artwork cache key: the directory's id, taken as an opaque string, plus what the picture was made
     /// from. A world whose id changes on the server keeps its picture through <see cref="WorldCatalog"/>, which
     /// re-keys cached art by endpoint when a snapshot renames a world.</summary>
-    [JsonIgnore] public string ArtKey => HasSuppliedArtwork ? Hash($"{Id}\nsupplied\n{BannerUrl}") : GeneratedArtKey;
-    /// <summary>The cache key of the directory's generated illustration. Equal to <see cref="ArtKey"/> for a world
-    /// without supplied artwork, so the same picture is never stored twice.</summary>
+    [JsonIgnore] public string ArtKey => PreferredArtwork == WorldArtwork.Supplied && HasSuppliedArtwork ? SuppliedArtKey : GeneratedArtKey;
+    /// <summary>The cache key of the supplied banner, whatever the preference.</summary>
+    [JsonIgnore] public string SuppliedArtKey => Hash($"{Id}\nsupplied\n{BannerUrl}");
+    /// <summary>The cache key of the directory's generated illustration at full size.</summary>
     [JsonIgnore] public string GeneratedArtKey => Hash($"{Id}\n{Name}\n{Summary}\n{Description}");
+    /// <summary>The generated illustration at one of the directory's sizes; each size is cached on its own.</summary>
+    public string GeneratedArtKeyFor(string? size) => size is { Length: > 0 } ? GeneratedArtKey + "-" + size : GeneratedArtKey;
+    /// <summary>Which picture stands for the world, in rows and the page hero: the banner an owner set, else the
+    /// illustration Wandur generated, else whatever banner the listing supplied.</summary>
+    [JsonIgnore] public WorldArtwork PreferredArtwork => BannerByOwner == true && HasSuppliedArtwork ? WorldArtwork.Supplied
+        : HasGeneratedArtwork ? WorldArtwork.Generated : WorldArtwork.Supplied;
+    /// <summary>The other picture, for the page's glimpse, when the world has both.</summary>
+    [JsonIgnore] public WorldArtwork? SecondaryArtwork => HasSuppliedArtwork && HasGeneratedArtwork
+        ? PreferredArtwork == WorldArtwork.Supplied ? WorldArtwork.Generated : WorldArtwork.Supplied : null;
     private static string Hash(string subject) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(subject)));
 
     /// <summary>The listing's mapping when it was generated for this exact endpoint. The mapping's world id is the
