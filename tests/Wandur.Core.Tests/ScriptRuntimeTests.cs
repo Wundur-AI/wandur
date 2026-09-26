@@ -186,6 +186,23 @@ public sealed class ScriptRuntimeTests
         Assert.Equal(new ScriptAction("send", "examiner café"), result.Actions[1]);
     }
 
+    /// <summary>Starting the worker is not script work: a first reply slower than the request deadline, as a cold
+    /// start on a loaded machine gives, must not fail the worker. Later requests keep the short deadline, which
+    /// <see cref="ParentDeadlineTerminatesAnUnresponsiveWorkerAndRaisesFailedOnce"/> holds.</summary>
+    [Fact]
+    public async Task ASlowWorkerStartDoesNotCountAgainstTheRequestDeadline()
+    {
+        Assert.True(TimeSpan.FromSeconds(3) > ProcessSessionScriptHost.RequestDeadline);
+        await using var host = CreateHost();
+        var failures = new List<string>();
+        host.Failed += failures.Add;
+        var loaded = await host.LoadAsync("a", "// test-host-slow-start\nmud.alias(/^go$/, () => mud.send(\"north\"));");
+        Assert.Null(loaded.Error);
+        Assert.True(host.IsRunning);
+        Assert.Equal(new ScriptAction("send", "north"), Assert.Single((await host.DispatchAsync(["a"], new("command", "go")))[0].Actions));
+        Assert.Empty(failures);
+    }
+
     [Fact]
     public async Task ParentDeadlineTerminatesAnUnresponsiveWorkerAndRaisesFailedOnce()
     {

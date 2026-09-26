@@ -17,6 +17,10 @@ public sealed class ProcessSessionScriptHost(string executablePath, string? entr
     /// runs. Jint's per-callback limits keep a reply far inside it; passing it means the process is stuck.</summary>
     public static readonly TimeSpan RequestDeadline = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan PerEngineAllowance = TimeSpan.FromMilliseconds(500);
+    /// <summary>Extra time for the request that starts the worker. Launching a .NET process and loading the
+    /// script engine is not script work: on a cold disk, a busy machine or under an antivirus scan of the new
+    /// process it can take seconds, and counting it against the deadline failed healthy workers.</summary>
+    public static readonly TimeSpan StartupAllowance = TimeSpan.FromSeconds(15);
     private readonly SemaphoreSlim _requests = new(1, 1);
     private readonly object _sync = new();
     private readonly CancellationTokenSource _lifetime = new();
@@ -87,7 +91,7 @@ public sealed class ProcessSessionScriptHost(string executablePath, string? entr
         {
             await _requests.WaitAsync(cancellation.Token).ConfigureAwait(false);
             acquired = true;
-            cancellation.CancelAfter(RequestDeadline + PerEngineAllowance * Math.Max(0, engines - 1));
+            var deadline = RequestDeadline + PerEngineAllowance * Math.Max(0, engines - 1);
             Process process;
             ScriptWorker.MessageReader replies;
             lock (_sync)
@@ -114,10 +118,12 @@ public sealed class ProcessSessionScriptHost(string executablePath, string? entr
                     _replies = new(started.StandardOutput);
                     // Drain stderr without retaining logs or allowing a full pipe to block the child.
                     _ = DrainErrorsAsync(started.StandardError, _lifetime.Token);
+                    deadline += StartupAllowance;
                 }
                 process = _process;
                 replies = _replies!;
             }
+            cancellation.CancelAfter(deadline);
             var message = JsonSerializer.Serialize(request);
             if (message.Length > ScriptWorker.MaximumMessageCharacters) throw new InvalidDataException("Worker message exceeds size limit.");
             await process.StandardInput.WriteLineAsync(message.AsMemory(), cancellation.Token).ConfigureAwait(false);
