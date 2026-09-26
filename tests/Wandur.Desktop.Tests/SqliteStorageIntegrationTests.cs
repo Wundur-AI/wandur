@@ -57,4 +57,29 @@ public sealed class SqliteStorageIntegrationTests
             provider.Dispose(); SqliteConnection.ClearAllPools(); Directory.Delete(directory, true);
         }
     }
+
+    /// <summary>The app disposes its service provider on exit; that must close the database file, which on
+    /// Windows is what lets it be deleted, moved or replaced afterwards.</summary>
+    [Fact]
+    public void DisposingTheProductionProviderReleasesTheDatabaseFile()
+    {
+        var directory = TestFiles.CreateDirectory("wandur-db-release-");
+        try
+        {
+            var database = Path.Combine(directory, "wandur.db");
+            var services = new ServiceCollection(); services.AddClientStorage(directory);
+            var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+            provider.GetRequiredService<ISettingsStore>().Save(new ClientSettings { Theme = "Paper" });
+            provider.GetRequiredService<Wandur.Core.History.IHistoryStore>().Prune(DateTimeOffset.UnixEpoch);
+            // The check can see a held file; disposing the connection returns it to the pool, still open.
+            using (provider.GetRequiredService<ClientDatabase>().OpenConnection()) Assert.True(TestFiles.IsOpenByThisProcess(database));
+
+            provider.Dispose();
+
+            Assert.False(TestFiles.IsOpenByThisProcess(database));
+            File.Delete(database);
+            Assert.False(File.Exists(database));
+        }
+        finally { TestFiles.DeleteDirectory(directory); }
+    }
 }

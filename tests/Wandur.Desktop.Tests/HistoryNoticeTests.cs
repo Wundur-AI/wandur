@@ -135,15 +135,16 @@ public sealed class HistoryNoticeTests
     private sealed class Fixture : IAsyncDisposable
     {
         private readonly string _directory = Path.Combine(Path.GetTempPath(), "wandur-history-notice-" + Guid.NewGuid());
+        private readonly ClientDatabase _database;
         public FallibleSettings Settings { get; }
         public SqliteHistoryStore History { get; }
         public MainWindow Window { get; private set; }
 
         public Fixture()
         {
-            var database = new ClientDatabase(Path.Combine(_directory, "test.db"));
-            Settings = new(new SqliteSettingsStore(database, Path.Combine(_directory, "legacy.json")));
-            History = new(database);
+            _database = new ClientDatabase(Path.Combine(_directory, "test.db"));
+            Settings = new(new SqliteSettingsStore(_database, Path.Combine(_directory, "legacy.json")));
+            History = new(_database);
             Window = Create();
         }
 
@@ -166,7 +167,8 @@ public sealed class HistoryNoticeTests
             await Window.Sessions.DisposeAsync(); Window.Close();
             UiLanguage.Apply("");
             ThemeService.Apply(new());
-            Directory.Delete(_directory, true);
+            _database.Dispose();
+            TestFiles.DeleteDirectory(_directory);
         }
     }
 

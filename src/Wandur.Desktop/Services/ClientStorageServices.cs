@@ -12,7 +12,9 @@ public static class ClientStorageServices
 {
     public static IServiceCollection AddClientStorage(this IServiceCollection services, string directory)
     {
-        services.AddSingleton(new ClientDatabase(Path.Combine(directory, "wandur.db")));
+        // A factory, not an instance: the provider disposes only what it created, and disposing the
+        // database is what releases its pooled file handles when the app exits.
+        services.AddSingleton(_ => new ClientDatabase(Path.Combine(directory, "wandur.db")));
         services.AddSingleton<ISettingsStore>(provider => new SqliteSettingsStore(provider.GetRequiredService<ClientDatabase>(), Path.Combine(directory, "settings.json")));
         services.AddSingleton<IRoomMapStore>(provider => new SqliteRoomMapStore(provider.GetRequiredService<ClientDatabase>(), Path.Combine(directory, "maps")));
         services.AddSingleton<IWorldScriptLibraryStore>(provider => new SqliteWorldScriptLibraryStore(provider.GetRequiredService<ClientDatabase>(), Path.Combine(directory, "scripts")));

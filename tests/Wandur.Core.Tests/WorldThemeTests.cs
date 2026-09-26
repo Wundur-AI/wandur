@@ -34,7 +34,8 @@ public sealed class WorldThemeTests : IDisposable
         Assert.Null(catalog.FindEndpoint(world.Host + ".unrelated", world.Port.Value, false));
         Assert.Null(catalog.FindEndpoint(world.Host, world.Port.Value, true));
         var profile = world.ToProfile() with { Username = "pilot", PasswordId = Guid.NewGuid() };
-        var store = new SqliteSettingsStore(new ClientDatabase(Path.Combine(_directory, "wandur.db")), Path.Combine(_directory, "old.json"));
+        using var database = new ClientDatabase(Path.Combine(_directory, "wandur.db"));
+        var store = new SqliteSettingsStore(database, Path.Combine(_directory, "old.json"));
         store.Save(new ClientSettings { Profiles = [profile] });
         Assert.Equal(profile, Assert.Single(store.Load().Settings.Profiles));
     }
@@ -73,5 +74,5 @@ public sealed class WorldThemeTests : IDisposable
         var world = catalog.Worlds[0];
         Assert.Null(catalog.FindEndpoint(world.Host, world.Port!.Value, false));
     }
-    public void Dispose() { if (Directory.Exists(_directory)) Directory.Delete(_directory, true); }
+    public void Dispose() => TestFiles.DeleteDirectory(_directory);
 }

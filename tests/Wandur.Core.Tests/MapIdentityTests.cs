@@ -43,7 +43,8 @@ public sealed class MapIdentityTests
         var directory = Path.Combine(Path.GetTempPath(), "wandur-identity-" + Guid.NewGuid());
         try
         {
-            var store = new SqliteRoomMapStore(new ClientDatabase(Path.Combine(directory, "map.db")), Path.Combine(directory, "legacy"));
+            using var database = new ClientDatabase(Path.Combine(directory, "map.db"));
+            var store = new SqliteRoomMapStore(database, Path.Combine(directory, "legacy"));
             var stale = new MapSnapshot(rooms, links, [], null, MapTrackingState.Unknown, RoomDataSource.Gmcp, 0);
             store.Save("host", 4000, stale);
             store.Save("host", 4000, map);
@@ -54,7 +55,7 @@ public sealed class MapIdentityTests
             Assert.NotNull(MapRoutePlanner.FindRoute(restored, "s:561", "s:562"));
             Assert.NotNull(MapRoutePlanner.FindRoute(restored, "s:562", "s:561"));
         }
-        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+        finally { TestFiles.DeleteDirectory(directory); }
     }
 
     [Fact]

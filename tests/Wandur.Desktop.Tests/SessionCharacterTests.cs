@@ -117,7 +117,8 @@ public sealed class SessionCharacterTests
         finally
         {
             await window.Sessions.DisposeAsync(); window.Close();
-            if (Directory.Exists(path)) Directory.Delete(path, true);
+            database.Dispose();
+            TestFiles.DeleteDirectory(path);
         }
     }
 }

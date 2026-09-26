@@ -158,7 +158,8 @@ public sealed class HistoryViewTests
     public async Task RealTemporaryStoreFiltersAndDeletesThroughTheViewModel()
     {
         var path = Path.Combine(Path.GetTempPath(), "wandur-history-ui-" + Guid.NewGuid(), "fixture.db");
-        var store = new SqliteHistoryStore(new ClientDatabase(path));
+        var database = new ClientDatabase(path);
+        var store = new SqliteHistoryStore(database);
         try
         {
             await Task.Run(() =>
@@ -177,7 +178,7 @@ public sealed class HistoryViewTests
             Assert.Empty(model.Sessions);
             Assert.Equal("two", Assert.Single(store.Sessions(new())).Id);
         }
-        finally { Directory.Delete(Path.GetDirectoryName(path)!, true); }
+        finally { database.Dispose(); TestFiles.DeleteDirectory(Path.GetDirectoryName(path)!); }
     }
 
     [AvaloniaFact]

@@ -6,11 +6,22 @@ using L = Wandur.Core.Localization.Strings;
 namespace Wandur.Core.Storage;
 
 /// <summary>One local SQLite database, with short-lived connections and transactional mutations.</summary>
-public sealed class ClientDatabase(string path)
+/// <remarks>Connections are pooled, so a disposed connection still holds the file open. Disposing the database
+/// closes its pooled connections, which on Windows is what lets the file be deleted, moved or replaced.</remarks>
+public sealed class ClientDatabase(string path) : IDisposable
 {
     private readonly object _initializationGate = new();
     private bool _initialized;
     public string FilePath { get; } = Path.GetFullPath(path);
+    private string ConnectionString => new SqliteConnectionStringBuilder
+    { DataSource = FilePath, ForeignKeys = true, DefaultTimeout = 30, Pooling = true }.ToString();
+
+    /// <summary>Closes this database's idle pooled connections now; ones still in use close when returned.</summary>
+    public void Dispose()
+    {
+        using var connection = new SqliteConnection(ConnectionString);
+        SqliteConnection.ClearPool(connection);
+    }
 
     public SqliteConnection OpenConnection()
     {
@@ -18,8 +29,7 @@ public sealed class ClientDatabase(string path)
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            connection = new SqliteConnection(new SqliteConnectionStringBuilder
-            { DataSource = FilePath, ForeignKeys = true, DefaultTimeout = 30, Pooling = true }.ToString());
+            connection = new SqliteConnection(ConnectionString);
             connection.Open();
             lock (_initializationGate)
             {
