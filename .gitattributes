@@ -1,0 +1,6 @@
+# Windows runners check out with core.autocrlf=true. The release workflow runs these with bash
+# there, and bash reads a CR at the end of a line as part of the command.
+*.sh text eol=lf
+*.py text eol=lf
+*.desktop text eol=lf
+*.entitlements text eol=lf

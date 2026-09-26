@@ -8,6 +8,11 @@ export MSBUILDDISABLENODEREUSE=1
 usage() {
   cat >&2 <<'USAGE'
 usage: package-macos.sh [--clean] [--force]
+       package-macos.sh --rid osx-arm64|osx-x64 --version X [--self-contained]
+                        [--output DIR] [--no-sign]
+
+With no --rid this is the local development build: a framework-dependent bundle
+at artifacts/macos/Wandur.app, version 0.1.0.
 
   --clean  Delete obj/ and bin/ first. Off by default: a cold graph here has
            produced a Wandur.deps.json missing its own project references, which
@@ -15,17 +20,44 @@ usage: package-macos.sh [--clean] [--force]
            path does not do this. Use it only when you suspect stale output, and
            check the result.
   --force  Package even if Wandur is running or Rider has the solution open.
+
+  --rid             Release build for one architecture. Restores in locked mode,
+                    publishes for that runtime and puts the lock files back
+                    afterwards (scripts/lock-guard.py). Needs --version.
+  --version         SemVer without the leading v, for example 0.1.0 or
+                    0.1.0-beta.1. Sets Version and InformationalVersion; the
+                    Info.plist gets the numeric part (0.1.0), because macOS
+                    reads CFBundleShortVersionString as numbers only.
+  --self-contained  Bundle the .NET runtime, so users need nothing installed.
+  --output          Directory for Wandur.app (default artifacts/macos/<rid>).
+  --sign-adhoc      Ad-hoc sign the finished bundle (codesign --deep -s -). The
+                    default with --rid: an unsigned bundle fails verification and
+                    Apple Silicon will not run it once downloaded.
+  --no-sign         Leave the bundle unsigned, for a caller that signs it next
+                    (scripts/release-macos-signed.sh).
 USAGE
   exit 2
 }
 
 clean=0
 force=0
+rid=""
+version=""
+self_contained=0
+output=""
+sign_adhoc=""
+need_value() { [[ $# -ge 2 && -n "$2" ]] || { echo "$1 needs a value" >&2; usage; }; }
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --clean) clean=1 ;;
     --no-clean) clean=0 ;;
     --force) force=1 ;;
+    --rid) need_value "$@"; rid="$2"; shift ;;
+    --version) need_value "$@"; version="$2"; shift ;;
+    --self-contained) self_contained=1 ;;
+    --output) need_value "$@"; output="$2"; shift ;;
+    --sign-adhoc) sign_adhoc=1 ;;
+    --no-sign) sign_adhoc=0 ;;
     -h|--help) usage ;;
     *) echo "unknown option: $1" >&2; usage ;;
   esac
@@ -37,8 +69,39 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 1
 fi
 
+case "$rid" in
+  ""|osx-arm64|osx-x64) ;;
+  *) echo "--rid must be osx-arm64 or osx-x64, not $rid" >&2; exit 2 ;;
+esac
+if [[ -n "$rid" && -z "$version" ]]; then
+  echo "--rid needs --version" >&2; exit 2
+fi
+if [[ -z "$rid" && ( $self_contained -eq 1 || -n "$output" ) ]]; then
+  echo "--self-contained and --output need --rid" >&2; exit 2
+fi
+if [[ -n "$version" ]] && ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+  echo "--version must look like 1.2.3 or 1.2.3-beta.1 (no leading v), not $version" >&2; exit 2
+fi
+# CFBundleShortVersionString and CFBundleVersion are read as up to three integers.
+bundle_version="${version%%-*}"
+bundle_version="${bundle_version:-0.1.0}"
+bundle_build="${version%%-*}"
+bundle_build="${bundle_build:-1}"
+
+if [[ -z "$sign_adhoc" ]]; then
+  sign_adhoc=0
+  [[ -n "$rid" ]] && sign_adhoc=1
+fi
+
 project_root="$(cd "$(dirname "$0")/.." && pwd)"
-app_bundle="$project_root/artifacts/macos/Wandur.app"
+if [[ -n "$rid" ]]; then
+  bundle_parent="${output:-$project_root/artifacts/macos/$rid}"
+  mkdir -p "$bundle_parent"
+  bundle_parent="$(cd "$bundle_parent" && pwd)"
+else
+  bundle_parent="$project_root/artifacts/macos"
+fi
+app_bundle="$bundle_parent/Wandur.app"
 
 # The bundle is replaced with rsync --delete, which pulls files out from under a
 # running process. Quit the app rather than debug the crash that follows.
@@ -48,6 +111,7 @@ if [[ $force -eq 0 ]] && pgrep -f "$app_bundle/Contents/MacOS/Wandur" >/dev/null
 fi
 
 # A run killed before its trap fired leaves its publish directory behind.
+mkdir -p "$project_root/artifacts/macos"
 rm -rf "$project_root/artifacts/macos/".publish.*
 
 if [[ $clean -eq 1 ]]; then
@@ -78,22 +142,50 @@ fi
 # Serial, because after a clean every project creates its obj/ files from nothing and
 # projects sharing a dependency have raced to write the same nuget.g.props, failing with
 # "the file ... already exists". A no-op when everything is already restored.
-if ! dotnet restore "$project_root/Wandur.sln" --disable-parallel; then
+# A release build restores in locked mode first, so it fails on a lock file that does not
+# match the projects instead of quietly resolving something else.
+restore_mode=()
+[[ -n "$rid" ]] && restore_mode=(--locked-mode)
+if ! dotnet restore "$project_root/Wandur.sln" --disable-parallel ${restore_mode[@]+"${restore_mode[@]}"}; then
   echo "restore failed, retrying once" >&2
   sleep 2
-  dotnet restore "$project_root/Wandur.sln" --disable-parallel
+  dotnet restore "$project_root/Wandur.sln" --disable-parallel ${restore_mode[@]+"${restore_mode[@]}"}
 fi
-
-mkdir -p "$app_bundle/Contents/MacOS"
 
 # Publish into an empty directory: package timestamps can be older than DLLs
 # left by a previous dependency version, which incremental publishing may skip.
 publish_dir="$(mktemp -d "$project_root/artifacts/macos/.publish.XXXXXX")"
-trap 'rm -rf "$publish_dir"' EXIT
+lock_store=""
+cleanup() {
+  local status=$?
+  rm -rf "$publish_dir"
+  if [[ -n "$lock_store" ]]; then
+    python3 "$project_root/scripts/lock-guard.py" check "$project_root" "$lock_store" || status=1
+    rm -rf "$lock_store"
+  fi
+  exit $status
+}
+trap cleanup EXIT
 
-dotnet publish "$project_root/src/Wandur.Desktop/Wandur.Desktop.csproj" \
-  -c Release --no-restore --no-self-contained --disable-build-servers \
-  -o "$publish_dir"
+publish_args=(-c Release --no-restore --disable-build-servers -o "$publish_dir")
+if [[ -n "$rid" ]]; then
+  sc=false
+  [[ $self_contained -eq 1 ]] && sc=true
+  # Locked mode cannot restore for a runtime the lock files do not list (NU1004), so the
+  # runtime restore runs unlocked and lock-guard.py undoes and checks what it writes.
+  lock_store="$(mktemp -d "$project_root/artifacts/macos/.locks.XXXXXX")"
+  python3 "$project_root/scripts/lock-guard.py" snapshot "$project_root" "$lock_store"
+  dotnet restore "$project_root/src/Wandur.Desktop/Wandur.Desktop.csproj" --disable-parallel \
+    -r "$rid" -p:SelfContained=$sc
+  publish_args+=(-r "$rid" --self-contained "$sc"
+    -p:Version="$version" -p:InformationalVersion="$version"
+    -p:IncludeSourceRevisionInInformationalVersion=false)
+else
+  publish_args+=(--no-self-contained)
+fi
+
+dotnet publish "$project_root/src/Wandur.Desktop/Wandur.Desktop.csproj" "${publish_args[@]}"
+mkdir -p "$app_bundle/Contents/MacOS"
 
 # A publish that produced no launcher must not reach the bundle: rsync --delete
 # would empty a working app and leave nothing to fall back to.
@@ -102,29 +194,19 @@ if [[ ! -x "$publish_dir/Wandur" ]]; then
   exit 1
 fi
 
-# A publish has emitted a deps.json missing its own project references. The host builds
-# its assembly list from that manifest, so Wandur.Core.dll sat in the bundle where nothing
-# would ever look at it and the app aborted on launch with FileNotFoundException. Every
-# file was present and the bundle looked correct, which is exactly why this is checked:
-# a complete set of files is not the same thing as an app that starts.
-python3 - "$publish_dir" <<'DEPSCHECK'
-import json, pathlib, sys
-publish = pathlib.Path(sys.argv[1])
-manifest = publish / "Wandur.deps.json"
-if not manifest.is_file():
-    sys.exit("publish produced no Wandur.deps.json")
-deps = json.loads(manifest.read_text())
-listed = {pathlib.PurePosixPath(path).name
-          for target in deps.get("targets", {}).values()
-          for library in target.values()
-          for path in (library.get("runtime") or {})}
-missing = sorted(dll.name for dll in publish.glob("Wandur*.dll") if dll.name not in listed)
-if missing:
-    sys.exit("deps.json does not list " + ", ".join(missing)
-             + "; the app would abort on launch. Re-run; this is a bad build, not a code error.")
-DEPSCHECK
+# A publish has emitted a deps.json missing its own project references, and that app aborts
+# on launch although every file is present. See scripts/check-deps-manifest.py.
+python3 "$project_root/scripts/check-deps-manifest.py" "$publish_dir"
 
-rsync -a --delete "$publish_dir/" "$app_bundle/Contents/MacOS/"
+# A release bundle starts empty, so no signature or file from an earlier build survives.
+if [[ -n "$rid" ]]; then
+  rm -rf "$app_bundle"
+  mkdir -p "$app_bundle/Contents/MacOS"
+fi
+# On exFAT (this drive) extended attributes appear as AppleDouble ._ files. Copied into a bundle
+# on APFS they become real files that codesign seals, and unzipping turns them back into
+# attributes, which breaks the seal ("a sealed resource is missing").
+rsync -a --delete --exclude='._*' "$publish_dir/" "$app_bundle/Contents/MacOS/"
 
 # Remove symbols left by an earlier build of this bundle; Release omits them.
 rm -f "$app_bundle/Contents/MacOS/Wandur.pdb" "$app_bundle/Contents/MacOS/Wandur.Core.pdb"
@@ -134,7 +216,7 @@ bash "$project_root/scripts/make-icons.sh" >/dev/null
 mkdir -p "$app_bundle/Contents/Resources"
 cp "$project_root/artifacts/icons/Wandur.icns" "$app_bundle/Contents/Resources/Wandur.icns"
 
-cat > "$app_bundle/Contents/Info.plist" <<'PLIST'
+cat > "$app_bundle/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
@@ -144,10 +226,20 @@ cat > "$app_bundle/Contents/Info.plist" <<'PLIST'
   <key>CFBundleExecutable</key><string>Wandur</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleIconFile</key><string>Wandur</string>
-  <key>CFBundleShortVersionString</key><string>0.1.0</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleShortVersionString</key><string>$bundle_version</string>
+  <key>CFBundleVersion</key><string>$bundle_build</string>
   <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
+
+# Extended attributes (quarantine, provenance, Finder info) are "detritus" to codesign.
+[[ -n "$rid" ]] && xattr -cr "$app_bundle"
+
+if [[ $sign_adhoc -eq 1 ]]; then
+  # Ad-hoc: no identity, so Gatekeeper still warns, but the bundle's seal is consistent.
+  # Apple Silicon refuses to run arm64 code with no signature at all.
+  codesign --force --deep -s - "$app_bundle"
+  codesign --verify --strict --deep "$app_bundle"
+fi
 
 echo "Built: $app_bundle"

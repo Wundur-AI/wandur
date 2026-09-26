@@ -1,0 +1,13 @@
+[Desktop Entry]
+# Menu entry for the Linux download. install-desktop-entry.sh copies this to
+# ~/.local/share/applications with Exec pointing at this folder's Wandur, because a
+# .desktop file cannot use a path relative to itself.
+Type=Application
+Name=Wandur
+GenericName=MUD Client
+Comment=Play text MUDs and MUSHes
+Exec=Wandur
+Icon=net.wandur.client
+Terminal=false
+Categories=Game;Network;
+StartupWMClass=Wandur
