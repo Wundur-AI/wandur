@@ -35,7 +35,24 @@ public sealed class WorkspaceTests
         return window;
     }
 
-    private static T Find<T>(Window window, string name) where T : Control => window.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
+    private static T Find<T>(Visual root, string name) where T : Control => root.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
+
+    private static void ExploreSelectedWorld(Window window)
+    {
+        var list = Find<ListBox>(window, "DirectoryResults");
+        list.ScrollIntoView(list.SelectedItem!); Dispatcher.UIThread.RunJobs();
+        var row = list.ContainerFromIndex(list.SelectedIndex)!;
+        Find<Button>(row, "DirectoryRowExplore").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Dispatcher.UIThread.RunJobs();
+    }
+
+    private static Control OpenDirectoryFilters(Window window)
+    {
+        var button = Find<Button>(window, "DirectoryFiltersButton");
+        var flyout = Assert.IsType<Flyout>(button.Flyout);
+        flyout.ShowAt(button); Dispatcher.UIThread.RunJobs();
+        return Assert.IsType<ScrollViewer>(flyout.Content);
+    }
 
     [AvaloniaFact]
     public async Task EditingSelectedWorldPreservesItsIdentityAndOtherProfiles()
@@ -138,6 +155,7 @@ public sealed class WorkspaceTests
             Dispatcher.UIThread.RunJobs();
             var results = Find<ListBox>(dialog, "DirectoryResults");
             Assert.Single(results.Items);
+            ExploreSelectedWorld(dialog);
             var facts = dialog.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToArray();
             Assert.Contains("Listed player range", facts);
             Assert.Contains("75-100", facts);
@@ -150,6 +168,8 @@ public sealed class WorkspaceTests
             add.Command!.Execute(null);
             Assert.Single(sessions.Active.Controller.Settings.Profiles);
             Assert.False(sessions.Active.Controller.HasSession);
+            Find<Button>(dialog, "DirectoryBack").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
             Find<TextBox>(dialog, "DirectorySearch").Text = "";
             Dispatcher.UIThread.RunJobs();
             Capture(dialog, "directory-browser.png");
@@ -160,6 +180,7 @@ public sealed class WorkspaceTests
             }
             Find<TextBox>(dialog, "DirectorySearch").Text = "web";
             Dispatcher.UIThread.RunJobs();
+            ExploreSelectedWorld(dialog);
             Assert.False(Find<Button>(dialog, "AddDirectoryWorld").IsEnabled);
             var embedded = new MainWindow(new Wandur.Desktop.Terminal.TranscriptDisplayFactory(), new SettingsStore(Path.Combine(directory, "embedded-settings.json")), new MemoryPasswordVault(), new MemoryRoomMapStore(), new RecordingScriptFactory(), new MemoryScriptLibraryStore(), catalog: catalog);
             try
@@ -168,6 +189,7 @@ public sealed class WorkspaceTests
                 var embeddedResults = Find<ListBox>(embedded, "DirectoryResults");
                 embeddedResults.SelectedItem = embeddedResults.Items.OfType<WorldListing>().Single(w => w.Name == "The Lantern & the Rain");
                 Dispatcher.UIThread.RunJobs();
+                ExploreSelectedWorld(embedded);
                 foreach (var width in new[] { 1380, 1040 })
                 {
                     embedded.Width = width;
@@ -219,33 +241,38 @@ public sealed class WorkspaceTests
         try
         {
             dialog.Show(); Dispatcher.UIThread.RunJobs();
-            Find<Expander>(dialog, "DirectoryAdvancedSearch").IsExpanded = true;
-            Dispatcher.UIThread.RunJobs();
+            var filters = OpenDirectoryFilters(dialog);
             var results = Find<ListBox>(dialog, "DirectoryResults");
             Find<ComboBox>(dialog, "DirectoryThemeFilter").SelectedItem = "Fantasy";
-            Find<ComboBox>(dialog, "DirectoryLanguageFilter").SelectedItem = "English";
+            Find<ComboBox>(filters, "DirectoryLanguageFilter").SelectedItem = "English";
             Dispatcher.UIThread.RunJobs(); Assert.Equal(2, results.Items.Count);
-            Find<ComboBox>(dialog, "DirectoryPlayerKillingFilter").SelectedItem = "Not Allowed";
+            Find<ComboBox>(filters, "DirectoryPlayerKillingFilter").SelectedItem = "Not Allowed";
             Dispatcher.UIThread.RunJobs(); Assert.Equal("Amber Forest", ((WorldListing)Assert.Single(results.Items)!).Name);
             Find<TextBox>(dialog, "DirectorySearch").Text = "station";
             Dispatcher.UIThread.RunJobs(); Assert.Empty(results.Items);
             Find<Button>(dialog, "DirectoryResetFilters").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs(); Assert.Equal(3, results.Items.Count);
-            Find<NumericUpDown>(dialog, "DirectoryMinimumPlayers").Value = 0;
+            Find<NumericUpDown>(filters, "DirectoryMinimumPlayers").Value = 0;
             Dispatcher.UIThread.RunJobs(); Assert.Equal(2, results.Items.Count); // unknown is not zero
-            Find<NumericUpDown>(dialog, "DirectoryMinimumPlayers").Value = 1;
+            Find<NumericUpDown>(filters, "DirectoryMinimumPlayers").Value = 1;
             Dispatcher.UIThread.RunJobs(); Assert.Single(results.Items);
-            Find<NumericUpDown>(dialog, "DirectoryMaximumPlayers").Value = 0;
+            Find<NumericUpDown>(filters, "DirectoryMaximumPlayers").Value = 0;
             Dispatcher.UIThread.RunJobs(); Assert.Empty(results.Items);
-            Assert.Contains(dialog.GetVisualDescendants().OfType<TextBlock>(), t => t.Text?.Contains("Minimum players exceeds maximum") == true);
+            Assert.Contains(filters.GetVisualDescendants().OfType<TextBlock>(), t => t.Text?.Contains("Minimum players exceeds maximum") == true);
             Find<Button>(dialog, "DirectoryResetFilters").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            Find<ComboBox>(dialog, "DirectoryRatingFilter").SelectedIndex = 2;
+            Find<ComboBox>(filters, "DirectoryRatingFilter").SelectedIndex = 2;
             Dispatcher.UIThread.RunJobs(); Assert.Single(results.Items);
+            Assert.IsType<Flyout>(Find<Button>(dialog, "DirectoryFiltersButton").Flyout).Hide();
+            ExploreSelectedWorld(dialog);
             Assert.Contains(dialog.GetVisualDescendants().OfType<TextBlock>(), t => t.Text?.Contains("10 ratings") == true);
             Assert.Contains(dialog.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "1997");
-            Find<CheckBox>(dialog, "DirectoryTlsFilter").IsChecked = true;
+            Find<Button>(dialog, "DirectoryBack").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            filters = OpenDirectoryFilters(dialog);
+            Find<CheckBox>(filters, "DirectoryTlsFilter").IsChecked = true;
             Dispatcher.UIThread.RunJobs(); Assert.Single(results.Items);
             Find<Button>(dialog, "DirectoryResetFilters").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert.IsType<Flyout>(Find<Button>(dialog, "DirectoryFiltersButton").Flyout).Hide();
             Find<ComboBox>(dialog, "DirectorySort").SelectedIndex = 2;
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(new[] { "Amber Forest", "Blue Forest", "Cloud Station" }, results.Items.Cast<WorldListing>().Select(w => w.Name));
@@ -277,8 +304,9 @@ public sealed class WorkspaceTests
         {
             dialog.Show(); Dispatcher.UIThread.RunJobs();
             await WaitFor(() => catalog.Worlds.Count == 3);
-            var connection = Find<ComboBox>(dialog, "DirectoryConnectionFilter");
-            var online = Find<CheckBox>(dialog, "DirectoryOnlineFilter");
+            var filters = OpenDirectoryFilters(dialog);
+            var connection = Find<ComboBox>(filters, "DirectoryConnectionFilter");
+            var online = Find<CheckBox>(filters, "DirectoryOnlineFilter");
             await WaitFor(() => dialog.GetVisualDescendants().OfType<Image>().Any(i => i.Source is not null));
             Assert.Contains("https://images.example.org/forest.png", handler.Requests);
             connection.SelectedIndex = 1; Dispatcher.UIThread.RunJobs();
@@ -286,14 +314,21 @@ public sealed class WorkspaceTests
             online.IsChecked = true; Dispatcher.UIThread.RunJobs();
             Assert.Single(Find<ListBox>(dialog, "DirectoryResults").Items);
             online.IsChecked = false;
+            Assert.IsType<Flyout>(Find<Button>(dialog, "DirectoryFiltersButton").Flyout).Hide();
             Find<TextBox>(dialog, "DirectorySearch").Text = "mountain"; Dispatcher.UIThread.RunJobs();
             await WaitFor(() => dialog.GetVisualDescendants().OfType<Image>().Any(i => i.Source is not null));
             Assert.Contains("http://directory.example/worlds/test:2/art", handler.Requests);
+            ExploreSelectedWorld(dialog);
             Find<Button>(dialog, "AddDirectoryWorld").Command!.Execute(null);
             Assert.True(Assert.Single(sessions.Active.Controller.Settings.Profiles).UseTls);
+            Find<Button>(dialog, "DirectoryBack").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
             Find<TextBox>(dialog, "DirectorySearch").Text = "";
+            OpenDirectoryFilters(dialog);
             connection.SelectedIndex = 2; Dispatcher.UIThread.RunJobs();
             Assert.Equal("Web Garden", ((WorldListing)Assert.Single(Find<ListBox>(dialog, "DirectoryResults").Items)!).Name);
+            Assert.IsType<Flyout>(Find<Button>(dialog, "DirectoryFiltersButton").Flyout).Hide();
+            ExploreSelectedWorld(dialog);
             Assert.False(Find<Button>(dialog, "AddDirectoryWorld").IsEnabled);
             dialog.Close();
             handler.Offline = true;

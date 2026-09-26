@@ -1,5 +1,46 @@
 # Client foundation verification
 
+## Docked directory redesign (2026-09-26)
+
+- Replaced the permanent list/detail split with full-width result rows, artwork
+  thumbnails, two tags, a summary, observed-population metadata, Add to my worlds
+  and Explore. Details stay in the same dock; Back restores query, selection,
+  scroll and keyboard focus. No dock layout or active-session changes.
+- The initial full-width regression failed on both fixture window sizes before
+  implementation. Responsive checks cover a 360-DIP dock, five languages and
+  Slate/Hull/Paper palettes, including filter-popup bounds and localized action
+  wrapping. A Paper contrast failure changed initials to TextBrush. A physical
+  Enter test caught the ListBox consuming bubbling key events; a scoped tunnel
+  handler now opens rows without intercepting their buttons.
+- Tests exercise independent saving, saved-state feedback, filters/reset, TLS
+  and browser-only listings, Enter/Escape/Space navigation with a live offline
+  demo session, bounded artwork requests for a 203-world catalog, and stale
+  thumbnail completion after detach/reattach. Existing details tests now open
+  Explore explicitly rather than assuming a permanently visible details pane.
+  The first full run exposed three more legacy Workspace tests using the old
+  inline filter/details layout. Updated them to open the popup and Explore;
+  their original filter, artwork-cache, offline and TLS assertions are retained,
+  and all three passed their focused rerun.
+- A subsequent full Desktop run passed 650/651 but hit a NullReferenceException
+  in unchanged `SessionScriptWorker.DisposeAsync` while cleaning up
+  `ReusableScriptsEditorHasCompactToolbarAndOutputIsOptional`. Its isolated
+  rerun passed. No script-worker changes are included in this directory task;
+  the intermittent cleanup failure remains a follow-up if it recurs.
+- Final verification passed 778 Core tests and, after those test-only updates,
+  the complete Desktop rerun passed 651/651, totaling 1,429 passing tests with
+  no skips. Final Release build passed with zero warnings/errors. Localization
+  generation and whitespace checks passed. TRX reports are retained under
+  `/private/tmp/wandur-directory-redesign/test-results/`.
+- Independent read-only review found no critical or important issues. Its two
+  minor coverage suggestions, Back focus and stale artwork completion, were
+  added. Verification uses isolated fixture databases and fake HTTP artwork.
+- Actual headless renders are under `/private/tmp/wandur-directory-redesign/`.
+  Desktop 1040/1536-DIP captures and narrow German Hull/French Paper captures
+  were inspected. These use fixture worlds, with initials where artwork is
+  absent, not the generated concept art. Native macOS/Windows interactions were
+  not manually retested. No owner app restart, bundle replacement, personal-data
+  access, schema change, new package or website changes.
+
 ## Themed history reminder and persistent dismissal (2026-09-26)
 
 - Replaced the hardcoded brown notice surface with live Panel/Text/Line brushes.

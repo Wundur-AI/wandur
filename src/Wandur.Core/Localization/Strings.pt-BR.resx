@@ -1931,4 +1931,9 @@ Pare após receber uma lista do inventário.</value></data>
   <data name="SkinHelp" xml:space="preserve"><value>Escolha o formato da janela independentemente das cores. Os temas do MUD não alteram seu estilo de janela.</value></data>
   <data name="DontShowAgain" xml:space="preserve"><value>Não mostrar novamente</value></data>
   <data name="HistoryNoticePreferenceFailed" xml:space="preserve"><value>Não foi possível salvar esta preferência. O aviso do histórico será exibido novamente.</value></data>
+  <data name="ExploreWorld" xml:space="preserve"><value>Explorar →</value></data>
+  <data name="WorldSaved" xml:space="preserve"><value>Salvo ✓</value></data>
+  <data name="AllGenres" xml:space="preserve"><value>Todos os gêneros</value></data>
+  <data name="BackToWorlds" xml:space="preserve"><value>← Todos os mundos</value></data>
+  <data name="DirectoryFilters" xml:space="preserve"><value>Filtros</value></data>
 </root>

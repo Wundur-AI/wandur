@@ -1,6 +1,6 @@
 # Claude handoff: Wandur client
 
-Updated September 25, 2026. This file is the entry point for a fresh session.
+Updated September 26, 2026. This file is the entry point for a fresh session.
 Read it, then `docs/verification.md` for what has been verified and when.
 The September 18 handoff about Icesus resource bars and directory refresh is
 complete and recorded in `docs/verification.md`; it no longer needs action.
@@ -31,6 +31,15 @@ the September 24 entry in `docs/verification.md` for verification evidence.
 The recording reminder now uses live theme colors and offers a localized
 Don't show again checkbox. `HideHistoryRecordingNotice` is a saved client
 preference propagated to open tabs, independent of recording and error notices.
+
+Find a MUD now uses full-width, artwork-led result rows in the existing dock,
+with Add to my worlds and Explore actions. Explore opens details in that same
+dock; Back restores the query, selection, scroll and keyboard focus. The rows
+reflow from the dock width, with a compact sort menu and a bounded filter popup
+on narrow layouts. Existing filters, TLS selection, offline search, saved-world
+deduplication and active sessions are retained. Only realized rows load artwork,
+one at a time, using the catalog cache; each row owns and disposes its scaled
+bitmap. Colors follow the active theme. No docking, schema or package changes.
 
 Mapped vitals fix (branch `fix/mapped-vitals`): the vitals strip stopped
 following the world when a login lingered (a GMCP login the world never

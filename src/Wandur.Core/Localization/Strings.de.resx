@@ -1931,4 +1931,9 @@ Stoppe nach einer Inventarliste.</value></data>
   <data name="SkinHelp" xml:space="preserve"><value>Wählen Sie die Fensterform unabhängig von den Farben. MUD-Themes ändern Ihren Fensterstil nicht.</value></data>
   <data name="DontShowAgain" xml:space="preserve"><value>Nicht mehr anzeigen</value></data>
   <data name="HistoryNoticePreferenceFailed" xml:space="preserve"><value>Diese Einstellung konnte nicht gespeichert werden. Der Hinweis zum Verlauf wird erneut angezeigt.</value></data>
+  <data name="ExploreWorld" xml:space="preserve"><value>Erkunden →</value></data>
+  <data name="WorldSaved" xml:space="preserve"><value>Gespeichert ✓</value></data>
+  <data name="AllGenres" xml:space="preserve"><value>Alle Genres</value></data>
+  <data name="BackToWorlds" xml:space="preserve"><value>← Alle Welten</value></data>
+  <data name="DirectoryFilters" xml:space="preserve"><value>Filter</value></data>
 </root>

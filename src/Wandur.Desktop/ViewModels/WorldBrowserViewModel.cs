@@ -36,6 +36,7 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private WorldBrowserQuery _query = new();
     [ObservableProperty] private IReadOnlyList<WorldListing> _results = [];
     [ObservableProperty] private WorldListing? _selectedWorld;
+    [ObservableProperty] private bool _isExploring;
     [ObservableProperty] private bool _useTls;
     [ObservableProperty] private string _count = "";
     [ObservableProperty] private string _status = "";
@@ -50,6 +51,21 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
     internal string? ScrollWorldId { get; set; }
     internal double DetailScrollOffset { get; set; }
     internal double ResultsScrollOffset { get; set; }
+    private IReadOnlyList<ConnectionProfile>? _savedProfiles;
+    public IReadOnlyList<ConnectionProfile> SavedWorlds => _sessions.Active.Controller.Settings.Profiles;
+    public bool HasFilters => Query.Search.Length > 0 || Query.Connection != 0 || Query.OnlineOnly || Query.Sort != 0
+        || Query.Facets.Count > 0 || Query.MinimumPlayers.HasValue || Query.MaximumPlayers.HasValue || Query.Rating != 0 || Query.TlsOnly;
+
+    public bool IsWorldSaved(WorldListing world) => world.CanConnect && SavedWorlds.Any(p =>
+        p.Host.Equals(world.Host, StringComparison.OrdinalIgnoreCase)
+        && (p.UseTls ? p.Port == world.TlsPort : p.Port == world.Port));
+
+    private void SavedWorldsChanged()
+    {
+        if (ReferenceEquals(_savedProfiles, SavedWorlds)) return;
+        _savedProfiles = SavedWorlds;
+        OnPropertyChanged(nameof(SavedWorlds));
+    }
     public IReadOnlyList<WorldBrowserFacet> Facets { get; } =
     [
         new("Theme", nameof(L.Theme), w => [w.Features.Theme]),
@@ -76,14 +92,17 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
         if (_lifetime.IsCancellationRequested) { _lifetime.Dispose(); _lifetime = new(); }
         _dispatch = dispatch ?? (action => action());
         _catalog.Changed += CatalogChanged;
+        _sessions.Changed += SavedWorldsChanged;
         Wandur.Core.Localization.UiLanguage.Changed += CatalogChanged;
         _attached = true;
+        SavedWorldsChanged();
         RefreshCatalog();
     }
     public void Detach()
     {
         if (_disposed || !_attached) return;
         _catalog.Changed -= CatalogChanged;
+        _sessions.Changed -= SavedWorldsChanged;
         Wandur.Core.Localization.UiLanguage.Changed -= CatalogChanged;
         _attached = false;
         _lifetime.Cancel();
@@ -101,7 +120,7 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
             .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(v => v, StringComparer.OrdinalIgnoreCase).ToArray());
         RefreshResults();
     }
-    partial void OnQueryChanged(WorldBrowserQuery value) => RefreshResults();
+    partial void OnQueryChanged(WorldBrowserQuery value) { RefreshResults(); OnPropertyChanged(nameof(HasFilters)); }
     partial void OnCanRefreshChanged(bool value) => RefreshCommand.NotifyCanExecuteChanged();
     // Highlighting a listing never themes the window: a world theme arrives with its session.
     partial void OnSelectedWorldChanged(WorldListing? value)
@@ -120,6 +139,7 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
             .Where(MatchesAdvanced);
         var results = SortResults(matches).ToArray();
         SelectedWorld = results.FirstOrDefault(w => w.Id == id) ?? results.FirstOrDefault();
+        if (IsExploring && SelectedWorld?.Id != id) IsExploring = false;
         Count = L.Format(L.OfWorlds, results.Length, _catalog.Worlds.Count);
         var count = Query.Facets.Count + (Query.MinimumPlayers.HasValue ? 1 : 0) + (Query.MaximumPlayers.HasValue ? 1 : 0)
             + (Query.Rating > 0 ? 1 : 0) + (Query.TlsOnly ? 1 : 0);
@@ -194,6 +214,7 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
         if (_disposed) return;
         _disposed = true;
         if (_attached) _catalog.Changed -= CatalogChanged;
+        _sessions.Changed -= SavedWorldsChanged;
         Wandur.Core.Localization.UiLanguage.Changed -= CatalogChanged;
         _lifetime.Cancel(); _lifetime.Dispose();
     }

@@ -18,15 +18,20 @@ public sealed class WorldThumbnails : IDisposable
     // Two pixels per layout unit keeps the tile crisp on a high density display and is still tiny.
     private const int PixelWidth = Width * 2;
     private const int PixelHeight = Height * 2;
+    private readonly int _pixelWidth;
+    private readonly int _pixelHeight;
+    private readonly bool _cacheBitmaps;
     private readonly WorldCatalog _catalog;
     private readonly Dictionary<string, Task<Bitmap?>> _loads = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _oneAtATime = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
     private bool _disposed;
 
-    public WorldThumbnails(WorldCatalog catalog)
+    public WorldThumbnails(WorldCatalog catalog, int pixelWidth = PixelWidth, int pixelHeight = PixelHeight, bool cacheBitmaps = true)
     {
         _catalog = catalog;
+        _pixelWidth = pixelWidth; _pixelHeight = pixelHeight;
+        _cacheBitmaps = cacheBitmaps;
         // A refreshed catalog may carry artwork a world lacked before; only the misses are forgotten.
         _catalog.Changed += ForgetMisses;
     }
@@ -49,7 +54,14 @@ public sealed class WorldThumbnails : IDisposable
     {
         if (_disposed) return Task.FromResult<Bitmap?>(null);
         var listing = Find(profile);
-        if (listing is null || (!listing.HasSuppliedArtwork && string.IsNullOrWhiteSpace(listing.GeneratedArtworkPath))) return Task.FromResult<Bitmap?>(null);
+        return listing is null ? Task.FromResult<Bitmap?>(null) : GetAsync(listing);
+    }
+
+    /// <summary>Browser rows use uncached bitmaps they own and dispose; the catalog still caches image bytes on disk.</summary>
+    public Task<Bitmap?> GetAsync(WorldListing listing, CancellationToken cancellationToken = default)
+    {
+        if (_disposed || (!listing.HasSuppliedArtwork && string.IsNullOrWhiteSpace(listing.GeneratedArtworkPath))) return Task.FromResult<Bitmap?>(null);
+        if (!_cacheBitmaps) return LoadAsync(listing, cancellationToken);
         var key = listing.ArtKey;
         lock (_loads)
         {
@@ -58,9 +70,10 @@ public sealed class WorldThumbnails : IDisposable
         }
     }
 
-    private async Task<Bitmap?> LoadAsync(WorldListing listing)
+    private async Task<Bitmap?> LoadAsync(WorldListing listing, CancellationToken cancellationToken = default)
     {
-        var token = _lifetime.Token;
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token, cancellationToken);
+        var token = lifetime.Token;
         try
         {
             await _oneAtATime.WaitAsync(token);
@@ -78,13 +91,13 @@ public sealed class WorldThumbnails : IDisposable
     }
 
     /// <summary>The whole picture inside the tile's pixel box, never upscaled and never stretched out of shape.</summary>
-    private static Bitmap? Shrink(byte[] bytes)
+    private Bitmap? Shrink(byte[] bytes)
     {
         using var stream = new MemoryStream(bytes);
         using var full = new Bitmap(stream);
         var size = full.PixelSize;
         if (size.Width <= 0 || size.Height <= 0) return null;
-        var scale = Math.Min(1.0, Math.Min((double)PixelWidth / size.Width, (double)PixelHeight / size.Height));
+        var scale = Math.Min(1.0, Math.Min((double)_pixelWidth / size.Width, (double)_pixelHeight / size.Height));
         var target = new PixelSize(Math.Max(1, (int)Math.Round(size.Width * scale)), Math.Max(1, (int)Math.Round(size.Height * scale)));
         return scale >= 1 ? full.CreateScaledBitmap(size) : full.CreateScaledBitmap(target, BitmapInterpolationMode.HighQuality);
     }

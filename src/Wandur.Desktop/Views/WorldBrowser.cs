@@ -14,6 +14,7 @@ using Avalonia.VisualTree;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Styling;
+using Wandur.Desktop.Services;
 
 namespace Wandur.Desktop.Views;
 
@@ -43,6 +44,11 @@ public sealed partial class WorldBrowserView : UserControl
     private CancellationTokenSource _lifetime = new();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(10) };
     private readonly Button _refresh;
+    private readonly Button _back;
+    private readonly Grid _resultsPage;
+    private readonly Border _detailPage;
+    private readonly StackPanel _emptyResults = new() { Spacing = 10, Margin = new Thickness(16) };
+    private WorldThumbnails? _rowThumbnails;
     private CancellationTokenSource? _selection;
     private Bitmap? _bitmap;
     private bool _artLoading;
@@ -55,7 +61,7 @@ public sealed partial class WorldBrowserView : UserControl
     {
         _catalog = catalog; _model = model; DataContext = model;
         // The shell chassis is intentionally dark. Directory labels need their own palette surface.
-        Bind(BackgroundProperty, new DynamicResourceExtension("PanelBrush"));
+        Bind(BackgroundProperty, new DynamicResourceExtension("ShellBrush"));
         var heading = Ui.TextKey(nameof(L.FindAMUD), 22);
         heading.Name = "DirectoryHeading";
         heading.FontWeight = FontWeight.SemiBold;
@@ -63,28 +69,33 @@ public sealed partial class WorldBrowserView : UserControl
         _refresh = Ui.ToolbarIconKey(new Button { Name = "RefreshDirectory", Command = _model.RefreshCommand },
             "M 13,5 A 5.5,5.5 0 1 0 13.2,10 M 13,1 V 5 H 9", nameof(L.RefreshDirectory), inset: true);
         _refresh.VerticalAlignment = VerticalAlignment.Center;
-        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 20, Children = { heading, _refresh } };
-        Grid.SetColumn(_refresh, 1);
+        _back = Ui.ButtonKey(nameof(L.BackToWorlds), BackToResults, "quiet");
+        _back.Name = "DirectoryBack"; _back.IsVisible = false; _back.FontSize = 12;
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 12, Children = { _back, heading, _refresh } };
+        Grid.SetColumn(heading, 1); Grid.SetColumn(_refresh, 2);
         _search.TextChanged += (_, _) => Filter();
         _connectionFilter.SelectionChanged += (_, _) => Filter();
         _onlineFilter.IsCheckedChanged += (_, _) => Filter();
         _onlineFilter.Bind(ToolTip.TipProperty, LocalizedText.Binding(nameof(L.BasedOnTheDirectorySLatestReportNotA)));
         StyleResults();
-        _list.ItemTemplate = new FuncDataTemplate<WorldListing>((world, _) => world is null ? null : ResultCard(world));
+        _list.ItemTemplate = new FuncDataTemplate<WorldListing>((world, _) => world is null ? null : new DirectoryWorldCard(world,
+            Explore, SaveWorld, _model.IsWorldSaved, (w, token) => _rowThumbnails?.GetAsync(w, token) ?? Task.FromResult<Bitmap?>(null)));
+        ScrollViewer.SetHorizontalScrollBarVisibility(_list, Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled);
+        _list.AddHandler(KeyDownEvent, (_, e) =>
+        {
+            var onButton = e.Source is Button || e.Source is Visual visual && visual.GetVisualAncestors().OfType<Button>().Any();
+            if (e.Key == Key.Enter && !onButton && _list.SelectedItem is WorldListing world)
+            { Explore(world); e.Handled = true; }
+        }, RoutingStrategies.Tunnel);
         _list.SelectionChanged += (_, _) =>
         {
             if (_renderingResults) return;
             _model.SelectedWorld = _list.SelectedItem as WorldListing;
             ShowSelection();
         };
-        var sortRow = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 4, Children = { _onlineFilter, _sort } };
-        Grid.SetColumn(_sort, 1);
         _sort.Bind(ToolTip.TipProperty, LocalizedText.Binding(nameof(L.SortWorldsByRelevanceNamePopulationRatingOrDate)));
         _sort.Bind(Avalonia.Automation.AutomationProperties.NameProperty, LocalizedText.Binding(nameof(L.SortWorldsBy)));
-        var filters = new StackPanel { Spacing = 6, Children = { _connectionFilter, sortRow } };
         _sort.SelectionChanged += (_, _) => Filter();
-        var left = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*"), RowSpacing = 8, Children = { filters, _count, _list } };
-        Grid.SetRow(_count, 1); Grid.SetRow(_list, 2);
         _artFrame = Ui.Card(new Grid { Children = { _image, _artPlaceholder } }, 0);
         _artFrame.Name = "DirectoryArtworkFrame";
         _artFrame.ClipToBounds = true;
@@ -96,19 +107,66 @@ public sealed partial class WorldBrowserView : UserControl
         _detailScroll.ScrollChanged += (_, _) => { if (!_closed && !_restoringScroll) _model.DetailScrollOffset = _detailScroll.Offset.Y; };
         var detailLayout = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), Children = { _listingToolbar, _detailScroll } };
         Grid.SetRow(_detailScroll, 1);
-        var detailCard = Ui.Card(detailLayout, 0);
-        detailCard.ClipToBounds = true;
-        Grid.SetColumn(detailCard, 1);
-        var body = new Grid { ColumnDefinitions = new ColumnDefinitions("5*,7*"), ColumnSpacing = 12, Children = { left, detailCard } };
-        body.ColumnDefinitions[0].MaxWidth = 360;
+        _detailPage = Ui.Card(detailLayout, 0);
+        _detailPage.ClipToBounds = true;
         var footer = new StackPanel { Spacing = 4, Children = { _feedback, _status } };
-        var advanced = CreateAdvancedSearch();
-        var contents = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto"), RowSpacing = 6, Margin = new Thickness(10), Children = { _search, advanced, body, footer } };
-        Grid.SetRow(advanced, 1); Grid.SetRow(body, 2); Grid.SetRow(footer, 3);
+        var filters = CreateFilterBar();
+        var counts = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { _count, _resetFilters } };
+        _count.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(_resetFilters, 1);
+        var results = new Panel { Children = { _list, _emptyResults } };
+        _resultsPage = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*"), RowSpacing = 10,
+            Children = { _search, filters, counts, results } };
+        Grid.SetRow(filters, 1); Grid.SetRow(counts, 2); Grid.SetRow(results, 3);
+        var body = new Panel { Children = { _resultsPage, _detailPage } };
+        var contents = new Grid { RowDefinitions = new RowDefinitions("*,Auto"), RowSpacing = 6, Margin = new Thickness(12), Children = { body, footer } };
+        Grid.SetRow(footer, 1);
         Grid.SetRow(contents, 1);
         Content = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), Children = { Ui.Toolbar(header, "DirectoryTitleBar"), contents } };
-        _timer.Tick += async (_, _) => { if (_bitmap is null && !_artLoading && _list.SelectedItem is WorldListing world) await LoadArtAsync(world); };
+        _timer.Tick += async (_, _) => { if (_model.IsExploring && _bitmap is null && !_artLoading && _list.SelectedItem is WorldListing world) await LoadArtAsync(world); };
+        KeyDown += (_, e) => { if (e.Key == Key.Escape && _model.IsExploring) { BackToResults(); e.Handled = true; } };
         _ready = true; ApplyQueryToControls();
+        UpdatePage();
+    }
+
+    private void Explore(WorldListing world)
+    {
+        _model.ResultsScrollOffset = _list.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault()?.Offset.Y ?? 0;
+        _list.SelectedItem = world;
+        _model.SelectedWorld = world;
+        _model.IsExploring = true;
+        _back.Focus();
+    }
+
+    private void SaveWorld(WorldListing world)
+    {
+        _list.SelectedItem = world; _model.SelectedWorld = world;
+        _model.SaveSelectedWorld();
+        RefreshSavedRows();
+    }
+
+    private void BackToResults()
+    {
+        _model.IsExploring = false;
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_closed || _model.IsExploring) return;
+            if (_list.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault() is { } scroll)
+                scroll.Offset = new Vector(0, _model.ResultsScrollOffset);
+            if (_list.ContainerFromIndex(_list.SelectedIndex) is { } selected) selected.Focus();
+            else _search.Focus();
+        }, DispatcherPriority.Loaded);
+    }
+
+    private void UpdatePage()
+    {
+        _resultsPage.IsVisible = !_model.IsExploring;
+        _detailPage.IsVisible = _back.IsVisible = _model.IsExploring;
+    }
+
+    private void RefreshSavedRows()
+    {
+        foreach (var card in _list.GetVisualDescendants().OfType<DirectoryWorldCard>()) card.RefreshSaved();
     }
 
     private void StyleResults()
@@ -143,6 +201,7 @@ public sealed partial class WorldBrowserView : UserControl
     {
         base.OnAttachedToVisualTree(e);
         _closed = false; _restoringScroll = true;
+        _rowThumbnails = new(_catalog, 320, 240, cacheBitmaps: false);
         if (_lifetime.IsCancellationRequested) { _lifetime.Dispose(); _lifetime = new(); }
         _model.PropertyChanged += ModelChanged;
         _model.Attach(action => Dispatcher.UIThread.Post(action));
@@ -162,12 +221,13 @@ public sealed partial class WorldBrowserView : UserControl
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         if (!_restoringScroll) _model.DetailScrollOffset = _detailScroll.Offset.Y;
-        _model.ResultsScrollOffset = _list.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault()?.Offset.Y ?? 0;
+        if (!_model.IsExploring) _model.ResultsScrollOffset = _list.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault()?.Offset.Y ?? 0;
         _closed = true; _timer.Stop();
         _model.PropertyChanged -= ModelChanged;
         _model.Detach();
         _lifetime.Cancel(); _selection?.Cancel(); _selection?.Dispose(); _selection = null;
         _image.Source = null; _bitmap?.Dispose(); _bitmap = null;
+        _rowThumbnails?.Dispose(); _rowThumbnails = null;
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -177,6 +237,7 @@ public sealed partial class WorldBrowserView : UserControl
         if (_closed) return;
         if (e.PropertyName is null or nameof(WorldBrowserViewModel.Query)) ApplyQueryToControls();
         if (e.PropertyName is null or nameof(WorldBrowserViewModel.FacetOptions)) RefreshFilterOptions();
+        if (e.PropertyName is nameof(WorldBrowserViewModel.IsExploring)) { UpdatePage(); ShowSelection(); }
         if (e.PropertyName is null or nameof(WorldBrowserViewModel.Results))
         {
             _renderingResults = true;
@@ -184,7 +245,13 @@ public sealed partial class WorldBrowserView : UserControl
             _list.SelectedItem = _model.SelectedWorld;
             _renderingResults = false;
             ShowSelection();
+            _emptyResults.Children.Clear();
+            _emptyResults.Children.Add(Ui.Text(_model.EmptyTitle, 18));
+            _emptyResults.Children.Add(Ui.Text(_model.EmptyDescription, 13, "muted"));
+            _emptyResults.IsVisible = _model.Results.Count == 0;
         }
+        if (e.PropertyName is null or nameof(WorldBrowserViewModel.SavedWorlds)) RefreshSavedRows();
+        UpdatePage();
         _refresh.IsEnabled = _model.CanRefresh;
         _count.Text = _model.Count;
         _status.Text = _model.Status;
@@ -193,6 +260,7 @@ public sealed partial class WorldBrowserView : UserControl
         _status.IsVisible = !string.IsNullOrWhiteSpace(_model.Status);
         _filterSummary.Text = _model.FilterSummary;
         _filterHint.Text = _model.FilterHint;
+        _resetFilters.IsVisible = _model.HasFilters;
     }
     private void Filter()
     {
@@ -243,17 +311,21 @@ public sealed partial class WorldBrowserView : UserControl
         var title = Ui.Text(world.Name, 22);
         title.Name = "DirectoryWorldTitle"; title.FontWeight = FontWeight.SemiBold;
         _details.Children.Add(title);
+        _artFrame.IsVisible = world.HasSuppliedArtwork || !string.IsNullOrWhiteSpace(world.GeneratedArtworkPath);
         _details.Children.Add(_artFrame);
         var tags = new[] { world.Features.Theme, world.Features.Kind, world.Features.Language }
             .Concat(world.Tags).Append(world.PopulationSummary);
         if (world.Population.LatestCount is { } count) tags = tags.Append(L.Format(L.PlayersLastObserved, count));
-        var badges = TagBadges(tags.Distinct(StringComparer.OrdinalIgnoreCase));
+        var badges = TagBadges(tags.Distinct(StringComparer.OrdinalIgnoreCase).Take(3));
         badges.Name = "DirectoryWorldTags";
         _details.Children.Add(badges);
         if (!string.IsNullOrWhiteSpace(world.Summary)) _details.Children.Add(Ui.Text(world.Summary, 13));
         var description = FormattedDescription(world.Description);
         description.Name = "DirectoryWorldDescription";
         _details.Children.Add(description);
+        if (world.Tags.Any())
+            _details.Children.Add(new Expander { Header = L.FeatureTag, Content = TagBadges(world.Tags),
+                HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch });
         _details.Children.Add(Ui.Text(world.StatusText + "\n" + world.Address, 11, "muted"));
         var tls = new CheckBox { [!ContentControl.ContentProperty] = LocalizedText.Binding(nameof(L.UseTLS)), IsVisible = world.TlsPort.HasValue && world.CanConnect, IsChecked = _model.UseTls,
             FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 4, 0) };
@@ -282,7 +354,7 @@ public sealed partial class WorldBrowserView : UserControl
         var attribution = world.Source.UpdatedAt is { } updated
             ? L.Format(L.SourceDetailsUpdated, world.Source.Name, updated.ToLocalTime()) : L.Format(L.SourceDetails, world.Source.Name);
         _details.Children.Add(Ui.Text(attribution, 11, "muted"));
-        _ = LoadArtAsync(world);
+        if (_model.IsExploring) _ = LoadArtAsync(world);
     }
     private static Grid CreateFacts(WorldListing world)
     {
@@ -331,10 +403,11 @@ public sealed partial class WorldBrowserView : UserControl
         {
             var bytes = await _catalog.GetArtAsync(world, token);
             if (token.IsCancellationRequested || _closed || _selection != selection) return;
-            if (bytes is null) { _artPlaceholder.Text = L.NoIllustrationAvailableYet; _artStatus.Text = L.YouCanStillBrowseTheDetailsAndConnect; return; }
+            if (bytes is null) { _artFrame.IsVisible = false; _artStatus.Text = L.YouCanStillBrowseTheDetailsAndConnect; return; }
             using var stream = new MemoryStream(bytes);
             var bitmap = new Bitmap(stream);
             _bitmap?.Dispose(); _bitmap = bitmap; _image.Source = bitmap; _image.IsVisible = true;
+            _artFrame.IsVisible = true;
             _artPlaceholder.IsVisible = false; _artFrame.MinHeight = 0; SizeArtwork();
             _artStatus.Text = world.HasSuppliedArtwork ? L.Format(L.SuppliedArtwork, world.Source.Name) : L.AIIllustrationInspiredByThisWorldSDescription;
         }
@@ -342,7 +415,7 @@ public sealed partial class WorldBrowserView : UserControl
         catch (Exception)
         {
             if (!token.IsCancellationRequested && !_closed && _selection == selection)
-            { _artPlaceholder.Text = L.ArtworkUnavailable; _artStatus.Text = L.WorldDetailsAreStillAvailableBelow; }
+            { _artFrame.IsVisible = false; _artStatus.Text = L.WorldDetailsAreStillAvailableBelow; }
         }
         finally { if (_selection == selection) _artLoading = false; }
     }

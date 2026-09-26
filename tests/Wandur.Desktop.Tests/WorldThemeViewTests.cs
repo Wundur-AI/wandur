@@ -309,6 +309,12 @@ public sealed class WorldThemeViewTests
             // Browsing never themes the window: the personal default stays until a session opens.
             Assert.Equal(ThemeVariant.Dark, window.ActualThemeVariant);
             Assert.Equal("#ff141519", ColorOf(window.Background));
+            window.UpdateLayout();
+            var directory = browser.GetVisualDescendants().OfType<ListBox>().Single(t => t.Name == "DirectoryResults");
+            var selectedRow = directory.GetVisualDescendants().OfType<ListBoxItem>().Single(r => r.IsSelected);
+            selectedRow.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "DirectoryRowExplore")
+                .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
             var title = browser.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "DirectoryWorldTitle");
             var children = Assert.IsType<StackPanel>(title.Parent).Children;
             Assert.Equal("DirectoryWorldTitle", children[0].Name);

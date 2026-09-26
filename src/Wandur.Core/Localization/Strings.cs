@@ -962,4 +962,9 @@ public static class Strings
     public static string SkinHelp => Get(nameof(SkinHelp));
     public static string DontShowAgain => Get(nameof(DontShowAgain));
     public static string HistoryNoticePreferenceFailed => Get(nameof(HistoryNoticePreferenceFailed));
+    public static string ExploreWorld => Get(nameof(ExploreWorld));
+    public static string WorldSaved => Get(nameof(WorldSaved));
+    public static string AllGenres => Get(nameof(AllGenres));
+    public static string BackToWorlds => Get(nameof(BackToWorlds));
+    public static string DirectoryFilters => Get(nameof(DirectoryFilters));
 }

@@ -1931,4 +1931,9 @@ Stop after receiving one inventory listing.</value></data>
   <data name="SkinHelp" xml:space="preserve"><value>Choose the window shape independently of colors. MUD themes cannot change your skin.</value></data>
   <data name="DontShowAgain" xml:space="preserve"><value>Don't show again</value></data>
   <data name="HistoryNoticePreferenceFailed" xml:space="preserve"><value>This preference could not be saved. The history reminder will appear again.</value></data>
+  <data name="ExploreWorld" xml:space="preserve"><value>Explore →</value></data>
+  <data name="WorldSaved" xml:space="preserve"><value>Saved ✓</value></data>
+  <data name="AllGenres" xml:space="preserve"><value>All genres</value></data>
+  <data name="BackToWorlds" xml:space="preserve"><value>← All worlds</value></data>
+  <data name="DirectoryFilters" xml:space="preserve"><value>Filters</value></data>
 </root>

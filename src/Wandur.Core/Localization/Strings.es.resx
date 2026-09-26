@@ -1931,4 +1931,9 @@ Detente después de recibir una lista del inventario.</value></data>
   <data name="SkinHelp" xml:space="preserve"><value>Elige la forma de la ventana independientemente de los colores. Los temas del MUD no cambian tu estilo de ventana.</value></data>
   <data name="DontShowAgain" xml:space="preserve"><value>No volver a mostrar</value></data>
   <data name="HistoryNoticePreferenceFailed" xml:space="preserve"><value>No se pudo guardar esta preferencia. El aviso del historial volverá a aparecer.</value></data>
+  <data name="ExploreWorld" xml:space="preserve"><value>Explorar →</value></data>
+  <data name="WorldSaved" xml:space="preserve"><value>Guardado ✓</value></data>
+  <data name="AllGenres" xml:space="preserve"><value>Todos los géneros</value></data>
+  <data name="BackToWorlds" xml:space="preserve"><value>← Todos los mundos</value></data>
+  <data name="DirectoryFilters" xml:space="preserve"><value>Filtros</value></data>
 </root>

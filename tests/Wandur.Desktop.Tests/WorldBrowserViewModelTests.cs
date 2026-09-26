@@ -86,6 +86,9 @@ public sealed class WorldBrowserViewModelTests
             var browser = content.GetVisualDescendants().OfType<WorldBrowserView>().Single();
             browser.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "DirectorySearch").Text = "Blue";
             Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+            browser.GetVisualDescendants().OfType<Button>().Single(t => t.Name == "DirectoryRowExplore")
+                .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
             var scroll = browser.GetVisualDescendants().OfType<ScrollViewer>().Single(t => t.Name == "DirectoryDetailsScroll");
             scroll.Offset = new Avalonia.Vector(0, 250);
             Dispatcher.UIThread.RunJobs();
