@@ -15,13 +15,15 @@
   <key>com.apple.security.cs.allow-jit</key>
   <true/>
   <!--
-    Writable-and-executable memory outside MAP_JIT. Older .NET runtimes and the x64 runtime under
-    Rosetta have needed it for stubs and thunks, and Microsoft's macOS notarization guidance lists
-    it. The arm64 bundle started without it in a local ad-hoc test, so it may be removable: try a
-    signed build of both architectures without it before dropping it.
+    Not included: com.apple.security.cs.allow-unsigned-executable-memory (writable and executable
+    memory outside MAP_JIT). Tested on September 26, 2026 with .NET 10: ad-hoc hardened-runtime
+    bundles (codesign --options runtime -s -) carrying only the two keys in this file started
+    in --script-worker mode and answered a request, both osx-arm64 natively and osx-x64 under
+    Rosetta. The same two bundles also opened the main window with an empty data directory
+    and ran for 10 seconds (Avalonia.Native, Skia and SQLite loaded; no world connected).
+    If a signed build crashes with a code-signing or memory-protection fault, add this key
+    back first.
   -->
-  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
-  <true/>
   <!--
     Library validation lets a process load only code signed by Apple or by its own team. The host
     loads libhostfxr, libcoreclr and the native libraries of NuGet packages (SkiaSharp, HarfBuzz,
