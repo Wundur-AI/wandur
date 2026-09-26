@@ -149,16 +149,19 @@ public sealed class SettingsStore(string path) : ISettingsStore
     {
         settings.Validate();
         var directory = Path.GetDirectoryName(Path.GetFullPath(FilePath))!;
-        Directory.CreateDirectory(directory);
         var temporary = Path.Combine(directory, $".settings-{Guid.NewGuid():N}.tmp");
         try
         {
+            Directory.CreateDirectory(directory);
             File.WriteAllText(temporary, JsonSerializer.Serialize(settings, JsonOptions));
             if (_preserveOriginal && File.Exists(FilePath))
                 File.Copy(FilePath, FilePath + ".corrupt-" + Guid.NewGuid().ToString("N"));
             File.Move(temporary, FilePath, overwrite: true);
             _preserveOriginal = false;
         }
+        // Windows reports a denied write or a directory in the way as access denied where Unix reports an IO
+        // error; callers handle a failed save as IOException either way, as the database store reports it.
+        catch (UnauthorizedAccessException error) { throw new IOException(error.Message, error); }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 }

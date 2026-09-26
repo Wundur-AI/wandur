@@ -82,5 +82,44 @@ public sealed class SettingsTests : IDisposable
         Assert.Equal(loaded.Settings.Profiles, store.Load().Settings.Profiles);
     }
 
-    public void Dispose() { if (Directory.Exists(_directory)) Directory.Delete(_directory, true); }
+    /// <summary>
+    /// The operating system decides whether a refused save is access denied or an IO error: Windows says
+    /// access denied for a directory in the way, Unix for a folder without write permission. Callers roll back
+    /// on IOException, so the store reports both the same way.
+    /// </summary>
+    [Fact]
+    public void RefusedSaveIsReportedAsAnIOExceptionOnEveryPlatform()
+    {
+        var store = new SettingsStore(FilePath);
+        store.Save(new() { Theme = "Forest" });
+        if (OperatingSystem.IsWindows() || !TryDenyWrites(_directory))
+        {
+            // Windows, or a Unix user (root) that permissions cannot stop: a directory blocks the atomic move.
+            File.Delete(FilePath);
+            Directory.CreateDirectory(FilePath);
+        }
+        try
+        {
+            var error = Assert.ThrowsAny<IOException>(() => store.Save(new() { Theme = "Paper" }));
+            Assert.False(string.IsNullOrWhiteSpace(error.Message));
+        }
+        finally
+        {
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(_directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+        Assert.Empty(Directory.EnumerateFiles(_directory, ".settings-*.tmp"));
+    }
+
+    private static bool TryDenyWrites(string directory)
+    {
+        if (OperatingSystem.IsWindows()) return false;
+        File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+        try { File.WriteAllText(Path.Combine(directory, "probe"), ""); }
+        catch (UnauthorizedAccessException) { return true; }
+        File.Delete(Path.Combine(directory, "probe"));
+        File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        return false;
+    }
+
+    public void Dispose() => TestFiles.DeleteDirectory(_directory);
 }
