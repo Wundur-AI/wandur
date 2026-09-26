@@ -40,10 +40,11 @@ builds self-contained downloads for every platform and publishes a GitHub Releas
    # once: store notarization credentials (prompts for an app-specific password)
    xcrun notarytool store-credentials wandur-notary --apple-id <apple id> --team-id <team id>
 
-   # build, sign, notarize, staple; leaves the zips in artifacts/release/
+   # build, sign, notarize, staple; leaves the disk images in artifacts/release/
    scripts/release-macos-signed.sh 0.1.0
 
-   # the same, then replace the two ad-hoc Mac zips and SHA256SUMS.txt on the release
+   # the same, then replace the two ad-hoc Mac images and SHA256SUMS.txt on the release,
+   # and update the release notes
    WANDUR_RELEASE_UPLOAD=1 scripts/release-macos-signed.sh 0.1.0
    ```
 
@@ -53,14 +54,20 @@ builds self-contained downloads for every platform and publishes a GitHub Releas
    command). Other settings: `WANDUR_SIGN_IDENTITY` (default: the first "Developer ID
    Application:" identity), `WANDUR_NOTARY_PROFILE` (default `wandur-notary`).
 
-   After replacing the Mac zips, edit the release notes: the macOS first-run paragraph about
-   right-click, Open no longer applies.
+   For each architecture the script signs the app inside out, builds the disk image
+   (`scripts/macos/make-dmg.sh`), signs the image, notarizes and staples it, then mounts it
+   and checks the app with `codesign` and `spctl`. After uploading, it rewrites the release
+   notes with `gh release edit --notes-file`: the macOS first-run paragraph between
+   `<!-- macos-first-run:start -->` and `<!-- macos-first-run:end -->` becomes "The macOS
+   builds are signed and notarized." It checks for those markers before building, so keep
+   them if you edit the notes by hand.
 
 ## What users see
 
 - **Windows:** `Wandur-<version>-windows-x64.zip`, a folder with `Wandur.exe`. Unsigned, so
   SmartScreen shows "Windows protected your PC" until they click More info, Run anyway.
-- **macOS:** `Wandur-<version>-macos-arm64.zip` and `...-macos-x64.zip`, each a `Wandur.app`.
+- **macOS:** `Wandur-<version>-macos-arm64.dmg` and `...-macos-x64.dmg`, each a disk image
+  with `Wandur.app` and an Applications shortcut to drag it onto.
   From the workflow they are ad-hoc signed: Gatekeeper calls the app from an unidentified
   developer and the user right-clicks, Open (or on macOS 15, System Settings, Privacy & Security,
   Open Anyway). After the signed script has replaced them, the app opens with a double-click.
@@ -81,7 +88,7 @@ issued in the member's legal name: `Developer ID Application: <Your Legal Name> 
 release, check which one yours is:
 
 ```sh
-codesign -dv --verbose=2 artifacts/release/<unzipped>/Wandur.app 2>&1 | grep Authority
+codesign -dv --verbose=2 artifacts/release/Wandur-<version>-macos-arm64.dmg 2>&1 | grep Authority
 ```
 
 If the first `Authority=` line shows a personal name you do not want attached to Wandur, do not
@@ -98,5 +105,6 @@ authored by `github-actions[bot]`.
   10.0.x`), so a release built later carries later runtime security fixes.
 - Mac bundles from both the workflow and the signed script keep the managed `.dll` files in
   `Contents/MacOS`, where codesign treats them as nested code and stores their signatures in
-  extended attributes. `ditto` and Finder's Archive Utility keep those; a tool that drops them
-  (some third-party unzip tools) leaves a bundle macOS reports as damaged.
+  extended attributes. That is why the Mac downloads are disk images: an image keeps those
+  attributes, whereas a zip keeps them only when macOS's own tools unpack it, and a bundle
+  that lost them is reported as damaged.

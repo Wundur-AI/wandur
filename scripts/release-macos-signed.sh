@@ -9,11 +9,14 @@
 #                          "Developer ID Application:" identity in the login keychain.
 #   WANDUR_NOTARY_PROFILE  notarytool keychain profile (default wandur-notary), created once with
 #                          xcrun notarytool store-credentials wandur-notary --apple-id <id> --team-id <team>
-#   WANDUR_RELEASE_UPLOAD  1 uploads the zips and a refreshed SHA256SUMS.txt to release v<version>
-#                          with gh, replacing the ad-hoc signed ones. Anything else only builds.
+#   WANDUR_RELEASE_UPLOAD  1 uploads the disk images and a refreshed SHA256SUMS.txt to release
+#                          v<version> with gh, replacing the ad-hoc signed ones, and rewrites the
+#                          release notes' macOS first-run paragraph. Anything else only builds.
 #   WANDUR_RELEASE_REPO    GitHub repository (default YouCantGoThatWay/wandur).
 #
-# Output: artifacts/release/Wandur-<version>-macos-{arm64,x64}.zip and SHA256SUMS-macos.txt.
+# Output: artifacts/release/Wandur-<version>-macos-{arm64,x64}.dmg and SHA256SUMS-macos.txt.
+# Order per architecture: sign the app inside out, make the disk image, sign the image, then
+# notarize and staple the image (notarizing it covers the app inside).
 # This script prints the signing identity's common name and nothing else about the certificate.
 set -euo pipefail
 export AVALONIA_TELEMETRY_OPTOUT=1 DOTNET_CLI_TELEMETRY_OPTOUT=1
@@ -88,6 +91,10 @@ if [[ "$upload" == "1" ]]; then
   fi
   gh release view "$tag" --repo "$repo" >/dev/null 2>&1 \
     || fail "release $tag not found in $repo; push the tag and let the release workflow finish first"
+  # Checked now rather than after a long build: the notes must still have the marked paragraph.
+  notes_now="$(gh release view "$tag" --repo "$repo" --json body --jq .body)"
+  [[ "$notes_now" == *"<!-- macos-first-run:start -->"*"<!-- macos-first-run:end -->"* ]] \
+    || fail "the $tag release notes have no <!-- macos-first-run:start/end --> markers; restore them or edit the notes by hand"
 fi
 
 # 3. Build in a scratch directory on the internal disk: codesign rejects the AppleDouble
@@ -98,7 +105,7 @@ mkdir -p "$out_dir"
 
 sign() { codesign --force --timestamp --options runtime --sign "$sign_hash" "$@"; }
 
-zips=()
+dmgs=()
 for rid in osx-arm64 osx-x64; do
   arch="${rid#osx-}"
   echo "== $rid"
@@ -133,10 +140,13 @@ for rid in osx-arm64 osx-x64; do
     echo "skipping the $arch start check: this Mac cannot run $arch code"
   fi
 
+  dmg="$out_dir/Wandur-$version-macos-$arch.dmg"
+  rm -f "$dmg"
+  bash "$project_root/scripts/macos/make-dmg.sh" "$app" "$dmg"
+  out="$(codesign --force --timestamp --sign "$sign_hash" "$dmg" 2>&1)" || { echo "$out" >&2; fail "codesign failed on $dmg"; }
+
   echo "notarizing $arch (usually a few minutes)"
-  submission="$work/Wandur-$arch-notary.zip"
-  ditto -c -k --keepParent "$app" "$submission"
-  result="$(xcrun notarytool submit "$submission" --keychain-profile "$profile" --wait --output-format json || true)"
+  result="$(xcrun notarytool submit "$dmg" --keychain-profile "$profile" --wait --output-format json || true)"
   status="$(python3 -c 'import json,sys; print(json.loads(sys.stdin.read() or "{}").get("status",""))' <<<"$result" 2>/dev/null || true)"
   if [[ "$status" != "Accepted" ]]; then
     id="$(python3 -c 'import json,sys; print(json.loads(sys.stdin.read() or "{}").get("id",""))' <<<"$result" 2>/dev/null || true)"
@@ -144,34 +154,45 @@ for rid in osx-arm64 osx-x64; do
     [[ -n "$id" ]] && xcrun notarytool log "$id" --keychain-profile "$profile" >&2 || echo "$result" >&2
     exit 1
   fi
-  xcrun stapler staple "$app"
-  xcrun stapler validate "$app"
-  spctl -a -t exec -vv "$app"
+  xcrun stapler staple "$dmg"
+  xcrun stapler validate "$dmg"
+  spctl -a -t open --context context:primary-signature -vv "$dmg"
 
-  zip="$out_dir/Wandur-$version-macos-$arch.zip"
-  rm -f "$zip"
-  ditto -c -k --keepParent "$app" "$zip"
-  zips+=("$zip")
+  # What a user gets: the app as it sits in the image, checked by Gatekeeper.
+  volume="$work/volume-$arch"
+  mkdir -p "$volume"
+  hdiutil attach -nobrowse -readonly -mountpoint "$volume" "$dmg" >/dev/null
+  checked=0
+  codesign --verify --strict --deep "$volume/Wandur.app" && spctl -a -t exec -vv "$volume/Wandur.app" && checked=1
+  hdiutil detach "$volume" >/dev/null || hdiutil detach -force "$volume" >/dev/null
+  [[ $checked -eq 1 ]] || fail "the app inside $dmg does not pass codesign and Gatekeeper"
+  dmgs+=("$dmg")
 done
 
 sums="$out_dir/SHA256SUMS-macos.txt"
-(cd "$out_dir" && shasum -a 256 "${zips[@]##*/}") > "$sums"
+(cd "$out_dir" && shasum -a 256 "${dmgs[@]##*/}") > "$sums"
 
 if [[ "$upload" != "1" ]]; then
   echo
-  echo "Signed and notarized:"
-  printf '  %s\n' "${zips[@]}"
+  echo "Signed, notarized and stapled:"
+  printf '  %s\n' "${dmgs[@]}"
   echo "Checksums: $sums"
   echo "To attach them to $tag (as $release_account), re-run with WANDUR_RELEASE_UPLOAD=1."
   exit 0
 fi
 
-# The release's SHA256SUMS.txt lists the ad-hoc zips; replace those two lines.
+# The release's SHA256SUMS.txt lists the ad-hoc images; replace those two lines.
 gh release download "$tag" --repo "$repo" --pattern SHA256SUMS.txt --dir "$work/sums" --clobber
-grep -v -E "  Wandur-$version-macos-(arm64|x64)\.zip$" "$work/sums/SHA256SUMS.txt" > "$work/SHA256SUMS.txt" || true
+grep -v -F -e "  Wandur-$version-macos-arm64.dmg" -e "  Wandur-$version-macos-x64.dmg" \
+  "$work/sums/SHA256SUMS.txt" > "$work/SHA256SUMS.txt" || true
 cat "$sums" >> "$work/SHA256SUMS.txt"
 sort -k2 -o "$work/SHA256SUMS.txt" "$work/SHA256SUMS.txt"
 cp "$work/SHA256SUMS.txt" "$out_dir/SHA256SUMS.txt"
-gh release upload "$tag" "${zips[@]}" "$out_dir/SHA256SUMS.txt" --repo "$repo" --clobber
-echo "Uploaded to $tag as $release_account:"
-printf '  %s\n' "${zips[@]}" "$out_dir/SHA256SUMS.txt"
+gh release upload "$tag" "${dmgs[@]}" "$out_dir/SHA256SUMS.txt" --repo "$repo" --clobber
+
+# Only after the signed images are in place: the notes stop telling Mac users to right-click.
+gh release view "$tag" --repo "$repo" --json body --jq .body > "$work/notes-before.md"
+python3 "$project_root/scripts/macos/signed-notes.py" "$work/notes-before.md" "$work/notes.md"
+gh release edit "$tag" --repo "$repo" --notes-file "$work/notes.md" >/dev/null
+echo "Uploaded to $tag as $release_account, and updated the release notes:"
+printf '  %s\n' "${dmgs[@]}" "$out_dir/SHA256SUMS.txt"

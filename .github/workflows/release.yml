@@ -102,8 +102,7 @@ jobs:
         run: |
           bash scripts/package-macos.sh --rid "$RID" --version "$VERSION" --self-contained \
             --output "$RUNNER_TEMP/mac" --sign-adhoc
-          mkdir -p dist
-          ditto -c -k --keepParent "$RUNNER_TEMP/mac/Wandur.app" "dist/Wandur-$VERSION-macos-${RID#osx-}.zip"
+          bash scripts/macos/make-dmg.sh "$RUNNER_TEMP/mac/Wandur.app" "dist/Wandur-$VERSION-macos-${RID#osx-}.dmg"
 
       # --script-worker starts the runtime and the Wandur assemblies, answers one request and
       # exits: no window, no network. It proves the self-contained download starts at all.
@@ -119,9 +118,12 @@ jobs:
               python -m zipfile -e "dist/Wandur-$VERSION-windows-x64.zip" "$smoke"
               app="$smoke/Wandur-$VERSION-windows-x64/Wandur.exe" ;;
             osx-*)
-              ditto -x -k "dist/Wandur-$VERSION-macos-${RID#osx-}.zip" "$smoke"
-              codesign --verify --strict --deep "$smoke/Wandur.app"
-              app="$smoke/Wandur.app/Contents/MacOS/Wandur"
+              hdiutil attach -nobrowse -readonly -mountpoint "$smoke/volume" \
+                "dist/Wandur-$VERSION-macos-${RID#osx-}.dmg"
+              trap 'hdiutil detach "$smoke/volume" || hdiutil detach -force "$smoke/volume"' EXIT
+              [[ -L "$smoke/volume/Applications" ]]
+              codesign --verify --strict --deep "$smoke/volume/Wandur.app"
+              app="$smoke/volume/Wandur.app/Contents/MacOS/Wandur"
               if [[ "$RID" == osx-x64 ]] && ! arch -x86_64 /usr/bin/true 2>/dev/null; then
                 echo "::notice::No Rosetta on this runner; osx-x64 was packaged but not started."
                 exit 0
@@ -163,8 +165,8 @@ jobs:
           expected=(
             "Wandur-$VERSION-windows-x64.zip"
             "Wandur-$VERSION-linux-x64.tar.gz"
-            "Wandur-$VERSION-macos-arm64.zip"
-            "Wandur-$VERSION-macos-x64.zip"
+            "Wandur-$VERSION-macos-arm64.dmg"
+            "Wandur-$VERSION-macos-x64.dmg"
           )
           ls -l
           for file in "${expected[@]}"; do

@@ -11,8 +11,8 @@ to install. The changes since the previous release are listed at the end of thes
 | System | File |
 | --- | --- |
 | Windows 10 or 11 (x64) | `Wandur-{{VERSION}}-windows-x64.zip` |
-| macOS, Apple silicon (M1 and later) | `Wandur-{{VERSION}}-macos-arm64.zip` |
-| macOS, Intel | `Wandur-{{VERSION}}-macos-x64.zip` |
+| macOS, Apple silicon (M1 and later) | `Wandur-{{VERSION}}-macos-arm64.dmg` |
+| macOS, Intel | `Wandur-{{VERSION}}-macos-x64.dmg` |
 | Linux (x64) | `Wandur-{{VERSION}}-linux-x64.tar.gz` |
 
 `SHA256SUMS.txt` lists the checksum of each file.
@@ -23,12 +23,15 @@ to install. The changes since the previous release are listed at the end of thes
 code-signed yet, so SmartScreen may say "Windows protected your PC". Click **More info**, then
 **Run anyway**. Windows asks once per download.
 
-**macOS.** Unzip, then move `Wandur.app` to Applications. Until a signed and notarized build is
-attached to this release, macOS says the app is from an unidentified developer and will not open
-it with a double-click. Right-click (or Control-click) `Wandur.app`, choose **Open**, then
-**Open** again in the dialog. On macOS 15 and later, if there is no Open button, go to System
-Settings, Privacy & Security, and click **Open Anyway** next to the message about Wandur. You
-only do this once. Once the signed build replaces the one here, it opens normally.
+**macOS.** Open the `.dmg` and drag Wandur onto Applications.
+
+<!-- macos-first-run:start -->
+Until a signed and notarized build is attached to this release, macOS says the app is from an
+unidentified developer and will not open it with a double-click. Right-click (or
+Control-click) Wandur in Applications, choose **Open**, then **Open** again in the dialog. On
+macOS 15 and later, if there is no Open button, go to System Settings, Privacy & Security, and
+click **Open Anyway** next to the message about Wandur. You only do this once.
+<!-- macos-first-run:end -->
 
 **Linux.** Unpack and run it from the folder:
 
