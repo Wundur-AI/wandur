@@ -17,5 +17,12 @@ staging="$(mktemp -d "${TMPDIR:-/tmp}/wandur-dmg.XXXXXX")"
 trap 'rm -rf "$staging"' EXIT
 ditto "$app" "$staging/Wandur.app"
 ln -s /Applications "$staging/Applications"
-hdiutil create -volname Wandur -srcfolder "$staging" -ov -format UDZO "$out" >/dev/null
+# hdiutil create fails now and then with "Resource busy" while Spotlight or another process
+# still holds the fresh volume; one retry after a pause gets past it.
+create() { hdiutil create -volname Wandur -srcfolder "$staging" -ov -format UDZO "$out" >/dev/null; }
+if ! create; then
+  echo "hdiutil create failed; retrying once in 5 seconds" >&2
+  sleep 5
+  create
+fi
 echo "Built: $out"

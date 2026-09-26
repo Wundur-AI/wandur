@@ -6,7 +6,7 @@
 #
 #   win-x64    DIR/Wandur-X-windows-x64.zip     (folder Wandur-X-windows-x64 with Wandur.exe)
 #   linux-x64  DIR/Wandur-X-linux-x64.tar.gz    (folder Wandur-X-linux-x64 with an executable
-#              Wandur, net.wandur.client.desktop, its icon and install-desktop-entry.sh)
+#              Wandur, install-desktop-entry.sh, the .desktop template it fills in and the icon)
 #
 # The output is a folder, not a single file: the app starts itself again as its script worker,
 # and ONNX Runtime, SQLite, Skia and HarfBuzz ship native libraries that a single-file bundle
@@ -74,7 +74,7 @@ dotnet publish "$project_root/src/Wandur.Desktop/Wandur.Desktop.csproj" -c Relea
 
 if [[ "$rid" == linux-x64 ]]; then
   [[ -f "$stage/Wandur" ]] || { echo "publish produced no Wandur executable" >&2; exit 1; }
-  cp "$project_root/scripts/linux/net.wandur.client.desktop" "$stage/"
+  cp "$project_root/scripts/linux/net.wandur.client.desktop.in" "$stage/"
   cp "$project_root/src/Wandur.Desktop/Assets/icon-256.png" "$stage/net.wandur.client.png"
   cp "$project_root/scripts/linux/install-desktop-entry.sh" "$stage/"
   # Plain modes whatever the source volume gave the files, then the executable bits.
@@ -83,7 +83,7 @@ if [[ "$rid" == linux-x64 ]]; then
   chmod 755 "$stage/Wandur" "$stage/install-desktop-entry.sh"
   [[ -f "$stage/createdump" ]] && chmod 755 "$stage/createdump"
   archive="$output/$name.tar.gz"
-  tar -C "$work" --exclude='._*' -czf "$archive" "$name"
+  tar -C "$work" --exclude='._*' --owner=0 --group=0 --numeric-owner -czf "$archive" "$name"
 else
   [[ -f "$stage/Wandur.exe" ]] || { echo "publish produced no Wandur.exe" >&2; exit 1; }
   archive="$output/$name.zip"

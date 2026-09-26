@@ -9,7 +9,7 @@ usage() {
   cat >&2 <<'USAGE'
 usage: package-macos.sh [--clean] [--force]
        package-macos.sh --rid osx-arm64|osx-x64 --version X [--self-contained]
-                        [--output DIR] [--no-sign]
+                        [--output DIR] [--build-number N] [--sign-adhoc|--no-sign]
 
 With no --rid this is the local development build: a framework-dependent bundle
 at artifacts/macos/Wandur.app, version 0.1.0.
@@ -28,6 +28,9 @@ at artifacts/macos/Wandur.app, version 0.1.0.
                     0.1.0-beta.1. Sets Version and InformationalVersion; the
                     Info.plist gets the numeric part (0.1.0), because macOS
                     reads CFBundleShortVersionString as numbers only.
+  --build-number    CFBundleVersion. Default with --rid: $GITHUB_RUN_NUMBER on
+                    GitHub Actions, otherwise the numeric version plus a UTC
+                    timestamp (0.1.0.202609261730), so every local build differs.
   --self-contained  Bundle the .NET runtime, so users need nothing installed.
   --output          Directory for Wandur.app (default artifacts/macos/<rid>).
   --sign-adhoc      Ad-hoc sign the finished bundle (codesign --deep -s -). The
@@ -46,6 +49,7 @@ version=""
 self_contained=0
 output=""
 sign_adhoc=""
+build_number=""
 need_value() { [[ $# -ge 2 && -n "$2" ]] || { echo "$1 needs a value" >&2; usage; }; }
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -58,6 +62,7 @@ while [[ $# -gt 0 ]]; do
     --output) need_value "$@"; output="$2"; shift ;;
     --sign-adhoc) sign_adhoc=1 ;;
     --no-sign) sign_adhoc=0 ;;
+    --build-number) need_value "$@"; build_number="$2"; shift ;;
     -h|--help) usage ;;
     *) echo "unknown option: $1" >&2; usage ;;
   esac
@@ -82,11 +87,22 @@ fi
 if [[ -n "$version" ]] && ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
   echo "--version must look like 1.2.3 or 1.2.3-beta.1 (no leading v), not $version" >&2; exit 2
 fi
-# CFBundleShortVersionString and CFBundleVersion are read as up to three integers.
+if [[ -n "$build_number" ]] && ! [[ "$build_number" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+  echo "--build-number must be dot-separated integers, not $build_number" >&2; exit 2
+fi
+# CFBundleShortVersionString is the numeric SemVer core (macOS reads it as integers only).
+# CFBundleVersion identifies the build: the CI run number, or the core plus a timestamp.
 bundle_version="${version%%-*}"
 bundle_version="${bundle_version:-0.1.0}"
-bundle_build="${version%%-*}"
-bundle_build="${bundle_build:-1}"
+if [[ -n "$build_number" ]]; then
+  bundle_build="$build_number"
+elif [[ -n "$rid" && -n "${GITHUB_RUN_NUMBER:-}" ]]; then
+  bundle_build="$GITHUB_RUN_NUMBER"
+elif [[ -n "$rid" ]]; then
+  bundle_build="$bundle_version.$(date -u +%Y%m%d%H%M)"
+else
+  bundle_build=1
+fi
 
 if [[ -z "$sign_adhoc" ]]; then
   sign_adhoc=0

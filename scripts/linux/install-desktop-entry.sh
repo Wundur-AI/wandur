@@ -10,7 +10,14 @@ data="${XDG_DATA_HOME:-$HOME/.local/share}"
 chmod +x "$here/Wandur"
 mkdir -p "$data/applications" "$data/icons/hicolor/256x256/apps"
 cp "$here/net.wandur.client.png" "$data/icons/hicolor/256x256/apps/net.wandur.client.png"
-sed "s|^Exec=.*|Exec=\"$here/Wandur\"|" "$here/net.wandur.client.desktop" \
-  > "$data/applications/net.wandur.client.desktop"
+
+# Desktop Entry Exec quoting: the path goes in double quotes, where " ` $ and \ take a
+# backslash; the string-value escape rule then doubles every backslash, and a literal % is
+# written %%. So \ becomes \\\\, and " ` $ become \\" \\` \\$. Spaces and & need only the quotes.
+exec_path="$(printf '%s' "$here/Wandur" | sed -e 's/\\/\\\\\\\\/g' -e 's/["`$]/\\\\&/g' -e 's/%/%%/g')"
+# awk reads the value from the environment, so no character in the path is special to it.
+EXEC_LINE="Exec=\"$exec_path\"" awk '/^Exec=/ { print ENVIRON["EXEC_LINE"]; next } /^# / { next } { print }' \
+  "$here/net.wandur.client.desktop.in" > "$data/applications/net.wandur.client.desktop"
+
 command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$data/applications" || true
 echo "Added Wandur to the application menu ($data/applications/net.wandur.client.desktop)."

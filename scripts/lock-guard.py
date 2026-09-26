@@ -11,8 +11,9 @@ brackets that restore:
                                              then put the original files back either way
 
 "Changed" means: a framework section that existed before is not identical, or a package in a
-new runtime section (for example net10.0/osx-arm64) resolved to a different version than the
-same package in its framework section. Adding runtime sections is expected and is undone.
+new runtime section (for example net10.0/osx-arm64) resolved to a different version or content
+hash than the same package in its framework section. Adding runtime sections is expected and
+is undone. A lock file the publish created where there was none is reported and deleted.
 """
 import json
 import pathlib
@@ -59,10 +60,13 @@ def drift(original: dict, current: dict, name: str) -> list[str]:
             continue
         base = before.get(framework.split("/", 1)[0], {})
         for package, entry in packages.items():
-            pinned = base.get(package, {}).get("resolved")
-            if pinned is not None and entry.get("resolved") != pinned:
-                problems.append(f"{name}: {package} resolved {entry.get('resolved')} for {framework},"
-                                f" locked at {pinned}")
+            locked = base.get(package)
+            if locked is None:
+                continue
+            for field in ("resolved", "contentHash"):
+                if field in locked and entry.get(field) != locked[field]:
+                    problems.append(f"{name}: {package} {field} for {framework} is {entry.get(field)},"
+                                    f" locked as {locked[field]}")
     return problems
 
 
@@ -81,6 +85,12 @@ def check(root: pathlib.Path, store: pathlib.Path) -> None:
         finally:
             shutil.copy2(saved, live)
             restored += 1
+    saved_paths = {saved.relative_to(store) for saved in store.rglob("packages.lock.json")}
+    for live in lock_files(root):
+        relative = live.relative_to(root)
+        if relative not in saved_paths:
+            live.unlink()
+            print(f"lock-guard: warning: the publish created {relative}; deleted it", file=sys.stderr)
     print(f"lock-guard: restored {restored} lock files")
     if problems:
         print("lock-guard: the publish resolved packages differently from the lock files:", file=sys.stderr)
