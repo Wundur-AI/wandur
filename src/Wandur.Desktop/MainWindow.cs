@@ -35,6 +35,7 @@ public sealed partial class MainWindow : Window
     private readonly TextBlock _toolbarStatus = Ui.TextKey(nameof(L.ReadyToWander), 12, "muted");
     private readonly TextBlock _noticeText = Ui.Text("", 12);
     private readonly Border _notice;
+    private readonly CheckBox _hideHistoryNotice;
     private readonly Border _toolbar;
     private (Size Size, Rect Title)? _fleetToolbarSurfaceKey;
     private readonly StackPanel _toolbarActions;
@@ -159,9 +160,36 @@ public sealed partial class MainWindow : Window
         }
 
         var dismiss = Ui.Button("×", () => Controller.ShowNotice(null), "quiet");
-        Grid.SetColumn(dismiss, 1);
-        _notice = new Border { Padding = new Thickness(18, 7), Background = Brush.Parse("#483B2A"), IsVisible = false, Child = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { _noticeText, dismiss } } };
-        _noticeText.Foreground = Brush.Parse("#FFE0B0");
+        dismiss.Name = "DismissNotice";
+        Grid.SetColumn(dismiss, 2);
+        _hideHistoryNotice = new CheckBox
+        {
+            Name = "HideHistoryRecordingNotice", FontSize = 12,
+            Margin = new Thickness(16, 0), VerticalAlignment = VerticalAlignment.Center,
+            [!CheckBox.ContentProperty] = LocalizedText.Binding(nameof(L.DontShowAgain))
+        };
+        _hideHistoryNotice.Bind(CheckBox.ForegroundProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("TextBrush"));
+        _hideHistoryNotice.IsCheckedChanged += (_, _) =>
+        {
+            if (_hideHistoryNotice.IsChecked != true || !Controller.IsHistoryRecordingNotice) return;
+            try { Controller.SaveSettings(Controller.Settings with { HideHistoryRecordingNotice = true }); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Data.Common.DbException)
+            {
+                _hideHistoryNotice.IsChecked = false;
+                Controller.ShowNotice(L.HistoryNoticePreferenceFailed);
+            }
+        };
+        Grid.SetColumn(_hideHistoryNotice, 1);
+        _notice = new Border
+        {
+            Name = "SessionNotice", Padding = new Thickness(18, 7), IsVisible = false,
+            BorderThickness = new Thickness(0, 0, 0, 1),
+            Child = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), Children = { _noticeText, _hideHistoryNotice, dismiss } }
+        };
+        _notice.Bind(Border.BackgroundProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("PanelBrush"));
+        _notice.Bind(Border.BorderBrushProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("LineBrush"));
+        _noticeText.Bind(TextBlock.ForegroundProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("TextBrush"));
+        _noticeText.TextWrapping = TextWrapping.Wrap;
         _noticeText.VerticalAlignment = VerticalAlignment.Center;
         var statusRight = Ui.TextKey(nameof(L.CtrlTabSwitchSessionsDragPanelHeadersToArrange), 10, "muted");
         statusRight.HorizontalAlignment = HorizontalAlignment.Right;
@@ -907,6 +935,8 @@ public sealed partial class MainWindow : Window
         Avalonia.Automation.AutomationProperties.SetName(_disconnect, disconnectTip);
         _notice.IsVisible = Controller.Notice is not null;
         _noticeText.Text = Controller.Notice;
+        _hideHistoryNotice.IsVisible = Controller.IsHistoryRecordingNotice;
+        _hideHistoryNotice.IsChecked = false;
         _menus.Refresh();
     }
 

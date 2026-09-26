@@ -1,5 +1,27 @@
 # Client foundation verification
 
+## Themed history reminder and persistent dismissal (2026-09-26)
+
+- Replaced the hardcoded brown notice surface with live Panel/Text/Line brushes.
+  The recording reminder alone offers a localized Don't show again checkbox;
+  its saved preference clears reminders in other tabs and survives app restarts.
+  Recording, retention, and error notices remain independent. Closing with the
+  cross is temporary; an unsuccessful preference write reports a safe error.
+- The three initial regressions failed before implementation. Expanded focused
+  checks passed 8/8, covering SQLite persistence, cross-tab clearing, continued
+  capture, error visibility, temporary dismissal, write failure, live theme and
+  language changes, and minimum-width layout in all five languages.
+- Full Release solution tests passed 778 Core + 641 Desktop = 1,419 tests,
+  with no failures or skips. Independent read-only review found no issues.
+  Final Release build passed with zero warnings/errors; localization generation
+  and whitespace checks passed.
+- Headless captures in `/private/tmp/wandur-history-notice/` cover Slate, Hull,
+  and Paper in all five languages at 1040 DIPs. Slate English, Hull German,
+  and Paper French were visually inspected. Native mouse/keyboard interaction
+  was not manually retested; tests exercise the actual checkbox change handler.
+- No owner app restart, session disruption, personal-data access, schema change,
+  new package, or bundle replacement. Only isolated temporary test databases.
+
 ## Fullscreen chrome preparation (2026-09-25)
 
 - The fullscreen command now hides title/frame decorations, releases their insets

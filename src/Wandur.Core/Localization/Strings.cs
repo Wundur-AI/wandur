@@ -960,4 +960,6 @@ public static class Strings
     public static string SkinArmored => Get(nameof(SkinArmored));
     public static string SkinSystem => Get(nameof(SkinSystem));
     public static string SkinHelp => Get(nameof(SkinHelp));
+    public static string DontShowAgain => Get(nameof(DontShowAgain));
+    public static string HistoryNoticePreferenceFailed => Get(nameof(HistoryNoticePreferenceFailed));
 }

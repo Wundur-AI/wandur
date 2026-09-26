@@ -1929,4 +1929,6 @@ Pare após receber uma lista do inventário.</value></data>
   <data name="SkinArmored" xml:space="preserve"><value>Blindado</value></data>
   <data name="SkinSystem" xml:space="preserve"><value>Sistema</value></data>
   <data name="SkinHelp" xml:space="preserve"><value>Escolha o formato da janela independentemente das cores. Os temas do MUD não alteram seu estilo de janela.</value></data>
+  <data name="DontShowAgain" xml:space="preserve"><value>Não mostrar novamente</value></data>
+  <data name="HistoryNoticePreferenceFailed" xml:space="preserve"><value>Não foi possível salvar esta preferência. O aviso do histórico será exibido novamente.</value></data>
 </root>

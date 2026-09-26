@@ -20,7 +20,7 @@ public sealed partial class WorkspaceController
         _historyRecorder = new(_historyStore, new(Guid.NewGuid().ToString("N"), _historyWorldKey,
             WorldName, CharacterName, DateTimeOffset.UtcNow), Settings.HistoryRetentionDays);
         _historyRecorder.Failed += HistoryFailed;
-        if (Notice is null) Notice = L.HistoryRecordingNotice;
+        if (Notice is null && !Settings.HideHistoryRecordingNotice) IsHistoryRecordingNotice = true;
     }
 
     private void HistoryFailed() => Dispatcher.UIThread.Post(() =>

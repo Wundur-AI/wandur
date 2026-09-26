@@ -28,6 +28,9 @@ forever retention. SQLite schema 7 adds FTS5 keyword/phrase search, no embedding
 or new packages. Capture is bounded and asynchronous, with conservative private
 input handling. See `docs/session-history.md` for behavior and limitations and
 the September 24 entry in `docs/verification.md` for verification evidence.
+The recording reminder now uses live theme colors and offers a localized
+Don't show again checkbox. `HideHistoryRecordingNotice` is a saved client
+preference propagated to open tabs, independent of recording and error notices.
 
 Mapped vitals fix (branch `fix/mapped-vitals`): the vitals strip stopped
 following the world when a login lingered (a GMCP login the world never

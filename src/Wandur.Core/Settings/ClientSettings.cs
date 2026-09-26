@@ -80,6 +80,8 @@ public sealed record ClientSettings
     /// <summary>Whether the composer offers grayed completions from command history and words seen in the session.</summary>
     public bool ComposerSuggestions { get; init; } = true;
     public bool HistoryEnabled { get; init; } = true;
+    /// <summary>Hides the informational recording reminder, never history errors or recording itself.</summary>
+    public bool HideHistoryRecordingNotice { get; init; }
     /// <summary>Days of locally retained interactions; zero keeps history until explicitly deleted.</summary>
     public int HistoryRetentionDays { get; init; } = 30;
     public List<UserTheme> CustomThemes { get; init; } = [];

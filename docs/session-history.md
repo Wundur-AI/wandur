@@ -11,6 +11,12 @@ Settings. Disabling recording retains existing history and stops new capture.
 Enabling it again while connected starts a new history segment. There is no
 backfill of interactions from before this feature or while recording was off.
 
+The recording reminder uses the current theme's panel and text colors. Check
+**Don't show again** to hide that reminder across all sessions and future app
+launches. This preference does not disable recording or hide recording errors.
+The close button dismisses only the current notice. If saving the preference
+fails, the app reports it and keeps the reminder enabled.
+
 Search accepts words and double-quoted phrases. Words are combined with AND
 within an entry; operators such as OR, NOT and wildcard punctuation are treated
 as literal input, not query syntax. Results are newest first. World and

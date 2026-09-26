@@ -1929,4 +1929,6 @@ Stoppe nach einer Inventarliste.</value></data>
   <data name="SkinArmored" xml:space="preserve"><value>Panzerung</value></data>
   <data name="SkinSystem" xml:space="preserve"><value>System</value></data>
   <data name="SkinHelp" xml:space="preserve"><value>Wählen Sie die Fensterform unabhängig von den Farben. MUD-Themes ändern Ihren Fensterstil nicht.</value></data>
+  <data name="DontShowAgain" xml:space="preserve"><value>Nicht mehr anzeigen</value></data>
+  <data name="HistoryNoticePreferenceFailed" xml:space="preserve"><value>Diese Einstellung konnte nicht gespeichert werden. Der Hinweis zum Verlauf wird erneut angezeigt.</value></data>
 </root>

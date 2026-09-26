@@ -84,7 +84,13 @@ public sealed partial class WorkspaceController : IAsyncDisposable
     private string? _reportedCharacter;
     public string Endpoint { get; private set; } = L.ChooseASavedWorldOrTryTheOfflineDemo;
     public string Status { get; private set; } = L.ReadyToWander;
-    public string? Notice { get; private set; }
+    private string? _notice;
+    public bool IsHistoryRecordingNotice { get; private set; }
+    public string? Notice
+    {
+        get => IsHistoryRecordingNotice ? L.HistoryRecordingNotice : _notice;
+        private set { _notice = value; IsHistoryRecordingNotice = false; }
+    }
     public bool IsConnected => _session?.IsConnected == true;
     public bool IsConnecting { get; private set; }
     public bool HasSession { get; private set; }
@@ -130,6 +136,7 @@ public sealed partial class WorkspaceController : IAsyncDisposable
     internal void ApplySettings(ClientSettings settings)
     {
         Settings = settings;
+        if (settings.HideHistoryRecordingNotice && IsHistoryRecordingNotice) Notice = null;
         RefreshChannelRules();
         Display.ApplySettings(settings);
         ThemeService.Apply(settings, WorldTheme);
