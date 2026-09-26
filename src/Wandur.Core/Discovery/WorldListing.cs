@@ -21,6 +21,12 @@ public sealed record WorldListing
     public int? Port { get; init; }
     public int? TlsPort { get; init; }
     public bool WebOnly { get; init; }
+    /// <summary>The directory's own beginner flag. Null when a record does not carry it; only true is shown.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public bool? BeginnerFriendly { get; init; }
+    /// <summary>The directory's adult content flag, once the directory ships it. Null when a record does not carry it.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public bool? AdultContent { get; init; }
     public WorldSource Source { get; init; } = new();
     public WorldAvailability Availability { get; init; } = new();
     public WorldPopulation Population { get; init; } = new();
@@ -50,6 +56,11 @@ public sealed record WorldListing
         (Port ?? TlsPort) is { } port ? $"{(Host.Contains(':') ? $"[{Host}]" : Host)}:{port}" : Host;
     [JsonIgnore] public bool CanConnect => !WebOnly && Uri.CheckHostName(Host) != UriHostNameType.Unknown && (Port ?? TlsPort) is > 0 and <= 65535;
     [JsonIgnore] public bool HasSuppliedArtwork => BannerUrl.Length > 0;
+    [JsonIgnore] public bool HasGeneratedArtwork => !string.IsNullOrWhiteSpace(GeneratedArtworkPath);
+    /// <summary>A player count Wandur measured itself. A count copied from another listing site is not live.</summary>
+    [JsonIgnore] public int? LivePlayerCount => Population.IsLive ? Population.LatestCount : null;
+    /// <summary>Online by the directory's latest report, and not archived.</summary>
+    [JsonIgnore] public bool IsOnline => Availability.Online == true && Availability.Archived != true;
     [JsonIgnore] public string RatingSummary => Community.Rating is { } rating && Community.RatingCount is > 0
         ? L.Format(Community.RatingCount == 1 ? L.RatingOne : L.RatingMany, rating.ToString("0.#", CultureInfo.CurrentCulture), Community.RatingCount)
         : Community.RatingCount == 0 ? L.NoRatingsYet : L.RatingNotSupplied;
@@ -67,14 +78,11 @@ public sealed record WorldListing
     /// <summary>The artwork cache key: the directory's id, taken as an opaque string, plus what the picture was made
     /// from. A world whose id changes on the server keeps its picture through <see cref="WorldCatalog"/>, which
     /// re-keys cached art by endpoint when a snapshot renames a world.</summary>
-    [JsonIgnore] public string ArtKey
-    {
-        get
-        {
-            var subject = HasSuppliedArtwork ? $"{Id}\nsupplied\n{BannerUrl}" : $"{Id}\n{Name}\n{Summary}\n{Description}";
-            return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(subject)));
-        }
-    }
+    [JsonIgnore] public string ArtKey => HasSuppliedArtwork ? Hash($"{Id}\nsupplied\n{BannerUrl}") : GeneratedArtKey;
+    /// <summary>The cache key of the directory's generated illustration. Equal to <see cref="ArtKey"/> for a world
+    /// without supplied artwork, so the same picture is never stored twice.</summary>
+    [JsonIgnore] public string GeneratedArtKey => Hash($"{Id}\n{Name}\n{Summary}\n{Description}");
+    private static string Hash(string subject) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(subject)));
 
     /// <summary>The listing's mapping when it was generated for this exact endpoint. The mapping's world id is the
     /// worker's label and is not compared with the listing's id: a mapping file may predate a rename.</summary>
@@ -152,6 +160,10 @@ public sealed record WorldPopulation
     public DateTimeOffset? ObservedAt { get; init; }
     public decimal? AverageCount { get; init; }
     public string ReportedRange { get; init; } = "";
+    /// <summary>Who measured the count: "wandur" for the directory's own probe, otherwise the listing site.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Source { get; init; }
+    [JsonIgnore] public bool IsLive => string.Equals(Source, "wandur", StringComparison.OrdinalIgnoreCase) && LatestCount is not null;
 }
 
 public sealed record WorldFeatures

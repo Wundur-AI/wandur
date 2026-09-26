@@ -257,6 +257,82 @@ public sealed class WorldCatalogTests : IDisposable
     }
 
     [Fact]
+    public async Task BeginnerFlagAndPopulationSourceAreOptionalAndOnlyWandurCountsAreLive()
+    {
+        var json = """
+            {"format":"wandur.directory","schema_version":2,"fetched_at":"2026-09-15T20:00:00Z",
+             "worlds":[
+               {"id":"measured","name":"Measured","host":"a.example.org","port":4000,"beginner_friendly":true,"adult_content":false,
+                "availability":{"online":true},"population":{"latest_count":143,"source":"wandur"}},
+               {"id":"copied","name":"Copied","host":"b.example.org","port":4000,"beginner_friendly":false,
+                "availability":{"online":true},"population":{"latest_count":5,"source":"mudverse"}},
+               {"id":"older","name":"Older","host":"c.example.org","port":4000,
+                "availability":{"online":true,"archived":true},"population":{"latest_count":9,"source":null}}]}
+            """;
+        using var http = new HttpClient(new Handler(_ => new(HttpStatusCode.OK) { Content = new StringContent(json) }));
+        using var catalog = new WorldCatalog(CachePath, http: http);
+        await catalog.LoadAsync();
+        Assert.Null(catalog.Warning);
+        var measured = catalog.Worlds.Single(w => w.Id == "measured");
+        var copied = catalog.Worlds.Single(w => w.Id == "copied");
+        var older = catalog.Worlds.Single(w => w.Id == "older");
+        Assert.True(measured.BeginnerFriendly);
+        Assert.False(measured.AdultContent);
+        Assert.Equal(143, measured.LivePlayerCount);
+        Assert.False(copied.BeginnerFriendly);
+        Assert.Null(copied.AdultContent);
+        Assert.Null(copied.LivePlayerCount);
+        Assert.Equal(5, copied.Population.LatestCount);
+        Assert.Null(older.BeginnerFriendly);
+        Assert.Null(older.Population.Source);
+        Assert.Null(older.LivePlayerCount);
+        Assert.True(measured.IsOnline);
+        Assert.False(older.IsOnline);
+        // The client's own cache keeps the new fields across a restart.
+        using var offline = new HttpClient(new Handler(_ => throw new HttpRequestException("offline")));
+        using var reopened = new WorldCatalog(CachePath, http: offline);
+        var cached = reopened.Worlds.Single(w => w.Id == "measured");
+        Assert.True(cached.BeginnerFriendly);
+        Assert.Equal(143, cached.LivePlayerCount);
+        Assert.Null(reopened.Worlds.Single(w => w.Id == "older").BeginnerFriendly);
+    }
+
+    [Fact]
+    public async Task GeneratedAndSuppliedArtworkCanBeFetchedSeparately()
+    {
+        var json = """
+            {"format":"wandur.directory","schema_version":2,"fetched_at":"2026-09-15T20:00:00Z",
+             "worlds":[
+               {"id":"both","name":"Both","host":"a.example.org","port":4000,
+                "banner_url":"https://assets.example.org/both.jpg","generated_artwork_path":"worlds/both/art"},
+               {"id":"generated","name":"Generated","host":"b.example.org","port":4000,"generated_artwork_path":"worlds/generated/art"}]}
+            """;
+        var requests = new List<string>();
+        using var http = new HttpClient(new Handler(request =>
+        {
+            var url = request.RequestUri!.AbsoluteUri;
+            requests.Add(url);
+            if (url.EndsWith("/directory", StringComparison.Ordinal)) return new(HttpStatusCode.OK) { Content = new StringContent(json) };
+            return new(HttpStatusCode.OK) { Content = new ByteArrayContent(url.Contains("assets") ? [1] : url.Contains("both") ? [2] : [3]) };
+        }));
+        using var catalog = new WorldCatalog(CachePath, new Uri("http://localhost/"), http);
+        await catalog.LoadAsync();
+        var both = catalog.Worlds.Single(w => w.Id == "both");
+        var generated = catalog.Worlds.Single(w => w.Id == "generated");
+        Assert.Equal(new byte[] { 1 }, await catalog.GetArtAsync(both));
+        Assert.Equal(new byte[] { 1 }, await catalog.GetArtAsync(both, WorldArtwork.Supplied));
+        Assert.Equal(new byte[] { 2 }, await catalog.GetArtAsync(both, WorldArtwork.Generated));
+        Assert.Equal(new byte[] { 3 }, await catalog.GetArtAsync(generated, WorldArtwork.Generated));
+        Assert.Null(await catalog.GetArtAsync(generated, WorldArtwork.Supplied));
+        Assert.Equal(generated.ArtKey, generated.GeneratedArtKey);
+        Assert.NotEqual(both.ArtKey, both.GeneratedArtKey);
+        var fetched = requests.Count;
+        Assert.Equal(new byte[] { 2 }, await catalog.GetArtAsync(both, WorldArtwork.Generated));
+        Assert.Equal(new byte[] { 3 }, await catalog.GetArtAsync(generated));
+        Assert.Equal(fetched, requests.Count);
+    }
+
+    [Fact]
     public async Task NativeDirectoryAcceptsNullArchivedAsNotArchived()
     {
         var json = """

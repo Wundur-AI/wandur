@@ -195,15 +195,28 @@ public sealed partial class WorldCatalog : IWorldDirectory, IDisposable
         var matches = Worlds.Where(w => string.Equals(w.Host.TrimEnd('.'), host.TrimEnd('.'), StringComparison.OrdinalIgnoreCase) && (w.Port == port || w.TlsPort == port)).ToArray();
         return matches.Length == 1 && Uri.TryCreate(matches[0].Source.ListingUrl, UriKind.Absolute, out var uri) ? new(matches[0].Name, uri) : null;
     }
-    public async Task<byte[]?> GetArtAsync(WorldListing world, CancellationToken token = default)
+    public Task<byte[]?> GetArtAsync(WorldListing world, CancellationToken token = default) =>
+        GetArtAsync(world, WorldArtwork.Preferred, token);
+
+    /// <summary>One picture of a world. <see cref="WorldArtwork.Preferred"/> is the supplied banner when the listing
+    /// has one, else the generated illustration; the other two ask for one kind only and return null without it.</summary>
+    public async Task<byte[]?> GetArtAsync(WorldListing world, WorldArtwork kind, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-        if (_cache.ReadArtwork(world.ArtKey) is { } cached) return cached;
-        Uri artUri;
-        if (world.HasSuppliedArtwork)
+        var supplied = kind switch
         {
-            if (!Uri.TryCreate(world.BannerUrl, UriKind.Absolute, out var supplied) || supplied.Scheme is not ("http" or "https") || supplied.UserInfo.Length > 0) return null;
-            artUri = supplied;
+            WorldArtwork.Generated => false,
+            WorldArtwork.Supplied => true,
+            _ => world.HasSuppliedArtwork
+        };
+        if (supplied && !world.HasSuppliedArtwork) return null;
+        var key = supplied ? world.ArtKey : world.GeneratedArtKey;
+        if (_cache.ReadArtwork(key) is { } cached) return cached;
+        Uri artUri;
+        if (supplied)
+        {
+            if (!Uri.TryCreate(world.BannerUrl, UriKind.Absolute, out var banner) || banner.Scheme is not ("http" or "https") || banner.UserInfo.Length > 0) return null;
+            artUri = banner;
         }
         else
         {
@@ -216,7 +229,7 @@ public sealed partial class WorldCatalog : IWorldDirectory, IDisposable
         response.EnsureSuccessStatusCode();
         var data = await response.Content.ReadAsByteArrayAsync(token);
         token.ThrowIfCancellationRequested();
-        _cache.WriteArtwork(world.ArtKey, data);
+        _cache.WriteArtwork(key, data);
         return data;
     }
     public void Dispose() { _lifetime.Cancel(); if (_ownsHttp) _http.Dispose(); }
