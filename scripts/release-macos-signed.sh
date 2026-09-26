@@ -43,7 +43,7 @@ version="${1#v}"
 tag="v$version"
 [[ "$(uname -s)" == "Darwin" ]] || fail "run this on macOS"
 
-project_root="$(cd "$(dirname "$0")/.." && pwd)"
+project_root="$(cd "$(dirname "$0")/.." && pwd -P)"
 out_dir="$project_root/artifacts/release"
 
 # 1. The exact tag, exported into a scratch directory on the internal disk (codesign also
@@ -52,7 +52,9 @@ git -C "$project_root" rev-parse -q --verify "refs/tags/$tag^{commit}" >/dev/nul
   || fail "tag $tag does not exist in this clone; run git fetch --tags, or create and push the tag first"
 tag_commit="$(git -C "$project_root" rev-parse "$tag^{commit}")"
 
-work="$(mktemp -d "${TMPDIR:-/tmp}/wandur-signed.XXXXXX")"
+# pwd -P: $TMPDIR is under /var, a symlink to /private/var, and restoring through a symlinked
+# path drops the project references (see package-macos.sh).
+work="$(cd "$(mktemp -d "${TMPDIR:-/tmp}/wandur-signed.XXXXXX")" && pwd -P)"
 cleanup() {
   local volume
   for volume in "$work"/volume-*; do

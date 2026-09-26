@@ -39,14 +39,15 @@ esac
 python=python3
 "$python" -c '' 2>/dev/null || python=python
 
-project_root="$(cd "$(dirname "$0")/.." && pwd)"
+# Physical paths: see the note in package-macos.sh.
+project_root="$(cd "$(dirname "$0")/.." && pwd -P)"
 output="${output:-$project_root/artifacts/release}"
 mkdir -p "$output"
-output="$(cd "$output" && pwd)"
+output="$(cd "$output" && pwd -P)"
 name="Wandur-$version-$platform"
 # Stage in the system temp directory: on exFAT (the owner's external drive) every file gains an
 # AppleDouble ._ companion and loses its permission bits, and both would end up in the archive.
-work="$(mktemp -d "${TMPDIR:-/tmp}/wandur-portable.XXXXXX")"
+work="$(cd "$(mktemp -d "${TMPDIR:-/tmp}/wandur-portable.XXXXXX")" && pwd -P)"
 stage="$work/$name"
 locks="$work/locks"
 

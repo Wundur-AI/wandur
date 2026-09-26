@@ -109,11 +109,14 @@ if [[ -z "$sign_adhoc" ]]; then
   [[ -n "$rid" ]] && sign_adhoc=1
 fi
 
-project_root="$(cd "$(dirname "$0")/.." && pwd)"
+# Physical path (pwd -P): restoring through a symlinked path (~/wandur here, /var -> /private/var
+# for temp directories) leaves the project references out of project.assets.json, and the build
+# then fails with CS0234 on every Wandur.Models type.
+project_root="$(cd "$(dirname "$0")/.." && pwd -P)"
 if [[ -n "$rid" ]]; then
   bundle_parent="${output:-$project_root/artifacts/macos/$rid}"
   mkdir -p "$bundle_parent"
-  bundle_parent="$(cd "$bundle_parent" && pwd)"
+  bundle_parent="$(cd "$bundle_parent" && pwd -P)"
 else
   bundle_parent="$project_root/artifacts/macos"
 fi
