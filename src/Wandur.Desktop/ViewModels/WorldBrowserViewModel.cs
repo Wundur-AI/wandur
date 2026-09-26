@@ -67,6 +67,13 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
         if (ReferenceEquals(_savedProfiles, SavedWorlds)) return;
         _savedProfiles = SavedWorlds;
         OnPropertyChanged(nameof(SavedWorlds));
+        // A saved adult world is browsable even with adult worlds hidden, so saving one can change the list.
+        if (!Query.ShowAdult && _catalog.Worlds.Any(w => w.IsAdult))
+        {
+            var feedback = Feedback;
+            RefreshCatalog();
+            Feedback = feedback;
+        }
     }
     public IReadOnlyList<WorldBrowserFacet> Facets { get; } =
     [
@@ -131,7 +138,9 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
     private bool _listedAdult;
     /// <summary>The directory as this viewer may browse it: adult worlds only when asked for. Every count, facet and
     /// result comes from here, so a hidden world leaves no trace in the list. Saved worlds are settings, not this.</summary>
-    private IEnumerable<WorldListing> Listed => Query.ShowAdult ? _catalog.Worlds : _catalog.Worlds.Where(w => !w.IsAdult);
+    private IEnumerable<WorldListing> Listed => _catalog.Worlds.Where(Browsable);
+    /// <summary>Adult worlds only when asked for, except one the user saved: their own world is never hidden.</summary>
+    private bool Browsable(WorldListing world) => Query.ShowAdult || !world.IsAdult || IsWorldSaved(world);
     /// <summary>What "now" is for live counts: the catalog's clock, so tests can hold it still.</summary>
     public DateTimeOffset Now => _catalog.Clock.GetUtcNow();
     partial void OnCanRefreshChanged(bool value) => RefreshCommand.NotifyCanExecuteChanged();
@@ -147,7 +156,7 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
         Feedback = "";
         var id = SelectedWorld?.Id;
         var matches = _catalog.Search(Query.Search)
-            .Where(w => Query.ShowAdult || !w.IsAdult)
+            .Where(Browsable)
             .Where(w => Query.Connection switch { 1 => w.CanConnect, 2 => w.WebOnly, _ => true })
             .Where(w => !Query.OnlineOnly || w.Availability.Online == true && w.Availability.Archived != true)
             .Where(MatchesAdvanced);
@@ -155,10 +164,10 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
         SelectedWorld = results.FirstOrDefault(w => w.Id == id) ?? results.FirstOrDefault();
         if (IsExploring && SelectedWorld?.Id != id) IsExploring = false;
         var listed = Listed.Count();
-        Count = results.Length == listed ? L.Format(L.WorldsToExplore, results.Length)
+        Count = results.Length == listed ? L.Format(results.Length == 1 ? L.WorldsToExploreOne : L.WorldsToExplore, results.Length)
             : L.Format(L.WorldsToExploreFiltered, results.Length, listed);
         var count = Query.Facets.Count + (Query.MinimumPlayers.HasValue ? 1 : 0) + (Query.MaximumPlayers.HasValue ? 1 : 0)
-            + (Query.Rating > 0 ? 1 : 0) + (Query.TlsOnly ? 1 : 0);
+            + (Query.Rating > 0 ? 1 : 0) + (Query.TlsOnly ? 1 : 0) + (Query.ShowAdult ? 1 : 0);
         FilterSummary = count == 0 ? L.AdvancedSearchFindYourKindOfWorld : L.Format(count == 1 ? L.FiltersOne : L.FiltersMany, count);
         FilterHint = Query.MinimumPlayers > Query.MaximumPlayers ? L.MinimumPlayersExceedsMaximumAdjustTheRangeToFind : L.AllPreferencesCombinePlayerCountsAreLastObservedNot;
         Results = results;
@@ -176,12 +185,16 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
     private IEnumerable<WorldListing> SortResults(IEnumerable<WorldListing> matches) => Query.Sort switch
     {
         1 => matches.OrderBy(w => w.Name, StringComparer.OrdinalIgnoreCase),
-        2 => matches.OrderByDescending(w => w.Population.LatestCount).ThenBy(w => w.Name, StringComparer.OrdinalIgnoreCase),
+        // Live counts first, as the site ranks players; then the other counts as history; then the rest.
+        2 => matches.OrderByDescending(w => w.LivePlayerCount(Now) is not null).ThenByDescending(w => w.LivePlayerCount(Now) ?? w.Population.LatestCount)
+            .ThenBy(w => w.Name, StringComparer.OrdinalIgnoreCase),
         3 => matches.OrderByDescending(w => w.Community.RatingCount is > 0 ? w.Community.Rating : null)
             .ThenByDescending(w => w.Community.RatingCount).ThenBy(w => w.Name, StringComparer.OrdinalIgnoreCase),
         4 => matches.OrderByDescending(w => w.Source.UpdatedAt).ThenBy(w => w.Name, StringComparer.OrdinalIgnoreCase),
         5 => matches.OrderByDescending(w => w.EstablishedAt).ThenBy(w => w.Name, StringComparer.OrdinalIgnoreCase),
-        _ => matches
+        // With nothing typed, the best match is the directory's own rank, as the site's default sort is; the stable
+        // sort keeps the directory's order for worlds without one. A search keeps its relevance order.
+        _ => Query.Search.Trim().Length == 0 ? matches.OrderBy(w => w.Community.Rank is null).ThenBy(w => w.Community.Rank) : matches
     };
     [RelayCommand] private void ResetFilters() => Query = new();
     [RelayCommand(CanExecute = nameof(CanRefresh))] private Task RefreshAsync() => LoadAsync(true);

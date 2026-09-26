@@ -109,7 +109,7 @@ public sealed partial class WorldBrowserView
         Add(nameof(L.MUDConnections), _connectionFilter);
         _adultFilter.Bind(ToolTip.TipProperty, LocalizedText.Binding(nameof(L.AdultWorldsHint)));
         _adultFilter.IsCheckedChanged += (_, _) => Filter();
-        Add(nameof(L.AdultChip), _adultFilter);
+        Add(nameof(L.AdultWorlds), _adultFilter);
         _minimumPlayers.ValueChanged += (_, _) => Filter();
         _maximumPlayers.ValueChanged += (_, _) => Filter();
         _rating.SelectionChanged += (_, _) => Filter();

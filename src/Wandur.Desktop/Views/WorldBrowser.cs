@@ -28,6 +28,8 @@ public sealed partial class WorldBrowserView : UserControl
 {
     /// <summary>Below this width the world page stacks into one column, as the site does under 800 pixels.</summary>
     internal const double NarrowBelow = 760;
+    /// <summary>Room on the right of the rows and the page for the overlay scroll bar.</summary>
+    internal const double ScrollGutter = 14;
     private readonly WorldCatalog _catalog;
     private readonly WorldBrowserViewModel _model;
     private bool _renderingResults;
@@ -99,10 +101,12 @@ public sealed partial class WorldBrowserView : UserControl
         _refresh = Ui.ToolbarIconKey(new Button { Name = "RefreshDirectory", Command = _model.RefreshCommand },
             "M 13,5 A 5.5,5.5 0 1 0 13.2,10 M 13,1 V 5 H 9", nameof(L.RefreshDirectory), inset: true);
         _refresh.VerticalAlignment = VerticalAlignment.Center;
-        _back = Ui.ButtonKey(nameof(L.BackToWorlds), BackToResults, "quiet");
-        _back.Name = "DirectoryBack"; _back.IsVisible = false; _back.FontSize = 12;
-        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 12, Children = { _back, heading, _refresh } };
-        Grid.SetColumn(heading, 1); Grid.SetColumn(_refresh, 2);
+        // The way back is the page's breadcrumb, as on the site; the title bar keeps the heading and refresh only.
+        _back = DirectoryLook.Link(L.BackToWorlds, BackToResults, 14, "MutedBrush", FontWeight.Normal);
+        _back.Name = "DirectoryBack";
+        _back.Bind(ContentControl.ContentProperty, LocalizedText.Binding(nameof(L.BackToWorlds)));
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12, Children = { heading, _refresh } };
+        Grid.SetColumn(_refresh, 1);
         _search.TextChanged += (_, _) => Filter();
         _connectionFilter.SelectionChanged += (_, _) => Filter();
         _onlineChoice.SelectionChanged += (_, _) => Filter();
@@ -111,6 +115,9 @@ public sealed partial class WorldBrowserView : UserControl
         _list.ItemTemplate = new FuncDataTemplate<WorldListing>((world, _) => world is null ? null : new DirectoryWorldCard(world,
             Explore, SaveWorld, _model.IsWorldSaved, (w, token) => _rowThumbnails?.GetAsync(w, token) ?? Task.FromResult<Bitmap?>(null), _model.Now));
         ScrollViewer.SetHorizontalScrollBarVisibility(_list, Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled);
+        // A right gutter keeps the rows clear of the overlay scroll bar.
+        _list.Padding = new Thickness(0, 0, ScrollGutter, 0);
+        _details.Margin = new Thickness(0, 0, ScrollGutter, 0);
         _list.AddHandler(KeyDownEvent, (_, e) =>
         {
             var onButton = e.Source is Button || e.Source is Visual visual && visual.GetVisualAncestors().OfType<Button>().Any();
@@ -133,9 +140,9 @@ public sealed partial class WorldBrowserView : UserControl
             Name = "DirectoryArtworkFrame", ClipToBounds = true, CornerRadius = new CornerRadius(12), Height = 320,
             Child = new Panel { Children = { _artPlaceholder, _image, _heroScrim } }
         };
-        _artFrame.Paint(Border.BackgroundProperty, "PanelBrush");
+        _artFrame.Paint(Border.BackgroundProperty, DirectoryLook.PlateBrush);
         _listingToolbar = new Border { Name = "DirectoryListingToolbar", Child = _listingActions, IsVisible = false };
-        _detailScroll = new ScrollViewer { Name = "DirectoryDetailsScroll", Content = _details, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
+        _detailScroll = new ScrollViewer { Name = "DirectoryDetailsScroll", Content = _details, Focusable = true, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
         _detailScroll.ScrollChanged += (_, _) => { if (!_closed && !_restoringScroll) _model.DetailScrollOffset = _detailScroll.Offset.Y; };
         _detailPage = _detailScroll;
 
@@ -182,7 +189,9 @@ public sealed partial class WorldBrowserView : UserControl
         _list.SelectedItem = world;
         _model.SelectedWorld = world;
         _model.IsExploring = true;
-        _back.Focus();
+        // The way back is on the page that was just built; focus it once it is laid out and can take focus.
+        if (!_back.Focus()) _detailScroll.Focus();
+        Dispatcher.UIThread.Post(() => { if (!_closed && _model.IsExploring) _back.Focus(); }, DispatcherPriority.Loaded);
     }
 
     private void SaveWorld(WorldListing world)
@@ -208,7 +217,7 @@ public sealed partial class WorldBrowserView : UserControl
     private void UpdatePage()
     {
         _resultsPage.IsVisible = !_model.IsExploring;
-        _detailPage.IsVisible = _back.IsVisible = _model.IsExploring;
+        _detailPage.IsVisible = _model.IsExploring;
     }
 
     private void RefreshSavedRows()
@@ -253,7 +262,7 @@ public sealed partial class WorldBrowserView : UserControl
         base.OnAttachedToVisualTree(e);
         _closed = false; _restoringScroll = true;
         // Two pixels per unit of the site's 400 by 160 plate, cropped to cover it.
-        _rowThumbnails = new(_catalog, 800, 320, cacheBitmaps: false, kind: WorldArtwork.Generated, cover: true);
+        _rowThumbnails = new(_catalog, 800, 320, cacheBitmaps: false, kind: WorldArtwork.Preferred, cover: true, size: WorldCatalog.RowSize);
         if (_lifetime.IsCancellationRequested) { _lifetime.Dispose(); _lifetime = new(); }
         _model.PropertyChanged += ModelChanged;
         _model.Attach(action => Dispatcher.UIThread.Post(action));
@@ -371,7 +380,7 @@ public sealed partial class WorldBrowserView : UserControl
             }
         }, DispatcherPriority.Loaded);
         // The hero, the actions and the banner outlive one world's page; free them from the last one first.
-        foreach (var kept in new Control[] { _artFrame, _listingToolbar, _banner }) Detach(kept);
+        foreach (var kept in new Control[] { _artFrame, _listingToolbar, _banner, _back }) Detach(kept);
         _details.Children.Clear();
         _narrowLayouts.Clear(); _narrow = null;
         _listingActions.Children.Clear();
@@ -382,6 +391,9 @@ public sealed partial class WorldBrowserView : UserControl
             _details.Children.Add(Ui.Text(_model.EmptyDescription, 13, "muted"));
             return;
         }
+        // The page is built when it is shown, not on every selection change in the list, so arrowing through rows
+        // stays cheap and a page shown again reads its counts afresh.
+        if (!_model.IsExploring) return;
         BuildWorldPage(world);
         Reflow();
         if (_model.IsExploring) _ = LoadArtAsync(world);
@@ -407,22 +419,28 @@ public sealed partial class WorldBrowserView : UserControl
         _artLoading = true;
         try
         {
-            // The hero is the illustration the site shows; a supplied banner goes in "A glimpse inside" below it.
-            // A world with only a banner shows the banner as its hero.
-            var generated = world.HasGeneratedArtwork ? await _catalog.GetArtAsync(world, WorldArtwork.Generated, token) : null;
-            var bytes = generated ?? await _catalog.GetArtAsync(world, WorldArtwork.Supplied, token);
-            if (token.IsCancellationRequested || _closed || _selection != selection) return;
-            if (bytes is null) { _artStatus.Text = L.YouCanStillBrowseTheDetailsAndConnect; return; }
-            var bitmap = Decode(bytes);
+            // The hero is the world's preferred picture (an owner's banner, else Wandur's illustration at the hero
+            // size); the other picture, when there is one, goes in "A glimpse inside".
+            var (bytes, kind) = await _catalog.GetHeroArtAsync(world, token);
+            var bitmap = TryDecode(bytes);
+            if (bitmap is null && kind == WorldArtwork.Generated)
+                bitmap = TryDecode(await _catalog.GetArtAsync(world, WorldArtwork.Generated, WorldCatalog.HeroFallbackSize, token));
+            if (bitmap is null && world.SecondaryArtwork is { } other)
+            {
+                kind = other;
+                bitmap = TryDecode(await _catalog.GetArtAsync(world, other, other == WorldArtwork.Generated ? WorldCatalog.HeroFallbackSize : null, token));
+            }
+            if (token.IsCancellationRequested || _closed || _selection != selection) { bitmap?.Dispose(); return; }
+            if (bitmap is null) { _artStatus.Text = L.YouCanStillBrowseTheDetailsAndConnect; return; }
             _bitmap?.Dispose(); _bitmap = bitmap; _image.Source = bitmap; _image.IsVisible = true;
             _artPlaceholder.IsVisible = false; InkHero(true);
-            _artStatus.Text = generated is not null ? L.AIIllustrationInspiredByThisWorldSDescription : L.Format(L.SuppliedArtwork, world.Source.Name);
-            if (generated is not null && world.HasSuppliedArtwork && await _catalog.GetArtAsync(world, WorldArtwork.Supplied, token) is { } supplied
-                && !token.IsCancellationRequested && !_closed && _selection == selection)
+            _artStatus.Text = kind == WorldArtwork.Generated ? L.AIIllustrationInspiredByThisWorldSDescription : L.Format(L.SuppliedArtwork, world.Source.Name);
+            if (world.SecondaryArtwork is { } glimpse && glimpse != kind)
             {
-                var banner = Decode(supplied);
-                _bannerBitmap?.Dispose(); _bannerBitmap = banner; _banner.Source = banner;
-                ShowGlimpse(world);
+                var second = TryDecode(await _catalog.GetArtAsync(world, glimpse, glimpse == WorldArtwork.Generated ? WorldCatalog.HeroFallbackSize : null, token));
+                if (second is null || token.IsCancellationRequested || _closed || _selection != selection) { second?.Dispose(); return; }
+                _bannerBitmap?.Dispose(); _bannerBitmap = second; _banner.Source = second;
+                ShowGlimpse(world, glimpse);
             }
         }
         catch (OperationCanceledException) { }
@@ -444,9 +462,14 @@ public sealed partial class WorldBrowserView : UserControl
         }
     }
 
-    private static Bitmap Decode(byte[] bytes)
+    private static Bitmap? TryDecode(byte[]? bytes)
     {
-        using var stream = new MemoryStream(bytes);
-        return new Bitmap(stream);
+        if (bytes is null) return null;
+        try
+        {
+            using var stream = new MemoryStream(bytes);
+            return new Bitmap(stream);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { return null; }
     }
 }

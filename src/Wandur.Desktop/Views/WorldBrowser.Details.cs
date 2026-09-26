@@ -14,6 +14,11 @@ namespace Wandur.Desktop.Views;
 public sealed partial class WorldBrowserView
 {
     private Border? _glimpse;
+    private SelectableTextBlock? _address;
+
+    /// <summary>The address a connection would use: the TLS port when TLS is chosen, else the plain one.</summary>
+    private string AddressText(WorldListing world) => _model.UseTls && world.TlsPort is { } tls && world.CanConnect
+        ? $"{(world.Host.Contains(':') ? $"[{world.Host}]" : world.Host)}:{tls}" : world.Address;
 
     private void BuildWorldPage(WorldListing world)
     {
@@ -25,8 +30,7 @@ public sealed partial class WorldBrowserView
 
         // Breadcrumbs, as the site's band above the hero.
         var crumbs = new FlowPanel { Name = "DirectoryCrumbs", Gap = 8, Margin = new Thickness(0, 0, 0, 12) };
-        var all = DirectoryLook.Link(L.BackToWorlds, BackToResults, 14, "MutedBrush", FontWeight.Normal);
-        crumbs.Children.Add(all);
+        crumbs.Children.Add(_back);
         if (world.Features.Theme.Length > 0) { crumbs.Children.Add(DirectoryLook.Label("/", 14, "MutedBrush")); crumbs.Children.Add(DirectoryLook.Label(world.Features.Theme, 14, "MutedBrush")); }
         crumbs.Children.Add(DirectoryLook.Label("/", 14, "MutedBrush"));
         var here = DirectoryLook.Label(world.Name, 14); here.TextWrapping = TextWrapping.NoWrap; here.TextTrimming = TextTrimming.CharacterEllipsis;
@@ -72,27 +76,20 @@ public sealed partial class WorldBrowserView
         }
         if (world.IsOnline)
             _listingActions.Children.Add(DirectoryLook.Live(world.LivePlayerCount(now) is { } players
-                ? L.Format(L.PlayersOnlineCount, players) : L.StatusOnline, 15));
+                ? L.Format(players == 1 ? L.PlayersOnlineCountOne : L.PlayersOnlineCount, players) : L.StatusOnline, 15));
         var connect = new Button { Name = "ConnectDirectoryWorld", [!ContentControl.ContentProperty] = LocalizedText.Binding(nameof(L.Connect2)),
             Command = _model.ConnectCommand, IsEnabled = world.CanConnect, FontSize = 15, Padding = new Thickness(22, 10), CornerRadius = new CornerRadius(8) };
         connect.Classes.Add("app-button"); connect.Classes.Add("primary");
         var add = new Button { Name = "AddDirectoryWorld", [!ContentControl.ContentProperty] = LocalizedText.Binding(nameof(L.AddToMyWorlds)),
             Command = _model.SaveCommand, IsEnabled = world.CanConnect, FontSize = 14, Padding = new Thickness(14, 9), CornerRadius = new CornerRadius(8) };
         add.Classes.Add("app-button");
-        var tls = new CheckBox { [!ContentControl.ContentProperty] = LocalizedText.Binding(nameof(L.UseTLS)), IsVisible = world.TlsPort.HasValue && world.CanConnect,
-            IsChecked = _model.UseTls, FontSize = 13, VerticalAlignment = VerticalAlignment.Center };
-        tls.IsCheckedChanged += (_, _) => _model.UseTls = tls.IsChecked == true;
-        foreach (var action in new Control[] { connect, add, tls }) { action.VerticalAlignment = VerticalAlignment.Center; _listingActions.Children.Add(action); }
-        var chipsBar = new Grid { ColumnSpacing = 20, RowSpacing = 14, Children = { chips, _listingToolbar } };
+        foreach (var action in new Control[] { connect, add }) { action.VerticalAlignment = VerticalAlignment.Center; _listingActions.Children.Add(action); }
+        // One line when the chips and the actions both fit at their own widths, otherwise the actions go under the
+        // chips. Measured, not a breakpoint: a world with two short chips keeps one line on a narrow dock.
+        var chipsBar = new ChipsBar(chips, _listingToolbar) { Name = "DirectoryChipsLine" };
         var barEdge = new Border { Name = "DirectoryChipsBar", BorderThickness = new Thickness(0, 0, 0, 1), Padding = new Thickness(0, 16), Margin = new Thickness(0, 8, 0, 22), Child = chipsBar };
         barEdge.Paint(Border.BorderBrushProperty, "LineBrush");
         _details.Children.Add(barEdge);
-        _narrowLayouts.Add(narrow =>
-        {
-            chipsBar.ColumnDefinitions = narrow ? new ColumnDefinitions("*") : new ColumnDefinitions("*,Auto");
-            chipsBar.RowDefinitions = narrow ? new RowDefinitions("Auto,Auto") : new RowDefinitions("Auto");
-            Grid.SetColumn(_listingToolbar, narrow ? 0 : 1); Grid.SetRow(_listingToolbar, narrow ? 1 : 0);
-        });
 
         // About beside World details.
         var about = Card(Heading(L.Format(L.AboutWorld, world.Name)));
@@ -139,6 +136,15 @@ public sealed partial class WorldBrowserView
         detailsBody.Children.Add(Facts(world, now));
         detailsBody.Children.Add(Subheading(L.ConnectWithAnyClient));
         detailsBody.Children.Add(AddressBox(world));
+        // "Use TLS" belongs with the address it changes, not with the actions.
+        if (world.TlsPort.HasValue && world.CanConnect)
+        {
+            var tls = new CheckBox { Name = "DirectoryUseTls", [!ContentControl.ContentProperty] = LocalizedText.Binding(nameof(L.UseTLS)),
+                IsChecked = _model.UseTls, FontSize = 14, IsEnabled = world.Port.HasValue };
+            tls.Paint(Avalonia.Controls.Primitives.TemplatedControl.ForegroundProperty, "TextBrush");
+            tls.IsCheckedChanged += (_, _) => { _model.UseTls = tls.IsChecked == true; _address!.Text = AddressText(world); };
+            detailsBody.Children.Add(tls);
+        }
         var links = new FlowPanel { Gap = 16, LineGap = 6 };
         AddLink(links, L.Website, world.WebsiteUrl); AddLink(links, L.Discord, world.DiscordUrl);
         AddLink(links, L.PlayInBrowser, world.PlayUrl);
@@ -159,18 +165,19 @@ public sealed partial class WorldBrowserView
         });
     }
 
-    /// <summary>"A glimpse inside": the banner the listing supplied, when the hero is the generated illustration.
-    /// The client has no player chart, so the banner stands alone, as the site's single-column glimpse.</summary>
-    private void ShowGlimpse(WorldListing world)
+    /// <summary>"A glimpse inside": the world's other picture when it has both (the banner under a generated hero, the
+    /// illustration under an owner's banner). The client has no player chart, so the picture stands alone.</summary>
+    private void ShowGlimpse(WorldListing world, WorldArtwork kind)
     {
         if (_glimpse is not null || _banner.Source is null) return;
         _banner.MaxHeight = 420; _banner.HorizontalAlignment = HorizontalAlignment.Left;
         var frame = new Border { ClipToBounds = true, CornerRadius = new CornerRadius(8), BorderThickness = new Thickness(1), Child = _banner, HorizontalAlignment = HorizontalAlignment.Left };
         frame.Paint(Border.BorderBrushProperty, "LineBrush");
-        var caption = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 16, Margin = new Thickness(0, 8, 0, 0),
-            Children = { DirectoryLook.Label(L.AroundTheWorld, 13, "MutedBrush") } };
-        var credit = DirectoryLook.Label(L.Format(L.SuppliedArtwork, world.Source.Name), 13, "MutedBrush");
-        Grid.SetColumn(credit, 1); caption.Children.Add(credit);
+        var around = DirectoryLook.Label(L.AroundTheWorld, 13, "MutedBrush"); around.TextWrapping = TextWrapping.NoWrap;
+        var credit = DirectoryLook.Label(kind == WorldArtwork.Generated ? L.AIIllustrationInspiredByThisWorldSDescription
+            : L.Format(L.SuppliedArtwork, world.Source.Name), 13, "MutedBrush");
+        // Two phrases that move to separate lines on a narrow page rather than breaking inside.
+        var caption = new FlowPanel { Gap = 16, LineGap = 2, Margin = new Thickness(0, 8, 0, 0), Children = { around, credit } };
         _glimpse = Card(Heading(L.AGlimpseInside));
         _glimpse.Name = "DirectoryGlimpse"; _glimpse.Margin = new Thickness(0, 18, 0, 0);
         ((StackPanel)_glimpse.Child!).Children.Add(new StackPanel { Children = { frame, caption } });
@@ -198,7 +205,7 @@ public sealed partial class WorldBrowserView
     /// <summary>The card's facts: Status, Language, Play style, Established, Codebase, Player killing, and live players.</summary>
     private static Grid Facts(WorldListing world, DateTimeOffset now)
     {
-        var grid = new Grid { Name = "DirectoryWorldFacts", ColumnDefinitions = new ColumnDefinitions("120,*"), ColumnSpacing = 12, RowSpacing = 10 };
+        var grid = new Grid { Name = "DirectoryWorldFacts", ColumnDefinitions = new ColumnDefinitions("160,*"), ColumnSpacing = 12, RowSpacing = 10 };
         void Fact(string label, Control? value)
         {
             if (value is null) return;
@@ -258,15 +265,16 @@ public sealed partial class WorldBrowserView
     {
         var address = new SelectableTextBlock
         {
-            Text = world.Address, FontSize = 14, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center,
+            Name = "DirectoryAddressText", Text = AddressText(world), FontSize = 14, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center,
             FontFamily = new FontFamily("Menlo, Consolas, DejaVu Sans Mono, monospace")
         }.Paint(TextBlock.ForegroundProperty, "TextBrush");
+        _address = address;
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 10, Children = { address } };
         if (world.CanConnect)
         {
             var copy = DirectoryLook.Link(L.Copy, async () =>
             {
-                try { if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard) await clipboard.SetTextAsync(world.Address); }
+                try { if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard) await clipboard.SetTextAsync(AddressText(world)); }
                 catch (Exception) { }
             }, 13, "AccentTextBrush", FontWeight.Normal);
             copy.Name = "DirectoryCopyAddress";

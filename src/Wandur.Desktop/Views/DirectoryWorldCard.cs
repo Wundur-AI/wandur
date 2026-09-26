@@ -23,6 +23,8 @@ internal sealed class DirectoryWorldCard : Border
     public const double StackedBelow = 480;
     /// <summary>Below this row width the way in leaves its ruled column and sits under the text.</summary>
     public const double SplitBelow = 760;
+    /// <summary>The site's row is never shorter than its 160 plate; a compact row keeps a little less.</summary>
+    public const double WideMinHeight = 160, CompactMinHeight = 128;
     protected override Type StyleKeyOverride => typeof(Border);
     private readonly WorldListing _world;
     private readonly Func<WorldListing, CancellationToken, Task<Bitmap?>> _loadArtwork;
@@ -48,10 +50,10 @@ internal sealed class DirectoryWorldCard : Border
         Name = "DirectoryResultCard"; Classes.Add("directory-result");
         BorderThickness = new Thickness(1); CornerRadius = new CornerRadius(12); ClipToBounds = true;
 
-        _initials = DirectoryLook.Label(WorldThumbnails.Initials(world.Name), 28, "MutedBrush");
+        _initials = DirectoryLook.Label(WorldThumbnails.Initials(world.Name), 28);
         _initials.HorizontalAlignment = HorizontalAlignment.Center; _initials.VerticalAlignment = VerticalAlignment.Center;
         _plate = new Border { Name = "DirectoryResultIdentity", ClipToBounds = true, Child = new CoverPanel { Children = { _initials, _image } } };
-        _plate.Paint(BackgroundProperty, "ShellBrush");
+        _plate.Paint(BackgroundProperty, DirectoryLook.PlateBrush);
         ToolTip.SetTip(_plate, world.HasGeneratedArtwork || !world.HasSuppliedArtwork
             ? L.AIIllustrationInspiredByThisWorldSDescription : L.Format(L.SuppliedArtwork, world.Source.Name));
 
@@ -60,6 +62,7 @@ internal sealed class DirectoryWorldCard : Border
         var (top, bottom) = DirectoryLook.RowPills(world);
         var pills = new FlowPanel { Name = "DirectoryRowPills", Gap = 6, LineGap = 6 };
         foreach (var pill in top) pills.Children.Add(DirectoryLook.Pill(pill));
+        if (world.IsAdult) { var adult = DirectoryLook.Pill(L.AdultChip); adult.Name = "DirectoryRowAdult"; pills.Children.Add(adult); }
         if (DirectoryLook.OnlineText(world, now ?? DateTimeOffset.UtcNow) is { } online) pills.Children.Add(DirectoryLook.Live(online));
         var blurbText = string.IsNullOrWhiteSpace(world.Summary) ? world.Description : world.Summary;
         var blurb = DirectoryLook.Label(blurbText.ReplaceLineEndings(" ").Trim(), 14, "MutedBrush");
@@ -141,7 +144,7 @@ internal sealed class DirectoryWorldCard : Border
             // A dock too narrow for the ruled column: the way in moves under the text, beside the plate.
             _layout.ColumnDefinitions = new ColumnDefinitions("Auto,*");
             _layout.RowDefinitions = new RowDefinitions("*,Auto");
-            _plate.Width = plate; _plate.Height = double.NaN; _plate.MinHeight = Math.Round(plate / PlateAspect);
+            _plate.Width = plate; _plate.Height = double.NaN; _plate.MinHeight = Math.Max(CompactMinHeight, Math.Round(plate / PlateAspect));
             Grid.SetRow(_plate, 0); Grid.SetColumn(_plate, 0); Grid.SetRowSpan(_plate, 2);
             Grid.SetRow(_copy, 0); Grid.SetColumn(_copy, 1); _copy.Margin = new Thickness(18, 12, 14, 6);
             Grid.SetRow(_go, 1); Grid.SetColumn(_go, 1);
@@ -150,7 +153,7 @@ internal sealed class DirectoryWorldCard : Border
         }
         else
         {
-            _plate.Width = plate; _plate.Height = double.NaN; _plate.MinHeight = Math.Round(plate / PlateAspect);
+            _plate.Width = plate; _plate.Height = double.NaN; _plate.MinHeight = Math.Max(WideMinHeight, Math.Round(plate / PlateAspect));
             Grid.SetRow(_plate, 0); Grid.SetColumn(_plate, 0);
             Grid.SetRow(_copy, 0); Grid.SetColumn(_copy, 1); _copy.Margin = new Thickness(22, 12, 18, 12);
             Grid.SetRow(_go, 0); Grid.SetColumn(_go, 2);

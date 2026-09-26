@@ -39,14 +39,14 @@ public sealed class WorldBrowserPolishTests
             list.SelectedIndex = 3; list.ScrollIntoView(list.SelectedItem!); Layout(window);
             var scroll = list.GetVisualDescendants().OfType<ScrollViewer>().Single();
             var offset = scroll.Offset.Y;
-            Assert.True(offset > 0);
+            Assert.True(offset > 0, "offset");
             Assert.True(list.ContainerFromIndex(list.SelectedIndex)!.Focus(), "The selected directory row must accept keyboard focus.");
             window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
             window.KeyReleaseQwerty(PhysicalKey.Enter, RawInputModifiers.None); Layout(window);
             Assert.False(list.IsEffectivelyVisible);
             window.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None);
             window.KeyReleaseQwerty(PhysicalKey.Escape, RawInputModifiers.None); Layout(window);
-            Assert.True(list.IsEffectivelyVisible);
+            Assert.True(list.IsEffectivelyVisible, "back after escape");
             Assert.Equal("Valley", search.Text);
             Assert.Equal(3, list.SelectedIndex);
             Assert.InRange(Math.Abs(scroll.Offset.Y - offset), 0, 1);
@@ -56,9 +56,9 @@ public sealed class WorldBrowserPolishTests
             window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.None);
             window.KeyReleaseQwerty(PhysicalKey.Space, RawInputModifiers.None); Layout(window);
             Assert.Single(window.Controller.Settings.Profiles);
-            Assert.True(list.IsEffectivelyVisible);
+            Assert.True(list.IsEffectivelyVisible, "after save");
             Assert.Same(active, window.Controller);
-            Assert.True(active.IsConnected);
+            Assert.True(active.IsConnected, "connected");
             Assert.Single(window.Sessions.Tabs);
         }
         finally { window.Close(); }
@@ -238,7 +238,7 @@ public sealed class WorldBrowserPolishTests
                 var world = Assert.IsType<WorldListing>(row.DataContext);
                 var name = row.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text == world.Name);
                 Assert.True(name.FontSize >= 14, "World names should be readable at the app's normal text size.");
-                Assert.InRange(row.Bounds.Height, 100, 480);
+                Assert.InRange(row.Bounds.Height, 125, 260);
                 Assert.InRange(row.Bounds.Width, 160, list.Bounds.Width);
                 // The site's 5:2 plate: full width on top of a narrow row, beside the text on a wide one.
                 var tile = Find<Border>(row, "DirectoryResultIdentity");
@@ -269,18 +269,23 @@ public sealed class WorldBrowserPolishTests
             var connect = Find<Button>(browser, "ConnectDirectoryWorld");
             var save = Find<Button>(browser, "AddDirectoryWorld");
             Assert.True(connect.IsEnabled && save.IsEnabled);
+            var pageScroll = Find<ScrollViewer>(browser, "DirectoryDetailsScroll");
             foreach (var button in new[] { connect, save })
             {
-                var end = button.TranslatePoint(new Point(button.Bounds.Width, button.Bounds.Height), browser)!.Value;
-                Assert.InRange(end.X, 0, browser.Bounds.Width);
+                var end = button.TranslatePoint(new Point(button.Bounds.Width, button.Bounds.Height), pageScroll)!.Value;
+                Assert.InRange(end.X, 0, pageScroll.Viewport.Width - WorldBrowserView.ScrollGutter + 1);
                 Assert.InRange(end.Y, 0, browser.Bounds.Height);
             }
+            var toolbar = Find<Border>(browser, "DirectoryListingToolbar");
+            Assert.True(toolbar.IsEffectivelyVisible, "The world page shows its actions.");
             save.Command!.Execute(null);
             Assert.Single(window.Controller.Settings.Profiles);
             Find<Button>(browser, "DirectoryBack").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Layout(window);
+            Assert.False(browser.GetVisualDescendants().Contains(toolbar) && toolbar.IsEffectivelyVisible, "Back to the list hides the page's actions.");
             search.Text = "no matching world zzq"; Layout(window);
             Assert.Empty(list.Items);
-            Assert.DoesNotContain(browser.GetVisualDescendants().OfType<Border>(), b => b.Name == "DirectoryListingToolbar" && b.IsEffectivelyVisible);
+            Assert.False(browser.GetVisualDescendants().Contains(toolbar) && toolbar.IsEffectivelyVisible);
+            Assert.False(pageScroll.IsEffectivelyVisible);
             Find<Button>(browser, "DirectoryResetFilters").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Layout(window);
             Assert.Equal(8, list.Items.Count);

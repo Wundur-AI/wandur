@@ -317,7 +317,7 @@ public sealed class WorkspaceTests
             Assert.IsType<Flyout>(Find<Button>(dialog, "DirectoryFiltersButton").Flyout).Hide();
             Find<TextBox>(dialog, "DirectorySearch").Text = "mountain"; Dispatcher.UIThread.RunJobs();
             await WaitFor(() => dialog.GetVisualDescendants().OfType<Image>().Any(i => i.Source is not null));
-            Assert.Contains("http://directory.example/worlds/test:2/art", handler.Requests);
+            Assert.Contains("http://directory.example/worlds/test:2/art?size=400", handler.Requests);
             ExploreSelectedWorld(dialog);
             Find<Button>(dialog, "AddDirectoryWorld").Command!.Execute(null);
             Assert.True(Assert.Single(sessions.Active.Controller.Settings.Profiles).UseTls);

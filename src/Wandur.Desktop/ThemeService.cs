@@ -204,20 +204,26 @@ public static class ThemeService
             (byte)(color.R + (target.R - color.R) * amount),
             (byte)(color.G + (target.G - color.G) * amount),
             (byte)(color.B + (target.B - color.B) * amount));
-        // Text in the accent (the directory's "Explore world") and the status green (online, beginner friendly)
-        // sit on the panel. Both start from the theme and move toward its text colour only as far as they must
-        // to read at 4.5:1, so a pale accent on a light preset still reads and the green stays a green.
+        // Text in the accent (the directory's "Explore world", "Copy") and the status green (online, beginner
+        // friendly) sits on both the panel (rows, cards) and the shell (the page's chips bar). Both start from the
+        // theme and move toward its text colour only as far as they must to read at 4.5:1 on each, so a pale accent
+        // on a light preset still reads and the green stays a green.
         var panelColor = Color.Parse(panel);
+        var shellColor = Color.Parse(shell);
         var textColor = Color.Parse(text);
         Color Legible(Color ink)
         {
-            for (var step = 0; step < 10 && ContrastRatio(ink, panelColor) < 4.5; step++) ink = Mix(ink, textColor, .15);
+            for (var step = 0; step < 40 && (ContrastRatio(ink, panelColor) < 4.5 || ContrastRatio(ink, shellColor) < 4.5); step++)
+                ink = Mix(ink, textColor, .08);
             return ink;
         }
         resources.Color("AccentTextBrush", Legible(Color.Parse(accent)));
         var live = Legible(Color.Parse(UserTheme.IsLightBackground(panel) ? "#1E8A4E" : "#3DDC8C"));
         resources.Color("LiveBrush", live);
         resources.Color("LiveEdgeBrush", Color.FromArgb(0x70, live.R, live.G, live.B));
+        // A plate with no picture: its own surface, a step from the panel toward the text, so it reads as an empty
+        // frame rather than a hole through to the shell.
+        resources.Color("DirectoryPlateBrush", Mix(panelColor, textColor, .07));
         if (worldTheme is null) Set("WorldSelectionBrush", line);
         else resources.Color("WorldSelectionBrush", Mix(surface, Color.Parse(accent), .16));
         // The terminal control paints its selection over the glyphs, not under them, so the transcript's

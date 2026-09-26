@@ -28,8 +28,10 @@ public sealed class DirectoryAdultAndFreshnessTests
         var plain = new WorldListing { Id = "harbor", Name = "Quiet Harbor", Host = "harbor.example.org", Port = 4000, AdultContent = false,
             Features = new() { Theme = "Fantasy" } };
         var unflagged = new WorldListing { Id = "moor", Name = "Grey Moor", Host = "moor.example.org", Port = 4000, Features = new() { Theme = "Fantasy" } };
-        var saved = adult.ToProfile();
-        await using var fixture = new Fixture([adult, plain, unflagged], new ClientSettings { Profiles = [saved] });
+        // The user saved another adult world: that one is theirs and stays visible in the directory too.
+        var mine = adult with { Id = "lantern-house", Name = "Lantern House", Host = "lantern-house.example.org", Tags = ["Nightlife"] };
+        var saved = mine.ToProfile();
+        await using var fixture = new Fixture([adult, plain, unflagged, mine], new ClientSettings { Profiles = [saved] });
         var browser = new WorldBrowserView(fixture.Model, fixture.Catalog);
         var library = new WorldLibraryView(fixture.Sessions, () => { });
         var window = new Window { Content = new StackPanel { Children = { browser, library } }, Width = 1100, Height = 1400 };
@@ -38,15 +40,20 @@ public sealed class DirectoryAdultAndFreshnessTests
             window.Show(); Layout(window);
             var list = Find<ListBox>(browser, "DirectoryResults");
             Assert.DoesNotContain(list.Items.OfType<WorldListing>(), w => w.Id == "velvet");
-            Assert.Equal(2, list.ItemCount);
-            Assert.Equal(L.Format(L.WorldsToExplore, 2), Find<TextBlock>(browser, "DirectoryCount").Text);
-            // A search that names it, and the tag facet, still do not reveal it.
+            Assert.Contains(list.Items.OfType<WorldListing>(), w => w.Id == "lantern-house");
+            Assert.Equal(3, list.ItemCount);
+            Assert.Equal(L.Format(L.WorldsToExplore, 3), Find<TextBlock>(browser, "DirectoryCount").Text);
+            // The saved adult world is marked in its row.
+            list.ScrollIntoView(list.Items.OfType<WorldListing>().Single(w => w.Id == "lantern-house")); Layout(window);
+            var mineRow = list.GetVisualDescendants().OfType<ListBoxItem>().Single(r => r.DataContext is WorldListing { Id: "lantern-house" });
+            Assert.Equal(L.AdultChip, ((TextBlock)Find<Border>(mineRow, "DirectoryRowAdult").Child!).Text);
+            // A search that names the other one, and the tag facet, still do not reveal it.
             Find<TextBox>(browser, "DirectorySearch").Text = "velvet"; Layout(window);
             Assert.Equal(0, list.ItemCount);
             Assert.DoesNotContain("Romance", fixture.Model.FacetOptions["Tag"]);
             Find<TextBox>(browser, "DirectorySearch").Text = ""; Layout(window);
             // The saved worlds list is the user's own: an adult world they saved stays there.
-            Assert.Contains(Find<ListBox>(library, "WorldProfiles").Items.OfType<ConnectionProfile>(), p => p.Host == "velvet.example.org");
+            Assert.Contains(Find<ListBox>(library, "WorldProfiles").Items.OfType<ConnectionProfile>(), p => p.Host == "lantern-house.example.org");
 
             var filter = Find<Button>(browser, "DirectoryFiltersButton");
             var flyout = Assert.IsType<Flyout>(filter.Flyout);
@@ -56,8 +63,8 @@ public sealed class DirectoryAdultAndFreshnessTests
             toggle.IsChecked = true; Layout(window);
             flyout.Hide();
             Assert.True(fixture.Model.Query.ShowAdult);
-            Assert.Equal(3, list.ItemCount);
-            Assert.Equal(L.Format(L.WorldsToExplore, 3), Find<TextBlock>(browser, "DirectoryCount").Text);
+            Assert.Equal(4, list.ItemCount);
+            Assert.Equal(L.Format(L.WorldsToExplore, 4), Find<TextBlock>(browser, "DirectoryCount").Text);
             Assert.Contains("Romance", fixture.Model.FacetOptions["Tag"]);
 
             // The world view marks it.
@@ -73,10 +80,10 @@ public sealed class DirectoryAdultAndFreshnessTests
             window.Content = again; Layout(window);
             var againFlyout = Assert.IsType<Flyout>(Find<Button>(again, "DirectoryFiltersButton").Flyout);
             Assert.True(Find<CheckBox>(Assert.IsType<ScrollViewer>(againFlyout.Content), "DirectoryAdultFilter", visualOnly: false).IsChecked);
-            Assert.Equal(3, Find<ListBox>(again, "DirectoryResults").ItemCount);
+            Assert.Equal(4, Find<ListBox>(again, "DirectoryResults").ItemCount);
             // Clearing the filters hides adult worlds again.
             fixture.Model.ResetFiltersCommand.Execute(null); Layout(window);
-            Assert.Equal(2, Find<ListBox>(again, "DirectoryResults").ItemCount);
+            Assert.Equal(3, Find<ListBox>(again, "DirectoryResults").ItemCount);
         }
         finally { window.Close(); }
     }

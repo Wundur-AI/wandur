@@ -71,8 +71,10 @@ public sealed class DirectorySiteLookCaptureTests
                 Assert.Equal(L.ExploreWorld, Find<Button>(row, "DirectoryRowExplore").Content);
                 foreach (var button in row.GetVisualDescendants().OfType<Button>().Where(b => b.IsEffectivelyVisible))
                 {
-                    var end = button.TranslatePoint(new Point(button.Bounds.Width, button.Bounds.Height), browser)!.Value;
-                    Assert.InRange(end.X, 0, browser.Bounds.Width);
+                    // Clear of the overlay scroll bar: within the list's viewport, less the gutter it reserves.
+                    var listScroll = list.GetVisualDescendants().OfType<ScrollViewer>().First();
+                    var end = button.TranslatePoint(new Point(button.Bounds.Width, button.Bounds.Height), listScroll)!.Value;
+                    Assert.InRange(end.X, 0, listScroll.Viewport.Width - WorldBrowserView.ScrollGutter + 1);
                 }
                 Assert.Empty(ContrastProbe.Scan(row));
             }
@@ -103,8 +105,14 @@ public sealed class DirectorySiteLookCaptureTests
             if (narrow) Assert.True(detailsAt.Y > aboutAt.Y, "A narrow page stacks World details under About.");
             else Assert.True(detailsAt.X > aboutAt.X && Math.Abs(details.Bounds.Width - 380) < 1, "World details sits beside About at the site's 380.");
             var toolbar = Find<Border>(browser, "DirectoryListingToolbar");
-            var end2 = toolbar.TranslatePoint(new Point(toolbar.Bounds.Width, 0), browser)!.Value;
-            Assert.InRange(end2.X, 0, browser.Bounds.Width);
+            var pageScroll = Find<ScrollViewer>(browser, "DirectoryDetailsScroll");
+            var end2 = toolbar.TranslatePoint(new Point(toolbar.Bounds.Width, 0), pageScroll)!.Value;
+            Assert.InRange(end2.X, 0, pageScroll.Viewport.Width - WorldBrowserView.ScrollGutter + 1);
+            var tls = Find<CheckBox>(browser, "DirectoryUseTls");
+            Assert.InRange(tls.TranslatePoint(new Point(tls.Bounds.Width, 0), pageScroll)!.Value.X, 0, pageScroll.Viewport.Width - WorldBrowserView.ScrollGutter + 1);
+            Assert.Contains(details.GetVisualDescendants(), v => v == tls);
+            Assert.Empty(ContrastProbe.Scan(Find<Border>(browser, "DirectoryChipsBar")));
+            Assert.Empty(ContrastProbe.Scan(Find<Border>(browser, "DirectoryAddress")));
             Assert.Empty(ContrastProbe.Scan(Find<Border>(browser, "DirectoryWorldDetails")));
             // The hero is a picture: a fixed dark scrim and fixed light ink over it, whatever the theme, and the name
             // clears 4.5:1 even where the scrim is at its darkest over a white picture.
@@ -120,6 +128,32 @@ public sealed class DirectorySiteLookCaptureTests
                 Assert.True(ContrastProbe.Contrast(Color.Parse("#C9D4E0"), scrim) >= 4.5, $"Tagline over the scrim on {picture}.");
             }
             Capture(window, $"directory-world-{theme.ToLowerInvariant()}-{width}.png");
+        }
+        finally { window.Close(); }
+    }
+
+    public static TheoryData<string> Presets() => new(ThemeService.Names);
+
+    /// <summary>The accent link and the live green sit on the shell as well as on the panel: the chips bar's live line and
+    /// beginner pill, and the address box's Copy. Every preset must read at 4.5:1 there, and on the rows.</summary>
+    [AvaloniaTheory]
+    [MemberData(nameof(Presets))]
+    public async Task ChipsBarAddressAndRowsReadOnEveryPreset(string theme)
+    {
+        await using var fixture = new Fixture(theme);
+        var browser = new WorldBrowserView(fixture.Window.Sessions.Browser(fixture.Catalog), fixture.Catalog);
+        var window = new Window { Content = browser, Width = 1280, Height = 1400 };
+        try
+        {
+            window.Show(); Layout(window);
+            var list = Find<ListBox>(browser, "DirectoryResults");
+            foreach (var row in list.GetVisualDescendants().OfType<ListBoxItem>()) Assert.Empty(ContrastProbe.Scan(row));
+            Find<Button>(Row(window, list, "starfall"), "DirectoryRowExplore").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Layout(window);
+            Assert.Empty(ContrastProbe.Scan(Find<Border>(browser, "DirectoryChipsBar")));
+            Assert.Empty(ContrastProbe.Scan(Find<Border>(browser, "DirectoryAddress")));
+            Assert.Empty(ContrastProbe.Scan(Find<Border>(browser, "DirectoryWorldDetails")));
+            await Task.CompletedTask;
         }
         finally { window.Close(); }
     }

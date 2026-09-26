@@ -21,6 +21,8 @@ namespace Wandur.Desktop.Views;
 /// </summary>
 internal static class DirectoryLook
 {
+    /// <summary>The surface of a plate with no picture.</summary>
+    public const string PlateBrush = "DirectoryPlateBrush";
     /// <summary>A leaf, for the beginner friendly pill, as the site draws it.</summary>
     private const string Leaf = "M 13,2 C 6,2 2,6 2,12 L 2,13 L 3,13 C 9,13 13,9 13,3 Z M 3,13 L 9,7";
 
@@ -205,5 +207,52 @@ internal sealed class FlowPanel : Panel
             top += height + LineGap;
         }
         return new Size(extent, visible.Length == 0 ? 0 : top - LineGap);
+    }
+}
+
+/// <summary>
+/// The world page's chips bar: the chips on the left and the actions on the right on one line when both fit at their
+/// natural widths, as the site's space-between flex does; otherwise the actions move under the chips.
+/// </summary>
+internal sealed class ChipsBar : Panel
+{
+    public const double Gap = 20, LineGap = 14;
+    private readonly Control _chips;
+    private readonly Control _actions;
+    public bool OneLine { get; private set; }
+
+    public ChipsBar(Control chips, Control actions)
+    {
+        _chips = chips; _actions = actions;
+        Children.Add(chips); Children.Add(actions);
+    }
+
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        _chips.Measure(Size.Infinity); _actions.Measure(Size.Infinity);
+        var natural = _chips.DesiredSize.Width + Gap + _actions.DesiredSize.Width;
+        OneLine = !_actions.IsVisible || natural <= availableSize.Width;
+        if (OneLine) return new Size(natural, Math.Max(_chips.DesiredSize.Height, _actions.DesiredSize.Height));
+        _chips.Measure(availableSize.WithHeight(double.PositiveInfinity));
+        _actions.Measure(availableSize.WithHeight(double.PositiveInfinity));
+        return new Size(Math.Max(_chips.DesiredSize.Width, _actions.DesiredSize.Width),
+            _chips.DesiredSize.Height + LineGap + _actions.DesiredSize.Height);
+    }
+
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        if (OneLine)
+        {
+            var height = finalSize.Height;
+            _chips.Arrange(new Rect(0, (height - _chips.DesiredSize.Height) / 2, _chips.DesiredSize.Width, _chips.DesiredSize.Height));
+            var width = _actions.DesiredSize.Width;
+            _actions.Arrange(new Rect(finalSize.Width - width, (height - _actions.DesiredSize.Height) / 2, width, _actions.DesiredSize.Height));
+        }
+        else
+        {
+            _chips.Arrange(new Rect(0, 0, finalSize.Width, _chips.DesiredSize.Height));
+            _actions.Arrange(new Rect(0, _chips.DesiredSize.Height + LineGap, finalSize.Width, _actions.DesiredSize.Height));
+        }
+        return finalSize;
     }
 }
