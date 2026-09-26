@@ -204,6 +204,20 @@ public static class ThemeService
             (byte)(color.R + (target.R - color.R) * amount),
             (byte)(color.G + (target.G - color.G) * amount),
             (byte)(color.B + (target.B - color.B) * amount));
+        // Text in the accent (the directory's "Explore world") and the status green (online, beginner friendly)
+        // sit on the panel. Both start from the theme and move toward its text colour only as far as they must
+        // to read at 4.5:1, so a pale accent on a light preset still reads and the green stays a green.
+        var panelColor = Color.Parse(panel);
+        var textColor = Color.Parse(text);
+        Color Legible(Color ink)
+        {
+            for (var step = 0; step < 10 && ContrastRatio(ink, panelColor) < 4.5; step++) ink = Mix(ink, textColor, .15);
+            return ink;
+        }
+        resources.Color("AccentTextBrush", Legible(Color.Parse(accent)));
+        var live = Legible(Color.Parse(UserTheme.IsLightBackground(panel) ? "#1E8A4E" : "#3DDC8C"));
+        resources.Color("LiveBrush", live);
+        resources.Color("LiveEdgeBrush", Color.FromArgb(0x70, live.R, live.G, live.B));
         if (worldTheme is null) Set("WorldSelectionBrush", line);
         else resources.Color("WorldSelectionBrush", Mix(surface, Color.Parse(accent), .16));
         // The terminal control paints its selection over the glyphs, not under them, so the transcript's
@@ -299,18 +313,25 @@ public static class ThemeService
         Applied?.Invoke();
     }
 
+    private static double Luminance(Color color)
+    {
+        static double Channel(byte value)
+        {
+            var channel = value / 255d;
+            return channel <= .04045 ? channel / 12.92 : Math.Pow((channel + .055) / 1.055, 2.4);
+        }
+        return .2126 * Channel(color.R) + .7152 * Channel(color.G) + .0722 * Channel(color.B);
+    }
+
+    internal static double ContrastRatio(Color a, Color b)
+    {
+        var (la, lb) = (Luminance(a), Luminance(b));
+        return (Math.Max(la, lb) + .05) / (Math.Min(la, lb) + .05);
+    }
+
     // Choose one ink for the entire gradient, including hover, not just its midpoint.
     private static string ReadableInk(Color top, Color bottom)
     {
-        static double Luminance(Color color)
-        {
-            static double Channel(byte value)
-            {
-                var channel = value / 255d;
-                return channel <= .04045 ? channel / 12.92 : Math.Pow((channel + .055) / 1.055, 2.4);
-            }
-            return .2126 * Channel(color.R) + .7152 * Channel(color.G) + .0722 * Channel(color.B);
-        }
         var high = Math.Max(Luminance(top), Luminance(bottom));
         var low = Math.Min(Luminance(top), Luminance(bottom));
         return 1.05 / (high + .05) > (low + .05) / .05 ? "#FFFFFF" : "#000000";

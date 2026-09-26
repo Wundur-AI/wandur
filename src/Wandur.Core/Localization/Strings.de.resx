@@ -1931,9 +1931,31 @@ Stoppe nach einer Inventarliste.</value></data>
   <data name="SkinHelp" xml:space="preserve"><value>Wählen Sie die Fensterform unabhängig von den Farben. MUD-Themes ändern Ihren Fensterstil nicht.</value></data>
   <data name="DontShowAgain" xml:space="preserve"><value>Nicht mehr anzeigen</value></data>
   <data name="HistoryNoticePreferenceFailed" xml:space="preserve"><value>Diese Einstellung konnte nicht gespeichert werden. Der Hinweis zum Verlauf wird erneut angezeigt.</value></data>
-  <data name="ExploreWorld" xml:space="preserve"><value>Erkunden →</value></data>
+  <data name="ExploreWorld" xml:space="preserve"><value>Welt erkunden →</value></data>
   <data name="WorldSaved" xml:space="preserve"><value>Gespeichert ✓</value></data>
   <data name="AllGenres" xml:space="preserve"><value>Alle Genres</value></data>
   <data name="BackToWorlds" xml:space="preserve"><value>← Alle Welten</value></data>
   <data name="DirectoryFilters" xml:space="preserve"><value>Filter</value></data>
+  <data name="WorldsToExplore" xml:space="preserve"><value>{0} Welten zu entdecken</value></data>
+  <data name="WorldsToExploreFiltered" xml:space="preserve"><value>{0} von {1} Welten zu entdecken</value></data>
+  <data name="OnlineCount" xml:space="preserve"><value>{0} online</value></data>
+  <data name="PlayersOnlineCount" xml:space="preserve"><value>{0} Spieler online</value></data>
+  <data name="StatusOnline" xml:space="preserve"><value>Online</value></data>
+  <data name="StatusOffline" xml:space="preserve"><value>Scheint offline</value></data>
+  <data name="OnlineNow" xml:space="preserve"><value>Jetzt online</value></data>
+  <data name="BeginnerFriendly" xml:space="preserve"><value>Einsteigerfreundlich</value></data>
+  <data name="BeginnerFriendlyHint" xml:space="preserve"><value>Das Verzeichnis führt diese Welt als offen für neue Spieler.</value></data>
+  <data name="AboutWorld" xml:space="preserve"><value>Über {0}</value></data>
+  <data name="FindYourPlace" xml:space="preserve"><value>Finde deinen Platz</value></data>
+  <data name="WorldDetails" xml:space="preserve"><value>Weltdetails</value></data>
+  <data name="WorldStatus" xml:space="preserve"><value>Status</value></data>
+  <data name="PlayStyle" xml:space="preserve"><value>Spielstil</value></data>
+  <data name="RoleplayStyle" xml:space="preserve"><value>Rollenspiel: {0}</value></data>
+  <data name="ConnectWithAnyClient" xml:space="preserve"><value>Mit jedem Client verbinden</value></data>
+  <data name="CopyAddress" xml:space="preserve"><value>Adresse kopieren</value></data>
+  <data name="AGlimpseInside" xml:space="preserve"><value>Ein Blick hinein</value></data>
+  <data name="AroundTheWorld" xml:space="preserve"><value>Rund um die Welt</value></data>
+  <data name="DirectoryLede" xml:space="preserve"><value>Lebendige Welten. Echte Menschen. Geschichten, in denen man sich verlieren kann.</value></data>
+  <data name="SortLabel" xml:space="preserve"><value>Sortieren:</value></data>
+  <data name="PlayersObservedAgo" xml:space="preserve"><value>{0} Spieler, {1}</value></data>
 </root>

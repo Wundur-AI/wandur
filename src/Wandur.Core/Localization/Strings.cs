@@ -967,4 +967,26 @@ public static class Strings
     public static string AllGenres => Get(nameof(AllGenres));
     public static string BackToWorlds => Get(nameof(BackToWorlds));
     public static string DirectoryFilters => Get(nameof(DirectoryFilters));
+    public static string WorldsToExplore => Get(nameof(WorldsToExplore));
+    public static string WorldsToExploreFiltered => Get(nameof(WorldsToExploreFiltered));
+    public static string OnlineCount => Get(nameof(OnlineCount));
+    public static string PlayersOnlineCount => Get(nameof(PlayersOnlineCount));
+    public static string StatusOnline => Get(nameof(StatusOnline));
+    public static string StatusOffline => Get(nameof(StatusOffline));
+    public static string OnlineNow => Get(nameof(OnlineNow));
+    public static string BeginnerFriendly => Get(nameof(BeginnerFriendly));
+    public static string BeginnerFriendlyHint => Get(nameof(BeginnerFriendlyHint));
+    public static string AboutWorld => Get(nameof(AboutWorld));
+    public static string FindYourPlace => Get(nameof(FindYourPlace));
+    public static string WorldDetails => Get(nameof(WorldDetails));
+    public static string WorldStatus => Get(nameof(WorldStatus));
+    public static string PlayStyle => Get(nameof(PlayStyle));
+    public static string RoleplayStyle => Get(nameof(RoleplayStyle));
+    public static string ConnectWithAnyClient => Get(nameof(ConnectWithAnyClient));
+    public static string CopyAddress => Get(nameof(CopyAddress));
+    public static string AGlimpseInside => Get(nameof(AGlimpseInside));
+    public static string AroundTheWorld => Get(nameof(AroundTheWorld));
+    public static string DirectoryLede => Get(nameof(DirectoryLede));
+    public static string SortLabel => Get(nameof(SortLabel));
+    public static string PlayersObservedAgo => Get(nameof(PlayersObservedAgo));
 }
