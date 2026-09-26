@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
-using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -11,73 +10,80 @@ using L = Wandur.Core.Localization.Strings;
 
 namespace Wandur.Desktop.Views;
 
-/// <summary>A virtualized directory row. Reflows from the dock's width, never the screen resolution.</summary>
+/// <summary>
+/// One world in the directory, laid out as the site's row: a wide art plate, the name, a pill line (genre, two
+/// tags, "N online"), a two-line blurb, one bottom pill, then a rule and the accent "Explore world". It reflows
+/// from the dock's width, never the screen's, and stacks into a card on a narrow dock as the site does on a phone.
+/// </summary>
 internal sealed class DirectoryWorldCard : Border
 {
+    /// <summary>The site's plate: 400 by 160, five to two, cropped to fill.</summary>
+    public const double PlateWidth = 400, PlateAspect = 2.5;
+    /// <summary>Below this row width the plate goes on top, as the site does on a phone.</summary>
+    public const double StackedBelow = 480;
+    /// <summary>Below this row width the way in leaves its ruled column and sits under the text.</summary>
+    public const double SplitBelow = 760;
     protected override Type StyleKeyOverride => typeof(Border);
     private readonly WorldListing _world;
     private readonly Func<WorldListing, CancellationToken, Task<Bitmap?>> _loadArtwork;
+    private readonly Func<WorldListing, bool> _isSaved;
     private CancellationTokenSource? _load;
     private Bitmap? _bitmap;
-    private readonly Border _thumbnail;
+    private readonly Grid _layout = new();
+    private readonly Border _plate;
     private readonly Image _image = new() { Name = "DirectoryRowArtwork", Stretch = Stretch.UniformToFill, IsHitTestVisible = false };
     private readonly TextBlock _initials;
-    private readonly TextBlock _description;
-    private readonly TextBlock _population;
-    private readonly WrapPanel _actions;
-    private readonly Grid _footer;
+    private readonly StackPanel _copy;
+    private readonly Border _go;
+    private readonly FlowPanel _goContent;
     private readonly Button _save;
-    private readonly Func<WorldListing, bool> _isSaved;
     private int _attachment;
-    private int _layoutMode = -1;
+    private Mode? _mode;
+    private double _plateWidth = -1;
 
     public DirectoryWorldCard(WorldListing world, Action<WorldListing> explore, Action<WorldListing> save,
         Func<WorldListing, bool> isSaved, Func<WorldListing, CancellationToken, Task<Bitmap?>> loadArtwork)
     {
         _world = world; _isSaved = isSaved; _loadArtwork = loadArtwork;
         Name = "DirectoryResultCard"; Classes.Add("directory-result");
-        Padding = new Thickness(12); BorderThickness = new Thickness(1); CornerRadius = new CornerRadius(6);
-        _initials = Ui.Text(WorldThumbnails.Initials(world.Name), 24);
+        BorderThickness = new Thickness(1); CornerRadius = new CornerRadius(12); ClipToBounds = true;
+
+        _initials = DirectoryLook.Label(WorldThumbnails.Initials(world.Name), 28, "MutedBrush");
         _initials.HorizontalAlignment = HorizontalAlignment.Center; _initials.VerticalAlignment = VerticalAlignment.Center;
-        _initials.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("TextBrush"));
-        _thumbnail = new Border { Name = "DirectoryResultIdentity", Width = 136, Height = 92, CornerRadius = new CornerRadius(4),
-            ClipToBounds = true, VerticalAlignment = VerticalAlignment.Top, Child = new Panel { Children = { _initials, _image } } };
-        _thumbnail.Bind(BackgroundProperty, new DynamicResourceExtension("ShellBrush"));
-        ToolTip.SetTip(_thumbnail, world.HasSuppliedArtwork ? L.Format(L.SuppliedArtwork, world.Source.Name) : L.AIIllustrationInspiredByThisWorldSDescription);
-        var title = Ui.Text(world.Name, 18);
-        title.FontWeight = FontWeight.SemiBold; title.MaxLines = 2; title.TextTrimming = TextTrimming.CharacterEllipsis;
-        var tags = new WrapPanel { Orientation = Orientation.Horizontal };
-        foreach (var tag in new[] { world.Features.Theme }.Concat(world.Tags).Append(world.Features.Kind)
-                     .Where(t => !string.IsNullOrWhiteSpace(t)).Distinct(StringComparer.OrdinalIgnoreCase).Take(2))
+        _plate = new Border { Name = "DirectoryResultIdentity", ClipToBounds = true, Child = new CoverPanel { Children = { _initials, _image } } };
+        _plate.Paint(BackgroundProperty, "ShellBrush");
+        ToolTip.SetTip(_plate, world.HasGeneratedArtwork || !world.HasSuppliedArtwork
+            ? L.AIIllustrationInspiredByThisWorldSDescription : L.Format(L.SuppliedArtwork, world.Source.Name));
+
+        var title = DirectoryLook.Label(world.Name, 20, weight: FontWeight.Bold);
+        title.Name = "DirectoryRowTitle"; title.MaxLines = 2; title.TextTrimming = TextTrimming.CharacterEllipsis;
+        var (top, bottom) = DirectoryLook.RowPills(world);
+        var pills = new FlowPanel { Name = "DirectoryRowPills", Gap = 6, LineGap = 6 };
+        foreach (var pill in top) pills.Children.Add(DirectoryLook.Pill(pill));
+        if (DirectoryLook.OnlineText(world) is { } online) pills.Children.Add(DirectoryLook.Live(online));
+        var blurbText = string.IsNullOrWhiteSpace(world.Summary) ? world.Description : world.Summary;
+        var blurb = DirectoryLook.Label(blurbText.ReplaceLineEndings(" ").Trim(), 14, "MutedBrush");
+        blurb.Name = "DirectoryRowBlurb"; blurb.MaxLines = 2; blurb.TextTrimming = TextTrimming.WordEllipsis; blurb.LineHeight = 20;
+        _copy = new StackPanel { Spacing = 7, VerticalAlignment = VerticalAlignment.Center, Children = { title } };
+        if (pills.Children.Count > 0) _copy.Children.Add(pills);
+        if (blurbText.Length > 0) _copy.Children.Add(blurb);
+        if (world.BeginnerFriendly == true || bottom is not null)
         {
-            var label = Ui.Text(tag, 11); label.MaxLines = 1; label.TextTrimming = TextTrimming.CharacterEllipsis;
-            var badge = new Border { Padding = new Thickness(7, 3), Margin = new Thickness(0, 0, 6, 4),
-                MaxWidth = 155, CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1), Child = label };
-            badge.Bind(BorderBrushProperty, new DynamicResourceExtension("LineBrush"));
-            tags.Children.Add(badge);
+            var tag = world.BeginnerFriendly == true ? DirectoryLook.Beginner() : DirectoryLook.Pill(bottom!);
+            tag.HorizontalAlignment = HorizontalAlignment.Left; tag.Name ??= "DirectoryRowTag";
+            _copy.Children.Add(tag);
         }
-        var identity = new StackPanel { Spacing = 6, Children = { title, tags } };
-        _description = Ui.Text(string.IsNullOrWhiteSpace(world.Summary) ? world.Description : world.Summary, 13);
-        _description.MaxLines = 2; _description.TextTrimming = TextTrimming.CharacterEllipsis;
-        var body = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), RowDefinitions = new RowDefinitions("Auto,Auto"),
-            ColumnSpacing = 14, RowSpacing = 6, Children = { _thumbnail, identity, _description } };
-        Grid.SetColumn(identity, 1); Grid.SetRow(_description, 1);
-        var population = world.Population.LatestCount is { } n ? L.Format(L.PlayersLastObserved, n) : world.PopulationSummary;
-        _population = Ui.Text(population, 11, "muted");
-        _population.VerticalAlignment = VerticalAlignment.Center;
-        ToolTip.SetTip(_population, world.StatusText);
-        _save = Ui.ButtonKey(nameof(L.AddToMyWorlds), () => { save(world); RefreshSaved(); });
-        _save.Name = "DirectoryRowSave"; _save.FontSize = 12;
-        var open = Ui.ButtonKey(nameof(L.ExploreWorld), () => explore(world));
-        open.Name = "DirectoryRowExplore"; open.FontSize = 12;
-        open.Bind(Button.BorderBrushProperty, new DynamicResourceExtension("AccentBrush"));
-        foreach (var button in new[] { _save, open }) button.Margin = new Thickness(6, 3, 0, 0);
-        _actions = new WrapPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Children = { _save, open } };
-        _footer = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), RowDefinitions = new RowDefinitions("Auto,Auto"),
-            RowSpacing = 4, Children = { _population, _actions } };
-        var footerEdge = new Border { Padding = new Thickness(0, 6, 0, 0), BorderThickness = new Thickness(0, 1, 0, 0), Child = _footer };
-        footerEdge.Bind(BorderBrushProperty, new DynamicResourceExtension("LineBrush"));
-        Child = new StackPanel { Spacing = 10, Children = { body, footerEdge } };
+
+        var open = DirectoryLook.Link(L.ExploreWorld, () => explore(world), 16);
+        open.Name = "DirectoryRowExplore";
+        // Saving is the client's own addition to the site's row: quiet, under the way in.
+        _save = DirectoryLook.Link("", () => { save(world); RefreshSaved(); }, 12, "MutedBrush", FontWeight.Normal);
+        _save.Name = "DirectoryRowSave";
+        _goContent = new FlowPanel { Gap = 6, LineGap = 6, VerticalAlignment = VerticalAlignment.Center, Children = { open, _save } };
+        _go = new Border { Child = _goContent };
+        _go.Paint(BorderBrushProperty, "LineBrush");
+        _layout.Children.Add(_plate); _layout.Children.Add(_copy); _layout.Children.Add(_go);
+        Child = _layout;
         RefreshSaved();
     }
 
@@ -86,27 +92,75 @@ internal sealed class DirectoryWorldCard : Border
         var saved = _isSaved(_world);
         _save.Content = saved ? L.WorldSaved : "+ " + L.AddToMyWorlds;
         _save.IsEnabled = _world.CanConnect && !saved;
+        _save.IsVisible = _world.CanConnect;
+        // The way-in column is sized to its text, which just changed.
+        _mode = null; InvalidateMeasure();
     }
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        var mode = availableSize.Width < 480 ? 0 : availableSize.Width < 700 ? 1 : 2;
-        if (_layoutMode != mode)
+        var width = double.IsFinite(availableSize.Width) ? availableSize.Width : PlateWidth * 2;
+        var mode = width < StackedBelow ? Mode.Stacked : width < SplitBelow ? Mode.Compact : Mode.Wide;
+        // The plate keeps the site's 400 wide where the row has room, and gives way on a narrower dock so the
+        // name and blurb keep a readable measure.
+        var plate = mode switch
         {
-            _layoutMode = mode;
-            _thumbnail.Width = mode == 0 ? 72 : mode == 1 ? 100 : 136;
-            _thumbnail.Height = mode == 0 ? 64 : mode == 1 ? 78 : 92;
-            Grid.SetRowSpan(_thumbnail, mode == 0 ? 1 : 2);
-            Grid.SetColumn(_description, mode == 0 ? 0 : 1);
-            Grid.SetColumnSpan(_description, mode == 0 ? 2 : 1);
+            Mode.Stacked => width,
+            Mode.Compact => Math.Clamp(Math.Round(width * .36), 180, 280),
+            _ => Math.Clamp(Math.Round(width * .34), 240, PlateWidth)
+        };
+        if (_mode != mode || Math.Abs(_plateWidth - plate) > .5)
+        {
+            _mode = mode; _plateWidth = plate;
+            ApplyLayout(mode, plate);
+            _goContent.InvalidateMeasure();
         }
-        // Button widths vary by language. Wrap based on their measured width, not English assumptions.
-        _actions.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        _population.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        var stacked = _actions.DesiredSize.Width + _population.DesiredSize.Width + 44 > availableSize.Width;
-        _footer.ColumnDefinitions[1].Width = stacked ? new GridLength(0) : GridLength.Auto;
-        Grid.SetColumn(_actions, stacked ? 0 : 1); Grid.SetRow(_actions, stacked ? 1 : 0);
         return base.MeasureOverride(availableSize);
+    }
+
+    private enum Mode { Stacked, Compact, Wide }
+
+    private void ApplyLayout(Mode mode, double plate)
+    {
+        _layout.ColumnDefinitions.Clear(); _layout.RowDefinitions.Clear();
+        Grid.SetRowSpan(_plate, 1);
+        if (mode == Mode.Stacked)
+        {
+            // A phone-width dock: the plate on top, the way in along the bottom, as the site under 800 pixels.
+            _layout.RowDefinitions = new RowDefinitions("Auto,Auto,Auto");
+            _plate.Width = double.NaN; _plate.MinHeight = 0;
+            _plate.Height = Math.Clamp(Math.Round(plate / PlateAspect), 110, 160);
+            Grid.SetRow(_plate, 0); Grid.SetColumn(_plate, 0);
+            Grid.SetRow(_copy, 1); Grid.SetColumn(_copy, 0); _copy.Margin = new Thickness(16, 14, 16, 14);
+            Grid.SetRow(_go, 2); Grid.SetColumn(_go, 0);
+            _go.BorderThickness = new Thickness(0, 1, 0, 0); _go.Margin = default; _go.Padding = new Thickness(16, 10);
+            _goContent.Orientation = Orientation.Horizontal; _goContent.Gap = 18;
+        }
+        else if (mode == Mode.Compact)
+        {
+            // A dock too narrow for the ruled column: the way in moves under the text, beside the plate.
+            _layout.ColumnDefinitions = new ColumnDefinitions("Auto,*");
+            _layout.RowDefinitions = new RowDefinitions("*,Auto");
+            _plate.Width = plate; _plate.Height = double.NaN; _plate.MinHeight = Math.Round(plate / PlateAspect);
+            Grid.SetRow(_plate, 0); Grid.SetColumn(_plate, 0); Grid.SetRowSpan(_plate, 2);
+            Grid.SetRow(_copy, 0); Grid.SetColumn(_copy, 1); _copy.Margin = new Thickness(18, 12, 14, 6);
+            Grid.SetRow(_go, 1); Grid.SetColumn(_go, 1);
+            _go.BorderThickness = default; _go.Margin = default; _go.Padding = new Thickness(18, 0, 14, 12);
+            _goContent.Orientation = Orientation.Horizontal; _goContent.Gap = 16;
+        }
+        else
+        {
+            _plate.Width = plate; _plate.Height = double.NaN; _plate.MinHeight = Math.Round(plate / PlateAspect);
+            Grid.SetRow(_plate, 0); Grid.SetColumn(_plate, 0);
+            Grid.SetRow(_copy, 0); Grid.SetColumn(_copy, 1); _copy.Margin = new Thickness(22, 12, 18, 12);
+            Grid.SetRow(_go, 0); Grid.SetColumn(_go, 2);
+            _go.BorderThickness = new Thickness(1, 0, 0, 0); _go.Margin = new Thickness(0, 22); _go.Padding = new Thickness(26, 0);
+            _goContent.Orientation = Orientation.Vertical; _goContent.Gap = 6;
+            // Every column but the text has a fixed width, so the text is measured once at the width it is given
+            // and its pill line cannot wrap in measure and then sit on one line, leaving a gap under it.
+            _go.Measure(Size.Infinity);
+            _layout.ColumnDefinitions = new ColumnDefinitions(FormattableString.Invariant($"{plate},*,{Math.Ceiling(_go.DesiredSize.Width)}"));
+        }
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -132,5 +186,24 @@ internal sealed class DirectoryWorldCard : Border
         _load?.Cancel(); _load?.Dispose(); _load = null;
         _bitmap?.Dispose(); _bitmap = null;
         base.OnDetachedFromVisualTree(e);
+    }
+}
+
+/// <summary>
+/// Fills whatever box its parent gives it and asks for nothing itself, so a picture cropped to cover a plate never
+/// makes the row taller than its text (an image stretched to fill would otherwise ask for its own aspect's height).
+/// </summary>
+internal sealed class CoverPanel : Panel
+{
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        foreach (var child in Children) child.Measure(availableSize);
+        return default;
+    }
+
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        foreach (var child in Children) child.Arrange(new Rect(finalSize));
+        return finalSize;
     }
 }

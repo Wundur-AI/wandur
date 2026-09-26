@@ -31,6 +31,8 @@ public sealed class WorldBrowserViewModelTests
             else
             {
                 Assert.Contains(fixture.Model.SelectedWorld!.Name, text);
+                // The world's page is built already; it is realized when shown, as the site's page is its own view.
+                fixture.Model.IsExploring = true; Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
                 Assert.Single(browser.GetVisualDescendants().OfType<Button>(), b => b.Name == "ConnectDirectoryWorld");
             }
             Assert.Equal(Wandur.Core.Localization.Strings.FindAMUD, fixture.Sessions.Active.Title);

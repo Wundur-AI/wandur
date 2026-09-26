@@ -140,7 +140,8 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
         var results = SortResults(matches).ToArray();
         SelectedWorld = results.FirstOrDefault(w => w.Id == id) ?? results.FirstOrDefault();
         if (IsExploring && SelectedWorld?.Id != id) IsExploring = false;
-        Count = L.Format(L.OfWorlds, results.Length, _catalog.Worlds.Count);
+        Count = results.Length == _catalog.Worlds.Count ? L.Format(L.WorldsToExplore, results.Length)
+            : L.Format(L.WorldsToExploreFiltered, results.Length, _catalog.Worlds.Count);
         var count = Query.Facets.Count + (Query.MinimumPlayers.HasValue ? 1 : 0) + (Query.MaximumPlayers.HasValue ? 1 : 0)
             + (Query.Rating > 0 ? 1 : 0) + (Query.TlsOnly ? 1 : 0);
         FilterSummary = count == 0 ? L.AdvancedSearchFindYourKindOfWorld : L.Format(count == 1 ? L.FiltersOne : L.FiltersMany, count);

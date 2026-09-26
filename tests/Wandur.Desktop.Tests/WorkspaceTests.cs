@@ -306,14 +306,14 @@ public sealed class WorkspaceTests
             await WaitFor(() => catalog.Worlds.Count == 3);
             var filters = OpenDirectoryFilters(dialog);
             var connection = Find<ComboBox>(filters, "DirectoryConnectionFilter");
-            var online = Find<CheckBox>(filters, "DirectoryOnlineFilter");
+            var online = Find<ComboBox>(dialog, "DirectoryOnlineChoice");
             await WaitFor(() => dialog.GetVisualDescendants().OfType<Image>().Any(i => i.Source is not null));
             Assert.Contains("https://images.example.org/forest.png", handler.Requests);
             connection.SelectedIndex = 1; Dispatcher.UIThread.RunJobs();
             Assert.Equal(2, Find<ListBox>(dialog, "DirectoryResults").Items.Count);
-            online.IsChecked = true; Dispatcher.UIThread.RunJobs();
+            online.SelectedIndex = 1; Dispatcher.UIThread.RunJobs();
             Assert.Single(Find<ListBox>(dialog, "DirectoryResults").Items);
-            online.IsChecked = false;
+            online.SelectedIndex = 0;
             Assert.IsType<Flyout>(Find<Button>(dialog, "DirectoryFiltersButton").Flyout).Hide();
             Find<TextBox>(dialog, "DirectorySearch").Text = "mountain"; Dispatcher.UIThread.RunJobs();
             await WaitFor(() => dialog.GetVisualDescendants().OfType<Image>().Any(i => i.Source is not null));

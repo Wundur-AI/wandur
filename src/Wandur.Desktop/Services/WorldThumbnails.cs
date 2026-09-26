@@ -21,17 +21,22 @@ public sealed class WorldThumbnails : IDisposable
     private readonly int _pixelWidth;
     private readonly int _pixelHeight;
     private readonly bool _cacheBitmaps;
+    private readonly WorldArtwork _kind;
+    private readonly bool _cover;
     private readonly WorldCatalog _catalog;
     private readonly Dictionary<string, Task<Bitmap?>> _loads = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _oneAtATime = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
     private bool _disposed;
 
-    public WorldThumbnails(WorldCatalog catalog, int pixelWidth = PixelWidth, int pixelHeight = PixelHeight, bool cacheBitmaps = true)
+    /// <param name="kind">Which picture to use. The directory rows ask for the generated illustration first, as the site does.</param>
+    /// <param name="cover">Scale so the picture covers the pixel box (it will be cropped to fill a plate), rather than fit inside it.</param>
+    public WorldThumbnails(WorldCatalog catalog, int pixelWidth = PixelWidth, int pixelHeight = PixelHeight, bool cacheBitmaps = true,
+        WorldArtwork kind = WorldArtwork.Preferred, bool cover = false)
     {
         _catalog = catalog;
         _pixelWidth = pixelWidth; _pixelHeight = pixelHeight;
-        _cacheBitmaps = cacheBitmaps;
+        _cacheBitmaps = cacheBitmaps; _kind = kind; _cover = cover;
         // A refreshed catalog may carry artwork a world lacked before; only the misses are forgotten.
         _catalog.Changed += ForgetMisses;
     }
@@ -79,7 +84,9 @@ public sealed class WorldThumbnails : IDisposable
             await _oneAtATime.WaitAsync(token);
             try
             {
-                var bytes = await _catalog.GetArtAsync(listing, token);
+                var bytes = _kind == WorldArtwork.Generated && listing.HasGeneratedArtwork
+                    ? await _catalog.GetArtAsync(listing, WorldArtwork.Generated, token) ?? await _catalog.GetArtAsync(listing, WorldArtwork.Supplied, token)
+                    : await _catalog.GetArtAsync(listing, token);
                 if (bytes is null) return null;
                 var bitmap = await Task.Run(() => Shrink(bytes), token);
                 if (_disposed) { bitmap?.Dispose(); return null; }
@@ -90,14 +97,16 @@ public sealed class WorldThumbnails : IDisposable
         catch (Exception ex) when (ex is not OutOfMemoryException) { return null; }
     }
 
-    /// <summary>The whole picture inside the tile's pixel box, never upscaled and never stretched out of shape.</summary>
+    /// <summary>The whole picture inside the tile's pixel box (or covering it, for a plate that crops), never upscaled
+    /// and never stretched out of shape.</summary>
     private Bitmap? Shrink(byte[] bytes)
     {
         using var stream = new MemoryStream(bytes);
         using var full = new Bitmap(stream);
         var size = full.PixelSize;
         if (size.Width <= 0 || size.Height <= 0) return null;
-        var scale = Math.Min(1.0, Math.Min((double)_pixelWidth / size.Width, (double)_pixelHeight / size.Height));
+        var (across, down) = ((double)_pixelWidth / size.Width, (double)_pixelHeight / size.Height);
+        var scale = Math.Min(1.0, _cover ? Math.Max(across, down) : Math.Min(across, down));
         var target = new PixelSize(Math.Max(1, (int)Math.Round(size.Width * scale)), Math.Max(1, (int)Math.Round(size.Height * scale)));
         return scale >= 1 ? full.CreateScaledBitmap(size) : full.CreateScaledBitmap(target, BitmapInterpolationMode.HighQuality);
     }

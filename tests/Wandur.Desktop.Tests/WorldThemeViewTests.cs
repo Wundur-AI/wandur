@@ -316,11 +316,18 @@ public sealed class WorldThemeViewTests
                 .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
             var title = browser.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "DirectoryWorldTitle");
-            var children = Assert.IsType<StackPanel>(title.Parent).Children;
-            Assert.Equal("DirectoryWorldTitle", children[0].Name);
-            Assert.Equal("DirectoryArtworkFrame", children[1].Name);
-            Assert.Equal("DirectoryWorldTags", children[2].Name);
-            Assert.Equal("DirectoryWorldDescription", children[4].Name);
+            // The site's order: breadcrumbs, the hero (art with the name over it), the chips bar, then About.
+            var page = browser.GetVisualDescendants().OfType<StackPanel>().Single(p => p.Name == "DirectoryWorldPage").Children;
+            Assert.Equal("DirectoryCrumbs", page[0].Name);
+            var hero = Assert.IsType<Grid>(page[1]);
+            Assert.Equal("DirectoryHero", hero.Name);
+            Assert.Equal("DirectoryArtworkFrame", hero.Children[0].Name);
+            Assert.Contains(title, hero.GetVisualDescendants());
+            var chips = page.Single(c => c.Name == "DirectoryChipsBar");
+            var split = page.Single(c => c.Name == "DirectoryWorldSplit");
+            Assert.True(page.IndexOf(chips) > 1 && page.IndexOf(split) > page.IndexOf(chips));
+            Assert.Contains(chips.GetVisualDescendants(), v => v is Control { Name: "DirectoryWorldTags" });
+            Assert.Contains(split.GetVisualDescendants(), v => v is Control { Name: "DirectoryWorldDescription" });
             var saved = world.ToProfile() with { Theme = null, Username = "pilot", PasswordId = Guid.NewGuid(), AutoLogin = true };
             sessions.Active.Controller.SaveSettings(sessions.Active.Controller.Settings with { Profiles = [saved] });
             var updated = model.SaveSelectedWorld();

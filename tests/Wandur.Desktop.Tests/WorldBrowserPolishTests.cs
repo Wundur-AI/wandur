@@ -150,11 +150,12 @@ public sealed class WorldBrowserPolishTests
             var scroll = Assert.IsType<ScrollViewer>(flyout.Content);
             Assert.True(scroll.Bounds.Height > 0);
             Assert.True(scroll.Extent.Width <= scroll.Viewport.Width + 1);
-            Find<CheckBox>(scroll, "DirectoryOnlineFilter").IsChecked = true; Layout(window);
-            Assert.True(fixture.Window.Sessions.Browser(fixture.Catalog).Query.OnlineOnly);
-            flyout.Hide();
-            var genre = Find<ComboBox>(browser, "DirectoryThemeFilter");
+            var genre = Find<ComboBox>(scroll, "DirectoryThemeFilter");
             genre.SelectedItem = "Fantasy"; Layout(window);
+            flyout.Hide();
+            // Online now is the site's select in the bar, not a popup checkbox.
+            Find<ComboBox>(browser, "DirectoryOnlineChoice").SelectedIndex = 1; Layout(window);
+            Assert.True(fixture.Window.Sessions.Browser(fixture.Catalog).Query.OnlineOnly);
             Assert.All(Find<ListBox>(browser, "DirectoryResults").Items.OfType<WorldListing>(), w => Assert.Equal("Fantasy", w.Features.Theme));
             Find<Button>(browser, "DirectoryResetFilters").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Layout(window);
             Assert.Equal(8, Find<ListBox>(browser, "DirectoryResults").ItemCount);
@@ -176,6 +177,8 @@ public sealed class WorldBrowserPolishTests
             var browser = Find<WorldBrowserView>(window);
             var list = Find<ListBox>(browser, "DirectoryResults");
             Assert.True(list.Bounds.Width > browser.Bounds.Width * .9, "Results must use the center dock, not a narrow master/detail column.");
+            // The site's rows are taller than the old cards; bring the row into view before using it.
+            list.ScrollIntoView(list.Items.OfType<WorldListing>().Single(w => w.Id == "lantern")); Layout(window);
             var row = list.GetVisualDescendants().OfType<ListBoxItem>().First(r => r.DataContext is WorldListing { Id: "lantern" });
             var save = Find<Button>(row, "DirectoryRowSave");
             save.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Layout(window);
@@ -221,26 +224,32 @@ public sealed class WorldBrowserPolishTests
             var search = Find<TextBox>(browser, "DirectorySearch");
             var list = Find<ListBox>(browser, "DirectoryResults");
             Capture(window, $"directory-polish-{theme.ToLowerInvariant()}-{width}x{height}.png");
-            Assert.True(search.Bounds.Width > browser.Bounds.Width * .8, "Search should use the available directory width.");
+            // The site's bar: search takes the free width, the online and sort selects and Filters keep their own.
+            var searchField = Find<Border>(browser, "DirectorySearchField");
+            foreach (var field in new[] { "DirectoryOnlineField", "DirectorySortField" })
+                Assert.True(searchField.Bounds.Width > Find<Border>(browser, field).Bounds.Width, "Search should be the widest field in the bar.");
+            Assert.True(searchField.Bounds.Width > 280, "Search should use the available directory width.");
             Assert.InRange(Find<Border>(browser, "DirectoryTitleBar").Bounds.Height, 30, 46);
             Assert.True(list.Bounds.Height > browser.Bounds.Height * .45, $"The directory header must leave room to browse: {list.Bounds.Height} of {browser.Bounds.Height}.");
             var rows = list.GetVisualDescendants().OfType<ListBoxItem>().ToArray();
-            Assert.True(rows.Length >= 2);
+            Assert.True(rows.Length >= 2, $"Only {rows.Length} rows realized."); 
             foreach (var row in rows)
             {
                 var world = Assert.IsType<WorldListing>(row.DataContext);
                 var name = row.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text == world.Name);
                 Assert.True(name.FontSize >= 14, "World names should be readable at the app's normal text size.");
-                Assert.InRange(row.Bounds.Height, 125, 260);
+                Assert.InRange(row.Bounds.Height, 100, 480);
                 Assert.InRange(row.Bounds.Width, 160, list.Bounds.Width);
+                // The site's 5:2 plate: full width on top of a narrow row, beside the text on a wide one.
                 var tile = Find<Border>(row, "DirectoryResultIdentity");
-                Assert.InRange(tile.Bounds.Width, 64, 136);
+                Assert.True(tile.Bounds.Width >= 180 && tile.Bounds.Height >= Math.Min(120, tile.Bounds.Width / 2.5) - 1, $"Plate {tile.Bounds}.");
             }
+            // Selection is the accent outline on the same card surface, as the site marks nothing but hover.
             var selected = rows.Single(r => r.IsSelected);
             var card = Find<Border>(selected, "DirectoryResultCard");
             Assert.Equal(Application.Current!.Resources["AccentBrush"], card.BorderBrush);
             var other = rows.First(r => !r.IsSelected);
-            Assert.NotEqual(card.Background, Find<Border>(other, "DirectoryResultCard").Background);
+            Assert.NotEqual(card.BorderBrush, Find<Border>(other, "DirectoryResultCard").BorderBrush);
             Capture(window, $"directory-polish-{theme.ToLowerInvariant()}-{width}x{height}.png");
 
             // Selection must update the existing detail and command targets, including browser-only worlds.
@@ -271,7 +280,7 @@ public sealed class WorldBrowserPolishTests
             Find<Button>(browser, "DirectoryBack").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Layout(window);
             search.Text = "no matching world zzq"; Layout(window);
             Assert.Empty(list.Items);
-            Assert.False(Find<Border>(browser, "DirectoryListingToolbar").IsVisible);
+            Assert.DoesNotContain(browser.GetVisualDescendants().OfType<Border>(), b => b.Name == "DirectoryListingToolbar" && b.IsEffectivelyVisible);
             Find<Button>(browser, "DirectoryResetFilters").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Layout(window);
             Assert.Equal(8, list.Items.Count);
@@ -291,15 +300,15 @@ public sealed class WorldBrowserPolishTests
             for (var attempt = 0; attempt < 100 && Find<Image>(first, "DirectoryRowArtwork").Source is null; attempt++)
             { await Task.Delay(10); Layout(fixture.Window); }
             var thumbnail = Assert.IsType<Bitmap>(Find<Image>(first, "DirectoryRowArtwork").Source);
-            Assert.InRange(thumbnail.PixelSize.Width, 1, 320);
+            Assert.InRange(thumbnail.PixelSize.Width, 1, 800);
             Find<Button>(first, "DirectoryRowExplore").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Layout(fixture.Window);
             for (var attempt = 0; attempt < 100 && Find<Image>(fixture.Window, "DirectoryArtwork").Source is null; attempt++)
             { await Task.Delay(10); Layout(fixture.Window); }
             Layout(fixture.Window);
             var image = Find<Image>(fixture.Window, "DirectoryArtwork");
             Assert.NotNull(image.Source);
-            Assert.Equal(Stretch.Uniform, image.Stretch);
-            Assert.InRange(image.Bounds.Height, 1, 160);
+            // The hero crops to fill, as the site's object-fit: cover does, at a fixed height rather than the picture's own.
+            Assert.Equal(Stretch.UniformToFill, image.Stretch); Assert.InRange(image.Bounds.Height, 1, 320);
             Assert.Single(fixture.Handler.ArtRequests, url => url.EndsWith("/orbit.png"));
             Assert.InRange(fixture.Handler.ArtRequests.Count, 1, 2);
             var title = Find<TextBlock>(fixture.Window, "DirectoryWorldTitle");

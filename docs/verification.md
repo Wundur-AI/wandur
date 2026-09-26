@@ -1,5 +1,30 @@
 # Client foundation verification
 
+## Directory in the wandur.net layout (2026-09-26, branch feature/directory-site-look)
+
+- Rows follow the site: a 5:2 art plate cropped to cover (400 wide where the
+  dock allows), bold name, a pill line (genre, two tags, "N online" with a
+  green dot), a two-line blurb, one bottom pill (Beginner friendly when the
+  record says so, else the next tag), a rule and "Explore world" in the
+  accent. Below 760 DIP the way in moves under the text; below 480 the plate
+  goes on top. Search, an Online now select and a Sort select form the bar,
+  with the other filters behind Filters, then "N worlds to explore".
+- A world's page: breadcrumbs, a hero with the name and tagline over a
+  gradient into the page colour, a chips bar with the live count and Connect,
+  About (description, Find your place) beside World details (facts, address
+  with Copy, links, quieter facts), and "A glimpse inside" with the supplied
+  banner when the hero is the generated illustration. Below 760 DIP it stacks.
+- A count is live only when `population.source` is `wandur`; otherwise the
+  row says "Online". `beginner_friendly`, `adult_content` and
+  `population.source` are read as optional fields in `WorldListing`.
+- Colours come from the theme: new AccentTextBrush, LiveBrush and
+  LiveEdgeBrush are derived per palette and held to 4.5:1 on the panel.
+- Verification: Release build with no warnings; Core 780 passed; Desktop 656
+  passed in the final full run except two unrelated intermittent failures
+  (SessionScriptWorker.DisposeAsync null reference, a mapping regex timeout
+  under load), both passing on rerun. `DirectorySiteLookCaptureTests` renders
+  the list and a world page under Hull, Slate and Ember at 1280 and 440 DIP.
+
 ## Docked directory redesign (2026-09-26)
 
 - Replaced the permanent list/detail split with full-width result rows, artwork
