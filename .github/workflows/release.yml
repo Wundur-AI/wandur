@@ -1,0 +1,213 @@
+name: Release
+
+# A v* tag builds self-contained downloads for Windows, Linux and both Mac architectures, then
+# publishes a GitHub Release as github-actions[bot] with GITHUB_TOKEN. The tag is the version.
+# Run it by hand (workflow_dispatch) for a dry run: same builds, uploaded as workflow artifacts,
+# no release. See docs/releasing.md.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version for the dry-run build, without the v (no release is created)
+        required: true
+        default: 0.0.0-dryrun
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AVALONIA_TELEMETRY_OPTOUT: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - id: version
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "$EVENT" == push ]]; then version="${REF_NAME#v}"; else version="${INPUT_VERSION#v}"; fi
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$version' is not a version like 0.1.0 or 0.1.0-beta.1"
+            exit 1
+          fi
+          prerelease=false
+          [[ "$version" == *-* ]] && prerelease=true
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "Version $version, prerelease $prerelease"
+
+  test:
+    uses: ./.github/workflows/build.yml
+
+  package:
+    needs: [version, test]
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - rid: win-x64
+            os: windows-latest
+          - rid: linux-x64
+            os: ubuntu-latest
+          - rid: osx-arm64
+            os: macos-latest
+          - rid: osx-x64
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      RID: ${{ matrix.rid }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      # 10.0.x, not the global.json floor: a self-contained app carries the runtime patch the
+      # SDK knows about, so the newest SDK ships the newest runtime security fixes.
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      # scripts/make-icons.sh (called by package-macos.sh) draws the icon sizes with Pillow.
+      - name: Install Pillow
+        if: runner.os == 'macOS'
+        run: python -m pip install --disable-pip-version-check pillow
+
+      - name: Package Windows or Linux
+        if: runner.os != 'macOS'
+        run: bash scripts/package-portable.sh --rid "$RID" --version "$VERSION" --output dist
+
+      - name: Package macOS
+        if: runner.os == 'macOS'
+        run: |
+          bash scripts/package-macos.sh --rid "$RID" --version "$VERSION" --self-contained \
+            --output "$RUNNER_TEMP/mac" --sign-adhoc
+          mkdir -p dist
+          ditto -c -k --keepParent "$RUNNER_TEMP/mac/Wandur.app" "dist/Wandur-$VERSION-macos-${RID#osx-}.zip"
+
+      # --script-worker starts the runtime and the Wandur assemblies, answers one request and
+      # exits: no window, no network. It proves the self-contained download starts at all.
+      - name: Start the packaged app
+        run: |
+          smoke="$RUNNER_TEMP/smoke"
+          rm -rf "$smoke" && mkdir -p "$smoke"
+          case "$RID" in
+            linux-x64)
+              tar -xzf "dist/Wandur-$VERSION-linux-x64.tar.gz" -C "$smoke"
+              app="$smoke/Wandur-$VERSION-linux-x64/Wandur" ;;
+            win-x64)
+              python -m zipfile -e "dist/Wandur-$VERSION-windows-x64.zip" "$smoke"
+              app="$smoke/Wandur-$VERSION-windows-x64/Wandur.exe" ;;
+            osx-*)
+              ditto -x -k "dist/Wandur-$VERSION-macos-${RID#osx-}.zip" "$smoke"
+              codesign --verify --strict --deep "$smoke/Wandur.app"
+              app="$smoke/Wandur.app/Contents/MacOS/Wandur"
+              if [[ "$RID" == osx-x64 ]] && ! arch -x86_64 /usr/bin/true 2>/dev/null; then
+                echo "::notice::No Rosetta on this runner; osx-x64 was packaged but not started."
+                exit 0
+              fi ;;
+          esac
+          reply="$(echo '{"Kind":"shutdown"}' | "$app" --script-worker)"
+          echo "$reply"
+          [[ "$reply" == *'"Results":[]'* ]]
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wandur-${{ matrix.rid }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    needs: [version, package]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      PRERELEASE: ${{ needs.version.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: docs/release-notes-template.md
+          sparse-checkout-cone-mode: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wandur-*
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: dist
+        run: |
+          expected=(
+            "Wandur-$VERSION-windows-x64.zip"
+            "Wandur-$VERSION-linux-x64.tar.gz"
+            "Wandur-$VERSION-macos-arm64.zip"
+            "Wandur-$VERSION-macos-x64.zip"
+          )
+          ls -l
+          for file in "${expected[@]}"; do
+            [[ -f "$file" ]] || { echo "::error::missing $file"; exit 1; }
+          done
+          sha256sum "${expected[@]}" > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Release notes
+        run: |
+          sed -e "s|{{VERSION}}|$VERSION|g" -e "s|{{TAG}}|v$VERSION|g" \
+              -e "s|{{REPOSITORY}}|$GITHUB_REPOSITORY|g" \
+              docs/release-notes-template.md > "$RUNNER_TEMP/notes.md"
+          if grep -q '{{' "$RUNNER_TEMP/notes.md"; then
+            echo "::error::release-notes-template.md has a placeholder this step does not fill"
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/notes.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the dry run's checksums and notes
+        if: github.event_name != 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-preview
+          path: |
+            dist/SHA256SUMS.txt
+            ${{ runner.temp }}/notes.md
+          retention-days: 14
+
+      # GITHUB_TOKEN makes github-actions[bot] the release's author and uploader, never a person.
+      # --generate-notes appends GitHub's list of changes since the previous release to the template.
+      - name: Create the GitHub Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          flags=()
+          [[ "$PRERELEASE" == true ]] && flags+=(--prerelease)
+          gh release create "$TAG" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "Wandur $VERSION" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --generate-notes \
+            "${flags[@]}"
