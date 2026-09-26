@@ -263,9 +263,9 @@ public sealed class WorldCatalogTests : IDisposable
             {"format":"wandur.directory","schema_version":2,"fetched_at":"2026-09-15T20:00:00Z",
              "worlds":[
                {"id":"measured","name":"Measured","host":"a.example.org","port":4000,"beginner_friendly":true,"adult_content":false,
-                "availability":{"online":true},"population":{"latest_count":143,"source":"wandur"}},
+                "availability":{"online":true},"population":{"latest_count":143,"source":"wandur","observed_at":"2026-09-15T19:30:00Z"}},
                {"id":"copied","name":"Copied","host":"b.example.org","port":4000,"beginner_friendly":false,
-                "availability":{"online":true},"population":{"latest_count":5,"source":"mudverse"}},
+                "availability":{"online":true},"population":{"latest_count":5,"source":"mudverse","observed_at":"2026-09-15T19:30:00Z"}},
                {"id":"older","name":"Older","host":"c.example.org","port":4000,
                 "availability":{"online":true,"archived":true},"population":{"latest_count":9,"source":null}}]}
             """;
@@ -276,16 +276,17 @@ public sealed class WorldCatalogTests : IDisposable
         var measured = catalog.Worlds.Single(w => w.Id == "measured");
         var copied = catalog.Worlds.Single(w => w.Id == "copied");
         var older = catalog.Worlds.Single(w => w.Id == "older");
+        var now = DateTimeOffset.Parse("2026-09-15T20:00:00Z");
         Assert.True(measured.BeginnerFriendly);
         Assert.False(measured.AdultContent);
-        Assert.Equal(143, measured.LivePlayerCount);
+        Assert.Equal(143, measured.LivePlayerCount(now));
         Assert.False(copied.BeginnerFriendly);
         Assert.Null(copied.AdultContent);
-        Assert.Null(copied.LivePlayerCount);
+        Assert.Null(copied.LivePlayerCount(now));
         Assert.Equal(5, copied.Population.LatestCount);
         Assert.Null(older.BeginnerFriendly);
         Assert.Null(older.Population.Source);
-        Assert.Null(older.LivePlayerCount);
+        Assert.Null(older.LivePlayerCount(now));
         Assert.True(measured.IsOnline);
         Assert.False(older.IsOnline);
         // The client's own cache keeps the new fields across a restart.
@@ -293,8 +294,31 @@ public sealed class WorldCatalogTests : IDisposable
         using var reopened = new WorldCatalog(CachePath, http: offline);
         var cached = reopened.Worlds.Single(w => w.Id == "measured");
         Assert.True(cached.BeginnerFriendly);
-        Assert.Equal(143, cached.LivePlayerCount);
+        Assert.Equal(143, cached.LivePlayerCount(now));
         Assert.Null(reopened.Worlds.Single(w => w.Id == "older").BeginnerFriendly);
+    }
+
+    [Fact]
+    public void AWandurCountIsLiveOnlyWithinTwoHoursAndOtherwiseReadsAsHistory()
+    {
+        var observed = DateTimeOffset.Parse("2026-09-15T12:00:00Z");
+        var world = new WorldListing
+        {
+            Id = "w", Name = "W", Source = new() { Provider = "mudverse", Name = "MUDVerse" },
+            Population = new() { LatestCount = 42, Source = "wandur", ObservedAt = observed }
+        };
+        Assert.Equal(42, world.LivePlayerCount(observed.AddMinutes(30)));
+        Assert.Equal(42, world.LivePlayerCount(observed.AddHours(2)));
+        Assert.Null(world.LivePlayerCount(observed.AddHours(2).AddMinutes(1)));
+        Assert.Null(world.LivePlayerCount(observed.AddHours(-1)));
+        Assert.Null((world with { Population = world.Population with { ObservedAt = null } }).LivePlayerCount(observed));
+        var copied = world with { Population = world.Population with { Source = "mudverse" } };
+        Assert.Null(copied.LivePlayerCount(observed.AddMinutes(5)));
+        Assert.Equal("MUDVerse counted 42, 3 h ago", copied.PopulationHistory(observed.AddHours(3)));
+        Assert.Equal("Wandur counted 42, 5 days ago", world.PopulationHistory(observed.AddDays(5)));
+        Assert.Equal("MUDVerse counted 42", (copied with { Population = copied.Population with { ObservedAt = null, Source = null } }).PopulationHistory(observed));
+        Assert.Equal("just now", WorldListing.Ago(observed, observed.AddSeconds(20)));
+        Assert.Equal("12 min ago", WorldListing.Ago(observed, observed.AddMinutes(12)));
     }
 
     [Fact]

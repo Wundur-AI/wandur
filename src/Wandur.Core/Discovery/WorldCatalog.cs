@@ -26,6 +26,8 @@ public sealed partial class WorldCatalog : IWorldDirectory, IDisposable
     /// <summary>The snapshot's own timestamp, which describes the source listings, not when this process fetched it.</summary>
     public DateTimeOffset? FetchedAt { get; private set; }
     /// <summary>How long ago this process fetched the snapshot in use, or null when it came from the cache on disk.</summary>
+    /// <summary>The clock the catalog runs on; views ask it what "now" is, so tests can hold it still.</summary>
+    public TimeProvider Clock => _time;
     public TimeSpan? SnapshotAge => _lastLoaded is { } loaded ? _time.GetElapsedTime(loaded) : null;
     public string? Warning { get; private set; }
     public bool Loading { get; private set; }

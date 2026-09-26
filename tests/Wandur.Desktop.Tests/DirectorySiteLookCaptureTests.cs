@@ -63,7 +63,7 @@ public sealed class DirectorySiteLookCaptureTests
                 Assert.True(pills.Length <= 3);
                 var live = row.GetVisualDescendants().OfType<StackPanel>().SingleOrDefault(p => p.Name == "DirectoryLive");
                 if (!world.IsOnline) Assert.Null(live);
-                else Assert.Equal(world.LivePlayerCount is { } n ? L.Format(L.OnlineCount, n) : L.StatusOnline,
+                else Assert.Equal(world.LivePlayerCount(DateTimeOffset.UtcNow) is { } n ? L.Format(L.OnlineCount, n) : L.StatusOnline,
                     live!.Children.OfType<TextBlock>().Single().Text);
                 var beginner = row.GetVisualDescendants().OfType<Border>().SingleOrDefault(b => b.Name == "DirectoryBeginner");
                 Assert.Equal(world.BeginnerFriendly == true, beginner is not null);
@@ -106,6 +106,19 @@ public sealed class DirectorySiteLookCaptureTests
             var end2 = toolbar.TranslatePoint(new Point(toolbar.Bounds.Width, 0), browser)!.Value;
             Assert.InRange(end2.X, 0, browser.Bounds.Width);
             Assert.Empty(ContrastProbe.Scan(Find<Border>(browser, "DirectoryWorldDetails")));
+            // The hero is a picture: a fixed dark scrim and fixed light ink over it, whatever the theme, and the name
+            // clears 4.5:1 even where the scrim is at its darkest over a white picture.
+            Assert.True(Find<Border>(browser, "DirectoryHeroScrim").IsEffectivelyVisible);
+            var name = Find<TextBlock>(browser, "DirectoryWorldTitle");
+            Assert.Equal(Color.Parse("#E7EEF6"), Assert.IsAssignableFrom<ISolidColorBrush>(name.Foreground).Color);
+            Assert.Equal(Color.Parse("#C9D4E0"), Assert.IsAssignableFrom<ISolidColorBrush>(Find<TextBlock>(browser, "DirectoryWorldTagline").Foreground).Color);
+            var darkest = WorldBrowserView.HeroScrimColor;
+            foreach (var picture in new[] { Colors.White, Colors.Black, Color.Parse("#F4E9C8") })
+            {
+                var scrim = ContrastProbe.Over(darkest, picture, 1);
+                Assert.True(ContrastProbe.Contrast(Color.Parse("#E7EEF6"), scrim) >= 4.5, $"Name over the scrim on {picture}.");
+                Assert.True(ContrastProbe.Contrast(Color.Parse("#C9D4E0"), scrim) >= 4.5, $"Tagline over the scrim on {picture}.");
+            }
             Capture(window, $"directory-world-{theme.ToLowerInvariant()}-{width}.png");
         }
         finally { window.Close(); }
@@ -206,7 +219,7 @@ public sealed class DirectorySiteLookCaptureTests
                 {
                     Id = "harbor", Name = "The Last Harbor", Host = "harbor.example.org", Port = 5000, BeginnerFriendly = true,
                     Summary = "A windswept port of secrets, sea voyages, and stories waiting beyond the shoreline.",
-                    Availability = online, Population = new() { LatestCount = 53, Source = "wandur" },
+                    Availability = online, Population = new() { LatestCount = 53, Source = "wandur", ObservedAt = DateTimeOffset.UtcNow.AddMinutes(-40) },
                     Features = new() { Theme = "Adventure" }, Tags = ["Story-rich"], GeneratedArtworkPath = "worlds/harbor/art", Source = new() { Name = "Test directory" }
                 },
                 new WorldListing

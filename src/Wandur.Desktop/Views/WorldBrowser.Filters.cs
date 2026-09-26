@@ -20,6 +20,7 @@ public sealed partial class WorldBrowserView
     private readonly NumericUpDown _minimumPlayers = PlayerNumber("DirectoryMinimumPlayers");
     private readonly NumericUpDown _maximumPlayers = PlayerNumber("DirectoryMaximumPlayers");
     private readonly CheckBox _tlsFilter = new() { Name = "DirectoryTlsFilter", [!ContentControl.ContentProperty] = LocalizedText.Binding(nameof(L.TLSAvailable)), FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+    private readonly CheckBox _adultFilter = new() { Name = "DirectoryAdultFilter", [!ContentControl.ContentProperty] = LocalizedText.Binding(nameof(L.ShowAdultWorlds)), FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _filterSummary = Ui.TextKey(nameof(L.AdvancedSearch), 13);
     private readonly TextBlock _filterHint = Ui.TextKey(nameof(L.AllPreferencesCombinePlayerCountsAreLastObservedNot), 11, "muted");
     private bool _ready;
@@ -106,6 +107,9 @@ public sealed partial class WorldBrowserView
         Add(nameof(L.MinimumRating), _rating);
         Add(nameof(L.ConnectionSecurity), _tlsFilter);
         Add(nameof(L.MUDConnections), _connectionFilter);
+        _adultFilter.Bind(ToolTip.TipProperty, LocalizedText.Binding(nameof(L.AdultWorldsHint)));
+        _adultFilter.IsCheckedChanged += (_, _) => Filter();
+        Add(nameof(L.AdultChip), _adultFilter);
         _minimumPlayers.ValueChanged += (_, _) => Filter();
         _maximumPlayers.ValueChanged += (_, _) => Filter();
         _rating.SelectionChanged += (_, _) => Filter();
@@ -175,7 +179,7 @@ public sealed partial class WorldBrowserView
             if (query.Facets.TryGetValue(key, out var selected)) input.SelectedItem = selected;
         }
         _minimumPlayers.Value = query.MinimumPlayers; _maximumPlayers.Value = query.MaximumPlayers;
-        _rating.SelectedIndex = query.Rating; _tlsFilter.IsChecked = query.TlsOnly;
+        _rating.SelectedIndex = query.Rating; _tlsFilter.IsChecked = query.TlsOnly; _adultFilter.IsChecked = query.ShowAdult;
         _updatingFilters = false;
     }
 }

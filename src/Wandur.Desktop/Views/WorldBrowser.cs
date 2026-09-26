@@ -5,6 +5,7 @@ using Avalonia.Controls.Templates;
 using Avalonia.Layout;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Wandur.Core.Discovery;
@@ -45,11 +46,22 @@ public sealed partial class WorldBrowserView : UserControl
     private readonly TextBlock _artStatus = Ui.TextKey(nameof(L.LoadingArtwork), 11, "muted");
     private readonly TextBlock _artPlaceholder = DirectoryLook.Label("", 96, "LineBrush", FontWeight.Bold);
     private readonly Border _artFrame;
-    private readonly LinearGradientBrush _heroShade = new()
+    // The one place the directory does not follow the theme: the hero is a photograph, so its scrim and the name and
+    // tagline over it are fixed, the site's own night ink, and read the same under Hull as under Ember.
+    internal static readonly Color HeroScrimColor = Color.FromArgb(0xE6, 0x0C, 0x14, 0x22);
+    internal static readonly IBrush HeroTitleInk = new ImmutableSolidColorBrush(Color.Parse("#E7EEF6"));
+    internal static readonly IBrush HeroTaglineInk = new ImmutableSolidColorBrush(Color.Parse("#C9D4E0"));
+    private readonly Border _heroScrim = new()
     {
-        StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative), EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
-        GradientStops = [new GradientStop(Colors.Transparent, .3), new GradientStop(Colors.Transparent, 1)]
+        Name = "DirectoryHeroScrim", IsHitTestVisible = false, IsVisible = false,
+        Background = new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative), EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
+            GradientStops = [new GradientStop(Color.FromArgb(0, 0x0C, 0x14, 0x22), .35), new GradientStop(HeroScrimColor, 1)]
+        }
     };
+    private TextBlock? _heroTitle;
+    private TextBlock? _heroTagline;
     private readonly ScrollViewer _detailScroll;
     private readonly FlowPanel _listingActions = new() { Gap = 14, LineGap = 8, VerticalAlignment = VerticalAlignment.Center };
     private readonly Border _listingToolbar;
@@ -97,7 +109,7 @@ public sealed partial class WorldBrowserView : UserControl
         _onlineChoice.Bind(ToolTip.TipProperty, LocalizedText.Binding(nameof(L.BasedOnTheDirectorySLatestReportNotA)));
         StyleResults();
         _list.ItemTemplate = new FuncDataTemplate<WorldListing>((world, _) => world is null ? null : new DirectoryWorldCard(world,
-            Explore, SaveWorld, _model.IsWorldSaved, (w, token) => _rowThumbnails?.GetAsync(w, token) ?? Task.FromResult<Bitmap?>(null)));
+            Explore, SaveWorld, _model.IsWorldSaved, (w, token) => _rowThumbnails?.GetAsync(w, token) ?? Task.FromResult<Bitmap?>(null), _model.Now));
         ScrollViewer.SetHorizontalScrollBarVisibility(_list, Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled);
         _list.AddHandler(KeyDownEvent, (_, e) =>
         {
@@ -119,7 +131,7 @@ public sealed partial class WorldBrowserView : UserControl
         _artFrame = new Border
         {
             Name = "DirectoryArtworkFrame", ClipToBounds = true, CornerRadius = new CornerRadius(12), Height = 320,
-            Child = new Panel { Children = { _artPlaceholder, _image, new Border { Background = _heroShade, IsHitTestVisible = false } } }
+            Child = new Panel { Children = { _artPlaceholder, _image, _heroScrim } }
         };
         _artFrame.Paint(Border.BackgroundProperty, "PanelBrush");
         _listingToolbar = new Border { Name = "DirectoryListingToolbar", Child = _listingActions, IsVisible = false };
@@ -244,8 +256,6 @@ public sealed partial class WorldBrowserView : UserControl
         _rowThumbnails = new(_catalog, 800, 320, cacheBitmaps: false, kind: WorldArtwork.Generated, cover: true);
         if (_lifetime.IsCancellationRequested) { _lifetime.Dispose(); _lifetime = new(); }
         _model.PropertyChanged += ModelChanged;
-        ThemeService.Applied += ShadeHero;
-        ShadeHero();
         _model.Attach(action => Dispatcher.UIThread.Post(action));
         // Initial values may be unchanged (especially the shared empty results array).
         // Render the complete snapshot instead of depending on change notifications.
@@ -266,7 +276,6 @@ public sealed partial class WorldBrowserView : UserControl
         if (!_model.IsExploring) _model.ResultsScrollOffset = _list.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault()?.Offset.Y ?? 0;
         _closed = true; _timer.Stop();
         _model.PropertyChanged -= ModelChanged;
-        ThemeService.Applied -= ShadeHero;
         _model.Detach();
         _lifetime.Cancel(); _selection?.Cancel(); _selection?.Dispose(); _selection = null;
         ReleaseArtwork();
@@ -274,13 +283,19 @@ public sealed partial class WorldBrowserView : UserControl
         base.OnDetachedFromVisualTree(e);
     }
 
-    /// <summary>The hero's bottom gradient fades into the page, so it takes the page colour of the active theme.</summary>
-    private void ShadeHero()
+    /// <summary>The name and tagline sit on a photograph, not on the theme: over a picture they are fixed light ink on
+    /// the fixed dark scrim; over the initials plate they follow the theme like the rest of the page.</summary>
+    private void InkHero(bool onPicture)
     {
-        var shell = Application.Current?.Resources.TryGetResource("ShellBrush", ActualThemeVariant, out var value) == true && value is ISolidColorBrush brush
-            ? brush.Color : Colors.Black;
-        _heroShade.GradientStops[0].Color = Color.FromArgb(0x0D, shell.R, shell.G, shell.B);
-        _heroShade.GradientStops[1].Color = Color.FromArgb(0xEB, shell.R, shell.G, shell.B);
+        _heroScrim.IsVisible = onPicture;
+        if (_heroTitle is { } title)
+        {
+            if (onPicture) title.Foreground = HeroTitleInk; else title.Paint(TextBlock.ForegroundProperty, "TextBrush");
+        }
+        if (_heroTagline is { } tagline)
+        {
+            if (onPicture) tagline.Foreground = HeroTaglineInk; else tagline.Paint(TextBlock.ForegroundProperty, "MutedBrush");
+        }
     }
 
     private void ModelChanged(object? sender, PropertyChangedEventArgs e)
@@ -323,7 +338,7 @@ public sealed partial class WorldBrowserView : UserControl
             OnlineOnly = _onlineChoice.SelectedIndex == 1, Sort = _sort.SelectedIndex,
             Facets = _facets.Where(f => f.Input.SelectedIndex > 0).ToDictionary(f => f.Key, f => f.Input.SelectedItem as string ?? ""),
             MinimumPlayers = _minimumPlayers.Value, MaximumPlayers = _maximumPlayers.Value,
-            Rating = _rating.SelectedIndex, TlsOnly = _tlsFilter.IsChecked == true
+            Rating = _rating.SelectedIndex, TlsOnly = _tlsFilter.IsChecked == true, ShowAdult = _adultFilter.IsChecked == true
         };
     }
 
@@ -400,7 +415,7 @@ public sealed partial class WorldBrowserView : UserControl
             if (bytes is null) { _artStatus.Text = L.YouCanStillBrowseTheDetailsAndConnect; return; }
             var bitmap = Decode(bytes);
             _bitmap?.Dispose(); _bitmap = bitmap; _image.Source = bitmap; _image.IsVisible = true;
-            _artPlaceholder.IsVisible = false;
+            _artPlaceholder.IsVisible = false; InkHero(true);
             _artStatus.Text = generated is not null ? L.AIIllustrationInspiredByThisWorldSDescription : L.Format(L.SuppliedArtwork, world.Source.Name);
             if (generated is not null && world.HasSuppliedArtwork && await _catalog.GetArtAsync(world, WorldArtwork.Supplied, token) is { } supplied
                 && !token.IsCancellationRequested && !_closed && _selection == selection)

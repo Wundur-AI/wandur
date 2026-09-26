@@ -1958,4 +1958,13 @@ Arrêtez après réception d’une liste d’inventaire.</value></data>
   <data name="DirectoryLede" xml:space="preserve"><value>Des mondes vivants. De vraies personnes. Des histoires où se perdre.</value></data>
   <data name="SortLabel" xml:space="preserve"><value>Trier :</value></data>
   <data name="PlayersObservedAgo" xml:space="preserve"><value>{0} joueurs, {1}</value></data>
+  <data name="CountedAgo" xml:space="preserve"><value>{0} en a compté {1}, {2}</value></data>
+  <data name="Counted" xml:space="preserve"><value>{0} en a compté {1}</value></data>
+  <data name="JustNow" xml:space="preserve"><value>à l'instant</value></data>
+  <data name="MinutesAgo" xml:space="preserve"><value>il y a {0} min</value></data>
+  <data name="HoursAgo" xml:space="preserve"><value>il y a {0} h</value></data>
+  <data name="DaysAgo" xml:space="preserve"><value>il y a {0} jours</value></data>
+  <data name="ShowAdultWorlds" xml:space="preserve"><value>Afficher les mondes pour adultes</value></data>
+  <data name="AdultChip" xml:space="preserve"><value>Adultes</value></data>
+  <data name="AdultWorldsHint" xml:space="preserve"><value>Les mondes que l'annuaire signale comme contenu pour adultes restent masqués sauf si vous activez ceci. Vos mondes enregistrés ne sont jamais masqués.</value></data>
 </root>

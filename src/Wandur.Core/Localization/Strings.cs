@@ -989,4 +989,13 @@ public static class Strings
     public static string DirectoryLede => Get(nameof(DirectoryLede));
     public static string SortLabel => Get(nameof(SortLabel));
     public static string PlayersObservedAgo => Get(nameof(PlayersObservedAgo));
+    public static string CountedAgo => Get(nameof(CountedAgo));
+    public static string Counted => Get(nameof(Counted));
+    public static string JustNow => Get(nameof(JustNow));
+    public static string MinutesAgo => Get(nameof(MinutesAgo));
+    public static string HoursAgo => Get(nameof(HoursAgo));
+    public static string DaysAgo => Get(nameof(DaysAgo));
+    public static string ShowAdultWorlds => Get(nameof(ShowAdultWorlds));
+    public static string AdultChip => Get(nameof(AdultChip));
+    public static string AdultWorldsHint => Get(nameof(AdultWorldsHint));
 }

@@ -57,8 +57,37 @@ public sealed record WorldListing
     [JsonIgnore] public bool CanConnect => !WebOnly && Uri.CheckHostName(Host) != UriHostNameType.Unknown && (Port ?? TlsPort) is > 0 and <= 65535;
     [JsonIgnore] public bool HasSuppliedArtwork => BannerUrl.Length > 0;
     [JsonIgnore] public bool HasGeneratedArtwork => !string.IsNullOrWhiteSpace(GeneratedArtworkPath);
-    /// <summary>A player count Wandur measured itself. A count copied from another listing site is not live.</summary>
-    [JsonIgnore] public int? LivePlayerCount => Population.IsLive ? Population.LatestCount : null;
+    /// <summary>A player count Wandur measured itself within <see cref="WorldPopulation.LiveWindow"/> of
+    /// <paramref name="now"/>. A count copied from another listing site, or an old one, is history, not live.</summary>
+    public int? LivePlayerCount(DateTimeOffset now) => Population.IsLive(now) ? Population.LatestCount : null;
+    /// <summary>Who counted the players, for the history line: the population's source by name, else the listing's source.</summary>
+    [JsonIgnore] public string PopulationCountedBy => Population.Source?.Trim().ToLowerInvariant() switch
+    {
+        "wandur" => "Wandur",
+        "mudverse" => "MUDVerse",
+        "mudconnector" => "The Mud Connector",
+        { Length: > 0 } other when string.Equals(other, Source.Provider, StringComparison.OrdinalIgnoreCase) && Source.Name.Length > 0 => Source.Name,
+        { Length: > 0 } => Population.Source!.Trim(),
+        _ => Source.Name.Length > 0 ? Source.Name : L.Directory
+    };
+    /// <summary>The last count as history, the way the site words it: "MUDVerse counted 86, 3 days ago".</summary>
+    public string? PopulationHistory(DateTimeOffset now) => Population.LatestCount is not { } count ? null
+        : Population.ObservedAt is { } seen ? L.Format(L.CountedAgo, PopulationCountedBy, count, Ago(seen, now))
+        : L.Format(L.Counted, PopulationCountedBy, count);
+
+    /// <summary>A short relative time: just now, minutes, hours, days, then the date.</summary>
+    public static string Ago(DateTimeOffset then, DateTimeOffset now)
+    {
+        var age = now - then;
+        if (age < TimeSpan.FromMinutes(1)) return L.JustNow;
+        if (age < TimeSpan.FromHours(1)) return L.Format(L.MinutesAgo, (int)age.TotalMinutes);
+        if (age < TimeSpan.FromDays(1)) return L.Format(L.HoursAgo, (int)age.TotalHours);
+        if (age < TimeSpan.FromDays(60)) return L.Format(L.DaysAgo, (int)age.TotalDays);
+        return then.ToLocalTime().ToString("d", CultureInfo.CurrentCulture);
+    }
+
+    /// <summary>Hidden from directory lists unless the viewer asks for adult worlds.</summary>
+    [JsonIgnore] public bool IsAdult => AdultContent == true;
     /// <summary>Online by the directory's latest report, and not archived.</summary>
     [JsonIgnore] public bool IsOnline => Availability.Online == true && Availability.Archived != true;
     [JsonIgnore] public string RatingSummary => Community.Rating is { } rating && Community.RatingCount is > 0
@@ -163,7 +192,13 @@ public sealed record WorldPopulation
     /// <summary>Who measured the count: "wandur" for the directory's own probe, otherwise the listing site.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Source { get; init; }
-    [JsonIgnore] public bool IsLive => string.Equals(Source, "wandur", StringComparison.OrdinalIgnoreCase) && LatestCount is not null;
+    /// <summary>How old a Wandur count may be and still be shown as live.</summary>
+    public static readonly TimeSpan LiveWindow = TimeSpan.FromHours(2);
+    /// <summary>Measured by Wandur, observed at a known time within <see cref="LiveWindow"/> of <paramref name="now"/>
+    /// (a few minutes into the future is tolerated as clock skew).</summary>
+    public bool IsLive(DateTimeOffset now) => string.Equals(Source, "wandur", StringComparison.OrdinalIgnoreCase)
+        && LatestCount is not null && ObservedAt is { } observed
+        && now - observed <= LiveWindow && observed - now <= TimeSpan.FromMinutes(5);
 }
 
 public sealed record WorldFeatures

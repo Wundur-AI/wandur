@@ -133,9 +133,9 @@ internal static class DirectoryLook
         return (top, bottom);
     }
 
-    /// <summary>"143 online" only for a count Wandur measured; "Online" for any other world reported online.</summary>
-    public static string? OnlineText(WorldListing world) => !world.IsOnline ? null
-        : world.LivePlayerCount is { } count ? L.Format(L.OnlineCount, count) : L.StatusOnline;
+    /// <summary>"143 online" only for a fresh count Wandur measured; "Online" for any other world reported online.</summary>
+    public static string? OnlineText(WorldListing world, DateTimeOffset now) => !world.IsOnline ? null
+        : world.LivePlayerCount(now) is { } count ? L.Format(L.OnlineCount, count) : L.StatusOnline;
 }
 
 /// <summary>

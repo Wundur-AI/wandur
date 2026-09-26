@@ -1958,4 +1958,13 @@ Stoppe nach einer Inventarliste.</value></data>
   <data name="DirectoryLede" xml:space="preserve"><value>Lebendige Welten. Echte Menschen. Geschichten, in denen man sich verlieren kann.</value></data>
   <data name="SortLabel" xml:space="preserve"><value>Sortieren:</value></data>
   <data name="PlayersObservedAgo" xml:space="preserve"><value>{0} Spieler, {1}</value></data>
+  <data name="CountedAgo" xml:space="preserve"><value>{0} zählte {1}, {2}</value></data>
+  <data name="Counted" xml:space="preserve"><value>{0} zählte {1}</value></data>
+  <data name="JustNow" xml:space="preserve"><value>gerade eben</value></data>
+  <data name="MinutesAgo" xml:space="preserve"><value>vor {0} Min.</value></data>
+  <data name="HoursAgo" xml:space="preserve"><value>vor {0} Std.</value></data>
+  <data name="DaysAgo" xml:space="preserve"><value>vor {0} Tagen</value></data>
+  <data name="ShowAdultWorlds" xml:space="preserve"><value>Welten für Erwachsene zeigen</value></data>
+  <data name="AdultChip" xml:space="preserve"><value>Erwachsene</value></data>
+  <data name="AdultWorldsHint" xml:space="preserve"><value>Welten, die das Verzeichnis als Inhalte für Erwachsene kennzeichnet, bleiben verborgen, bis du dies einschaltest. Deine gespeicherten Welten werden nie verborgen.</value></data>
 </root>

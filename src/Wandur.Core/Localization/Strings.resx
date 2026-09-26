@@ -1958,4 +1958,13 @@ Stop after receiving one inventory listing.</value></data>
   <data name="DirectoryLede" xml:space="preserve"><value>Living worlds. Real people. Stories worth getting lost in.</value></data>
   <data name="SortLabel" xml:space="preserve"><value>Sort:</value></data>
   <data name="PlayersObservedAgo" xml:space="preserve"><value>{0} players, {1}</value></data>
+  <data name="CountedAgo" xml:space="preserve"><value>{0} counted {1}, {2}</value></data>
+  <data name="Counted" xml:space="preserve"><value>{0} counted {1}</value></data>
+  <data name="JustNow" xml:space="preserve"><value>just now</value></data>
+  <data name="MinutesAgo" xml:space="preserve"><value>{0} min ago</value></data>
+  <data name="HoursAgo" xml:space="preserve"><value>{0} h ago</value></data>
+  <data name="DaysAgo" xml:space="preserve"><value>{0} days ago</value></data>
+  <data name="ShowAdultWorlds" xml:space="preserve"><value>Show adult worlds</value></data>
+  <data name="AdultChip" xml:space="preserve"><value>Adult</value></data>
+  <data name="AdultWorldsHint" xml:space="preserve"><value>Worlds the directory marks as adult content are hidden unless you turn this on. Your saved worlds are never hidden.</value></data>
 </root>

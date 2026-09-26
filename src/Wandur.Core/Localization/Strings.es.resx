@@ -1958,4 +1958,13 @@ Detente después de recibir una lista del inventario.</value></data>
   <data name="DirectoryLede" xml:space="preserve"><value>Mundos vivos. Personas reales. Historias en las que perderse.</value></data>
   <data name="SortLabel" xml:space="preserve"><value>Ordenar:</value></data>
   <data name="PlayersObservedAgo" xml:space="preserve"><value>{0} jugadores, {1}</value></data>
+  <data name="CountedAgo" xml:space="preserve"><value>{0} contó {1}, {2}</value></data>
+  <data name="Counted" xml:space="preserve"><value>{0} contó {1}</value></data>
+  <data name="JustNow" xml:space="preserve"><value>ahora mismo</value></data>
+  <data name="MinutesAgo" xml:space="preserve"><value>hace {0} min</value></data>
+  <data name="HoursAgo" xml:space="preserve"><value>hace {0} h</value></data>
+  <data name="DaysAgo" xml:space="preserve"><value>hace {0} días</value></data>
+  <data name="ShowAdultWorlds" xml:space="preserve"><value>Mostrar mundos para adultos</value></data>
+  <data name="AdultChip" xml:space="preserve"><value>Adultos</value></data>
+  <data name="AdultWorldsHint" xml:space="preserve"><value>Los mundos que el directorio marca como contenido para adultos quedan ocultos salvo que actives esto. Tus mundos guardados nunca se ocultan.</value></data>
 </root>

@@ -17,6 +17,8 @@ public sealed record WorldBrowserQuery
     public decimal? MaximumPlayers { get; init; }
     public int Rating { get; init; }
     public bool TlsOnly { get; init; }
+    /// <summary>Show worlds the directory marks as adult content. Off unless the viewer turns it on.</summary>
+    public bool ShowAdult { get; init; }
 }
 
 public sealed record WorldBrowserFacet(string Key, string LabelKey, Func<WorldListing, IEnumerable<string>> Values)
@@ -54,7 +56,7 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
     private IReadOnlyList<ConnectionProfile>? _savedProfiles;
     public IReadOnlyList<ConnectionProfile> SavedWorlds => _sessions.Active.Controller.Settings.Profiles;
     public bool HasFilters => Query.Search.Length > 0 || Query.Connection != 0 || Query.OnlineOnly || Query.Sort != 0
-        || Query.Facets.Count > 0 || Query.MinimumPlayers.HasValue || Query.MaximumPlayers.HasValue || Query.Rating != 0 || Query.TlsOnly;
+        || Query.Facets.Count > 0 || Query.MinimumPlayers.HasValue || Query.MaximumPlayers.HasValue || Query.Rating != 0 || Query.TlsOnly || Query.ShowAdult;
 
     public bool IsWorldSaved(WorldListing world) => world.CanConnect && SavedWorlds.Any(p =>
         p.Host.Equals(world.Host, StringComparison.OrdinalIgnoreCase)
@@ -115,12 +117,23 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
             _catalog.Warning ?? (_catalog.FetchedAt is { } time ? L.Format(L.DirectorySavedSearchWorksOfflineRefreshedEvery24Hours, time.ToLocalTime()) : L.StartTheLocalDirectoryServerToDiscoverWorlds);
         EmptyTitle = _catalog.Worlds.Count == 0 ? L.AWorldOfPossibilities : L.NoWorldsFound;
         EmptyDescription = _catalog.Worlds.Count == 0 ? L.YourDirectoryWillAppearHereWhenItIsAvailable : L.TryRemovingAFilterOrShorteningYourSearchAll;
-        FacetOptions = Facets.ToDictionary(f => f.Key, f => _catalog.Worlds.SelectMany(f.Values)
+        FacetOptions = Facets.ToDictionary(f => f.Key, f => Listed.SelectMany(f.Values)
             .Append(Query.Facets.GetValueOrDefault(f.Key) ?? "").Where(v => !string.IsNullOrWhiteSpace(v))
             .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(v => v, StringComparer.OrdinalIgnoreCase).ToArray());
         RefreshResults();
     }
-    partial void OnQueryChanged(WorldBrowserQuery value) { RefreshResults(); OnPropertyChanged(nameof(HasFilters)); }
+    partial void OnQueryChanged(WorldBrowserQuery value)
+    {
+        if (value.ShowAdult != _listedAdult) { _listedAdult = value.ShowAdult; RefreshCatalog(); }
+        else RefreshResults();
+        OnPropertyChanged(nameof(HasFilters));
+    }
+    private bool _listedAdult;
+    /// <summary>The directory as this viewer may browse it: adult worlds only when asked for. Every count, facet and
+    /// result comes from here, so a hidden world leaves no trace in the list. Saved worlds are settings, not this.</summary>
+    private IEnumerable<WorldListing> Listed => Query.ShowAdult ? _catalog.Worlds : _catalog.Worlds.Where(w => !w.IsAdult);
+    /// <summary>What "now" is for live counts: the catalog's clock, so tests can hold it still.</summary>
+    public DateTimeOffset Now => _catalog.Clock.GetUtcNow();
     partial void OnCanRefreshChanged(bool value) => RefreshCommand.NotifyCanExecuteChanged();
     // Highlighting a listing never themes the window: a world theme arrives with its session.
     partial void OnSelectedWorldChanged(WorldListing? value)
@@ -134,14 +147,16 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
         Feedback = "";
         var id = SelectedWorld?.Id;
         var matches = _catalog.Search(Query.Search)
+            .Where(w => Query.ShowAdult || !w.IsAdult)
             .Where(w => Query.Connection switch { 1 => w.CanConnect, 2 => w.WebOnly, _ => true })
             .Where(w => !Query.OnlineOnly || w.Availability.Online == true && w.Availability.Archived != true)
             .Where(MatchesAdvanced);
         var results = SortResults(matches).ToArray();
         SelectedWorld = results.FirstOrDefault(w => w.Id == id) ?? results.FirstOrDefault();
         if (IsExploring && SelectedWorld?.Id != id) IsExploring = false;
-        Count = results.Length == _catalog.Worlds.Count ? L.Format(L.WorldsToExplore, results.Length)
-            : L.Format(L.WorldsToExploreFiltered, results.Length, _catalog.Worlds.Count);
+        var listed = Listed.Count();
+        Count = results.Length == listed ? L.Format(L.WorldsToExplore, results.Length)
+            : L.Format(L.WorldsToExploreFiltered, results.Length, listed);
         var count = Query.Facets.Count + (Query.MinimumPlayers.HasValue ? 1 : 0) + (Query.MaximumPlayers.HasValue ? 1 : 0)
             + (Query.Rating > 0 ? 1 : 0) + (Query.TlsOnly ? 1 : 0);
         FilterSummary = count == 0 ? L.AdvancedSearchFindYourKindOfWorld : L.Format(count == 1 ? L.FiltersOne : L.FiltersMany, count);

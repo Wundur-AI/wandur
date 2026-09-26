@@ -21,6 +21,7 @@ public sealed partial class WorldBrowserView
         _artPlaceholder.Text = Services.WorldThumbnails.Initials(world.Name);
         _artPlaceholder.IsVisible = true;
         _glimpse = null;
+        var now = _model.Now;
 
         // Breadcrumbs, as the site's band above the hero.
         var crumbs = new FlowPanel { Name = "DirectoryCrumbs", Gap = 8, Margin = new Thickness(0, 0, 0, 12) };
@@ -43,6 +44,8 @@ public sealed partial class WorldBrowserView
             tagline.HorizontalAlignment = HorizontalAlignment.Left;
             heroCopy.Children.Add(tagline);
         }
+        _heroTitle = title; _heroTagline = heroCopy.Children.Count > 1 ? (TextBlock)heroCopy.Children[1] : null;
+        InkHero(false);
         var hero = new Grid { Name = "DirectoryHero", Children = { _artFrame, heroCopy } };
         _details.Children.Add(hero);
         _artStatus.Margin = new Thickness(2, 8, 0, 0);
@@ -61,8 +64,14 @@ public sealed partial class WorldBrowserView
                      .Distinct(StringComparer.OrdinalIgnoreCase).Take(5))
             chips.Children.Add(DirectoryLook.Pill(chip, 14, chipPadding));
         if (world.BeginnerFriendly == true) chips.Children.Add(DirectoryLook.Beginner(14, chipPadding));
+        if (world.IsAdult)
+        {
+            var adult = DirectoryLook.Pill(L.AdultChip, 14, chipPadding);
+            adult.Name = "DirectoryAdultChip";
+            chips.Children.Add(adult);
+        }
         if (world.IsOnline)
-            _listingActions.Children.Add(DirectoryLook.Live(world.LivePlayerCount is { } players
+            _listingActions.Children.Add(DirectoryLook.Live(world.LivePlayerCount(now) is { } players
                 ? L.Format(L.PlayersOnlineCount, players) : L.StatusOnline, 15));
         var connect = new Button { Name = "ConnectDirectoryWorld", [!ContentControl.ContentProperty] = LocalizedText.Binding(nameof(L.Connect2)),
             Command = _model.ConnectCommand, IsEnabled = world.CanConnect, FontSize = 15, Padding = new Thickness(22, 10), CornerRadius = new CornerRadius(8) };
@@ -127,7 +136,7 @@ public sealed partial class WorldBrowserView
         var details = Card(Heading(L.WorldDetails));
         details.Name = "DirectoryWorldDetails";
         var detailsBody = (StackPanel)details.Child!;
-        detailsBody.Children.Add(Facts(world));
+        detailsBody.Children.Add(Facts(world, now));
         detailsBody.Children.Add(Subheading(L.ConnectWithAnyClient));
         detailsBody.Children.Add(AddressBox(world));
         var links = new FlowPanel { Gap = 16, LineGap = 6 };
@@ -187,7 +196,7 @@ public sealed partial class WorldBrowserView
     }
 
     /// <summary>The card's facts: Status, Language, Play style, Established, Codebase, Player killing, and live players.</summary>
-    private static Grid Facts(WorldListing world)
+    private static Grid Facts(WorldListing world, DateTimeOffset now)
     {
         var grid = new Grid { Name = "DirectoryWorldFacts", ColumnDefinitions = new ColumnDefinitions("120,*"), ColumnSpacing = 12, RowSpacing = 10 };
         void Fact(string label, Control? value)
@@ -208,9 +217,9 @@ public sealed partial class WorldBrowserView
         Fact(L.Established, Text(world.EstablishedAt?.Year.ToString(CultureInfo.InvariantCulture)));
         Fact(L.Codebase, Text(world.Features.Codebase));
         Fact(L.PlayerKilling, Text(world.Features.PlayerKilling));
-        if (world.LivePlayerCount is { } players)
-            Fact(L.LastObservedPlayers, Text(world.Population.ObservedAt is { } seen
-                ? L.Format(L.PlayersObservedAgo, players, seen.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)) : players.ToString(CultureInfo.CurrentCulture)));
+        // A fresh Wandur count reads as players now; any other count is history, with who counted and when.
+        Fact(L.LastObservedPlayers, Text(world.LivePlayerCount(now) is { } players && world.Population.ObservedAt is { } seen
+            ? L.Format(L.PlayersObservedAgo, players, WorldListing.Ago(seen, now)) : world.PopulationHistory(now)));
         return grid;
     }
 
@@ -236,12 +245,6 @@ public sealed partial class WorldBrowserView
         Fact(L.MonthlyVotes, world.Community.MonthlyVotes?.ToString(CultureInfo.CurrentCulture));
         Fact(L.ListedPlayerRange, world.Population.ReportedRange);
         Fact(L.AveragePlayers, world.Population.AverageCount?.ToString("0.#", CultureInfo.CurrentCulture));
-        // A count another listing reported stays a quiet, dated fact; only Wandur's own count is shown as live above.
-        if (world.LivePlayerCount is null && world.Population.LatestCount is { } reported)
-        {
-            Fact(L.LastObservedPlayers, reported.ToString(CultureInfo.CurrentCulture));
-            Fact(L.PlayersObserved, world.Population.ObservedAt?.ToLocalTime().ToString("g", CultureInfo.CurrentCulture));
-        }
         Fact(L.StatusChecked, world.Availability.CheckedAt?.ToLocalTime().ToString("g", CultureInfo.CurrentCulture));
         Fact(L.LastReached, world.Availability.LastOnlineAt?.ToLocalTime().ToString("g", CultureInfo.CurrentCulture));
         if (world.Availability.Archived == true) Fact(L.ArchiveReason, world.Availability.ArchiveReason);

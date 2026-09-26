@@ -42,7 +42,7 @@ internal sealed class DirectoryWorldCard : Border
     private double _plateWidth = -1;
 
     public DirectoryWorldCard(WorldListing world, Action<WorldListing> explore, Action<WorldListing> save,
-        Func<WorldListing, bool> isSaved, Func<WorldListing, CancellationToken, Task<Bitmap?>> loadArtwork)
+        Func<WorldListing, bool> isSaved, Func<WorldListing, CancellationToken, Task<Bitmap?>> loadArtwork, DateTimeOffset? now = null)
     {
         _world = world; _isSaved = isSaved; _loadArtwork = loadArtwork;
         Name = "DirectoryResultCard"; Classes.Add("directory-result");
@@ -60,7 +60,7 @@ internal sealed class DirectoryWorldCard : Border
         var (top, bottom) = DirectoryLook.RowPills(world);
         var pills = new FlowPanel { Name = "DirectoryRowPills", Gap = 6, LineGap = 6 };
         foreach (var pill in top) pills.Children.Add(DirectoryLook.Pill(pill));
-        if (DirectoryLook.OnlineText(world) is { } online) pills.Children.Add(DirectoryLook.Live(online));
+        if (DirectoryLook.OnlineText(world, now ?? DateTimeOffset.UtcNow) is { } online) pills.Children.Add(DirectoryLook.Live(online));
         var blurbText = string.IsNullOrWhiteSpace(world.Summary) ? world.Description : world.Summary;
         var blurb = DirectoryLook.Label(blurbText.ReplaceLineEndings(" ").Trim(), 14, "MutedBrush");
         blurb.Name = "DirectoryRowBlurb"; blurb.MaxLines = 2; blurb.TextTrimming = TextTrimming.WordEllipsis; blurb.LineHeight = 20;

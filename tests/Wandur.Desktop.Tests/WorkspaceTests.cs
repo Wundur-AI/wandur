@@ -160,7 +160,7 @@ public sealed class WorkspaceTests
             Assert.Contains("Listed player range", facts);
             Assert.Contains("75-100", facts);
             Assert.Contains("Last observed players", facts);
-            Assert.Contains("0", facts);
+            Assert.Contains(facts, f => f?.EndsWith(" counted 0", StringComparison.Ordinal) == true);
             Assert.Contains("Suggested", facts);
             Assert.DoesNotContain("Average players", facts);
             var add = Find<Button>(dialog, "AddDirectoryWorld");
