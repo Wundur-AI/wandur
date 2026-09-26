@@ -77,15 +77,16 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           submodules: recursive
       # 10.0.x, not the global.json floor: a self-contained app carries the runtime patch the
       # SDK knows about, so the newest SDK ships the newest runtime security fixes.
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '10.0.x'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.x'
       # scripts/make-icons.sh (called by package-macos.sh) draws the icon sizes with Pillow.
@@ -101,7 +102,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           bash scripts/package-macos.sh --rid "$RID" --version "$VERSION" --self-contained \
-            --output "$RUNNER_TEMP/mac" --sign-adhoc
+            --output "$RUNNER_TEMP/mac" --build-number "$GITHUB_RUN_NUMBER" --sign-adhoc
           bash scripts/macos/make-dmg.sh "$RUNNER_TEMP/mac/Wandur.app" "dist/Wandur-$VERSION-macos-${RID#osx-}.dmg"
 
       # --script-worker starts the runtime and the Wandur assemblies, answers one request and
@@ -133,7 +134,7 @@ jobs:
           echo "$reply"
           [[ "$reply" == *'"Results":[]'* ]]
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: wandur-${{ matrix.rid }}
           path: dist/*
@@ -149,11 +150,12 @@ jobs:
       VERSION: ${{ needs.version.outputs.version }}
       PRERELEASE: ${{ needs.version.outputs.prerelease }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           sparse-checkout: docs/release-notes-template.md
           sparse-checkout-cone-mode: false
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: wandur-*
           path: dist
@@ -188,7 +190,7 @@ jobs:
 
       - name: Keep the dry run's checksums and notes
         if: github.event_name != 'push'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-preview
           path: |
