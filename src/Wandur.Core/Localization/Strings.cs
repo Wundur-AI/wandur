@@ -1006,4 +1006,8 @@ public static class Strings
     public static string DiagnosticsServerDetails => Get(nameof(DiagnosticsServerDetails));
     public static string DiagnosticsServerDetailsHelp => Get(nameof(DiagnosticsServerDetailsHelp));
     public static string DiagnosticsServerDetailsNone => Get(nameof(DiagnosticsServerDetailsNone));
+    public static string LinkOpenQuestion => Get(nameof(LinkOpenQuestion));
+    public static string LinkOpen => Get(nameof(LinkOpen));
+    public static string LinkRefused => Get(nameof(LinkRefused));
+    public static string LinkNotOpened => Get(nameof(LinkNotOpened));
 }

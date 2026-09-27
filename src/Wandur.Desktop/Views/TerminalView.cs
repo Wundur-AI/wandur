@@ -71,6 +71,15 @@ public sealed class TerminalView : UserControl
     private bool _focusWanted;
     private IInputElement? _focusAtWish;
     private Point? _pressed;
+    // Link clicks: the server controls a link and the text around it, so a Ctrl+click only asks, with the full
+    // address shown, and only a plain http or https address without user info is ever offered.
+    private readonly Border _linkBar;
+    private readonly TextBlock _linkUrl = new() { Name = "LinkConfirmationUrl", FontSize = 12, TextWrapping = TextWrapping.Wrap, FontFamily = new FontFamily("Menlo, Consolas, DejaVu Sans Mono") };
+    private Uri? _pendingLink;
+    /// <summary>The address waiting for Open or Cancel, for tests.</summary>
+    internal Uri? PendingLink => _pendingLink;
+    /// <summary>Replaces the system launcher; for tests.</summary>
+    internal Func<Uri, Task<bool>>? LaunchLink { get; set; }
 
     public TerminalView(WorkspaceController controller, Action<int>? editConfiguration = null)
     {
@@ -159,13 +168,30 @@ public sealed class TerminalView : UserControl
             MaxWidth = 520, IsHitTestVisible = false,
             Child = Ui.Stack(Ui.TextKey(nameof(L.Connecting), 28))
         };
+        var open = Ui.ButtonKey(nameof(L.LinkOpen), () => _ = OpenPendingLinkAsync(), "primary");
+        open.Name = "LinkOpen";
+        var cancel = Ui.ButtonKey(nameof(L.Cancel), HideLink);
+        cancel.Name = "LinkCancel";
+        var question = Ui.TextKey(nameof(L.LinkOpenQuestion), 13);
+        var linkText = new StackPanel { Spacing = 4, VerticalAlignment = VerticalAlignment.Center, Children = { question, _linkUrl } };
+        var linkButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center, Children = { open, cancel } };
+        var linkContent = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12, Children = { linkText, linkButtons } };
+        Grid.SetColumn(linkButtons, 1);
+        _linkBar = new Border
+        {
+            Name = "LinkConfirmation", IsVisible = false, Padding = new Thickness(12, 8), Margin = new Thickness(12),
+            BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), VerticalAlignment = VerticalAlignment.Top,
+            MaxWidth = 720, Child = linkContent
+        };
+        _linkBar.Bind(Border.BackgroundProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("PanelBrush"));
+        _linkBar.Bind(Border.BorderBrushProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("LineBrush"));
         var display = controller.Display.View;
         if (display.Parent is Panel oldParent) oldParent.Children.Remove(display);
         SyncCommandField();
         var output = new Grid
         {
             RowDefinitions = new RowDefinitions { _transcriptRow, new RowDefinition(GridLength.Auto), _liveRow },
-            Children = { display, _welcome, _connecting, _latest, _divider, _tail }
+            Children = { display, _welcome, _connecting, _latest, _divider, _tail, _linkBar }
         };
         Grid.SetRow(_divider, 1); Grid.SetRow(_tail, 2);
         output.Bind(BackgroundProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("TerminalBrush"));
@@ -325,6 +351,7 @@ public sealed class TerminalView : UserControl
         ThemeService.Applied += SyncCommandField;
         SyncCommandField();
         _controller.Changed += Refresh; _controller.Display.ViewportChanged += RefreshScroll; _controller.Display.MenuRequested += ShowTranscriptMenu;
+        _controller.Display.LinkClicked += OnLinkClicked;
         Refresh();
         if (_focusWanted) PostFocus();
     }
@@ -332,6 +359,7 @@ public sealed class TerminalView : UserControl
     {
         ThemeService.Applied -= SyncCommandField;
         _focusWanted = false; _pressed = null; _controller.Changed -= Refresh; _controller.Display.ViewportChanged -= RefreshScroll; _controller.Display.MenuRequested -= ShowTranscriptMenu;
+        _controller.Display.LinkClicked -= OnLinkClicked; HideLink();
         _menu?.Close(); base.OnDetachedFromVisualTree(e);
     }
 
@@ -365,6 +393,48 @@ public sealed class TerminalView : UserControl
         _menu = menu;
         menu.Closed += (_, _) => { if (ReferenceEquals(_menu, menu)) _menu = null; };
         menu.Open(context.Anchor);
+    }
+
+    private void OnLinkClicked(string url) => RequestOpenLink(url);
+
+    /// <summary>
+    /// A link in the transcript was clicked. A plain http or https address without user info is shown in full with
+    /// Open and Cancel; anything else is refused with a notice and never offered. Returns whether it was offered.
+    /// </summary>
+    internal bool RequestOpenLink(string url)
+    {
+        if (Wandur.Core.Terminal.WebLinks.Accept(url) is not { } uri)
+        {
+            HideLink();
+            _controller.ShowNotice(L.LinkRefused);
+            return false;
+        }
+        _pendingLink = uri;
+        _linkUrl.Text = uri.AbsoluteUri;
+        ToolTip.SetTip(_linkUrl, uri.AbsoluteUri);
+        _linkBar.IsVisible = true;
+        return true;
+    }
+
+    private void HideLink()
+    {
+        _pendingLink = null;
+        _linkBar.IsVisible = false;
+    }
+
+    /// <summary>Open: hands the confirmed address to the system browser. A launcher failure is reported as a notice.</summary>
+    internal async Task OpenPendingLinkAsync()
+    {
+        var uri = _pendingLink;
+        HideLink();
+        if (uri is null || Wandur.Core.Terminal.WebLinks.Accept(uri.AbsoluteUri) is null) return;
+        try
+        {
+            var opened = LaunchLink is { } launch ? await launch(uri)
+                : TopLevel.GetTopLevel(this)?.Launcher is { } launcher && await launcher.LaunchUriAsync(uri);
+            if (!opened) _controller.ShowNotice(L.LinkNotOpened);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { _controller.ShowNotice(L.LinkNotOpened); }
     }
 
     /// <summary>Opens the teaching dialog for one line, owned by this view's window.</summary>

@@ -1973,4 +1973,8 @@ Stop after receiving one inventory listing.</value></data>
   <data name="DiagnosticsServerDetails" xml:space="preserve"><value>Server details</value></data>
   <data name="DiagnosticsServerDetailsHelp" xml:space="preserve"><value>What this world says about itself through MSSP: name, codebase, players, uptime and the protocols it claims. Read-only, kept for this session only. When the world profile names no codebase, the reported one picks the channel rules.</value></data>
   <data name="DiagnosticsServerDetailsNone" xml:space="preserve"><value>This world has not described itself through MSSP.</value></data>
+  <data name="LinkOpenQuestion" xml:space="preserve"><value>Open this link?</value></data>
+  <data name="LinkOpen" xml:space="preserve"><value>Open</value></data>
+  <data name="LinkRefused" xml:space="preserve"><value>That link was not opened. Wandur opens only web links (http or https) without a user name or password in the address.</value></data>
+  <data name="LinkNotOpened" xml:space="preserve"><value>The link could not be opened in your browser.</value></data>
 </root>

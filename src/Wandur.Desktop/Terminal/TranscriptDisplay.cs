@@ -39,6 +39,8 @@ internal sealed class TranscriptDisplay : ITranscriptDisplay
         _surface.BeginInit(); _surface.EndInit(); _surface.InitializeSession();
         _surface.MenuRequested += (line, selection) => MenuRequested?.Invoke(new(line, selection, _surface));
         _surface.GridResized += () => TerminalSizeChanged?.Invoke();
+        // The library detects links and reports a Ctrl+click, but opens nothing itself.
+        _surface.UrlClicked += OnUrlClicked;
         _bindings.Add(_surface.Bind(Iciclecreek.Terminal.TerminalView.BackgroundProperty, new DynamicResourceExtension("TerminalBrush")));
         _bindings.Add(_surface.Bind(Iciclecreek.Terminal.TerminalView.ForegroundProperty, new DynamicResourceExtension("TerminalTextBrush")));
         _bindings.Add(_surface.Bind(Iciclecreek.Terminal.TerminalView.SelectionBrushProperty, new DynamicResourceExtension("TranscriptSelectionBrush")));
@@ -98,6 +100,8 @@ internal sealed class TranscriptDisplay : ITranscriptDisplay
     public (int Columns, int Rows) TerminalSize => (_surface.Terminal.Cols, _surface.Terminal.Rows);
     public event Action? TerminalSizeChanged;
     public event Action<TranscriptContext>? MenuRequested;
+    public event Action<string>? LinkClicked;
+    private void OnUrlClicked(object? sender, Iciclecreek.Terminal.UrlClickedEventArgs e) { if (!_disposed) LinkClicked?.Invoke(e.Url); }
     public Task<bool> CopySelectionAsync() => _disposed ? Task.FromResult(false) : _surface.CopyAsync();
     public void FollowTail() { _surface.ViewportY = _surface.Terminal.Buffer.YBase; UpdateScroll(); }
     public void ApplySettings(ClientSettings settings)
@@ -178,6 +182,7 @@ internal sealed class TranscriptDisplay : ITranscriptDisplay
         ThemeService.Applied -= UpdatePalette;
         _source.OutputAppended -= Append; _source.Cleared -= Clear;
         _surface.PropertyChanged -= SurfaceChanged;
+        _surface.UrlClicked -= OnUrlClicked;
         _surface.StopBlinking();
         foreach (var binding in _bindings) binding.Dispose();
         _surface.Dispose();

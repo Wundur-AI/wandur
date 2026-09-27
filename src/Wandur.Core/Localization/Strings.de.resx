@@ -1973,4 +1973,8 @@ Stoppe nach einer Inventarliste.</value></data>
   <data name="DiagnosticsServerDetails" xml:space="preserve"><value>Serverdetails</value></data>
   <data name="DiagnosticsServerDetailsHelp" xml:space="preserve"><value>Was diese Welt über MSSP über sich selbst angibt: Name, Codebasis, Spieler, Laufzeit und die Protokolle, die sie nennt. Nur lesbar und nur für diese Sitzung. Wenn das Weltprofil keine Codebasis nennt, bestimmt die gemeldete die Kanalregeln.</value></data>
   <data name="DiagnosticsServerDetailsNone" xml:space="preserve"><value>Diese Welt hat sich nicht über MSSP beschrieben.</value></data>
+  <data name="LinkOpenQuestion" xml:space="preserve"><value>Diesen Link öffnen?</value></data>
+  <data name="LinkOpen" xml:space="preserve"><value>Öffnen</value></data>
+  <data name="LinkRefused" xml:space="preserve"><value>Dieser Link wurde nicht geöffnet. Wandur öffnet nur Weblinks (http oder https) ohne Benutzername oder Passwort in der Adresse.</value></data>
+  <data name="LinkNotOpened" xml:space="preserve"><value>Der Link konnte nicht im Browser geöffnet werden.</value></data>
 </root>

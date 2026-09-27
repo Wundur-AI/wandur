@@ -1973,4 +1973,8 @@ Arrêtez après réception d’une liste d’inventaire.</value></data>
   <data name="DiagnosticsServerDetails" xml:space="preserve"><value>Détails du serveur</value></data>
   <data name="DiagnosticsServerDetailsHelp" xml:space="preserve"><value>Ce que ce monde dit de lui-même via MSSP : nom, base de code, joueurs, temps de fonctionnement et protocoles annoncés. En lecture seule, conservé pour cette session uniquement. Si le profil du monde n'indique pas de base de code, celle annoncée choisit les règles de canaux.</value></data>
   <data name="DiagnosticsServerDetailsNone" xml:space="preserve"><value>Ce monde ne s'est pas décrit via MSSP.</value></data>
+  <data name="LinkOpenQuestion" xml:space="preserve"><value>Ouvrir ce lien ?</value></data>
+  <data name="LinkOpen" xml:space="preserve"><value>Ouvrir</value></data>
+  <data name="LinkRefused" xml:space="preserve"><value>Ce lien n'a pas été ouvert. Wandur n'ouvre que les liens web (http ou https) sans nom d'utilisateur ni mot de passe dans l'adresse.</value></data>
+  <data name="LinkNotOpened" xml:space="preserve"><value>Le lien n'a pas pu être ouvert dans votre navigateur.</value></data>
 </root>
