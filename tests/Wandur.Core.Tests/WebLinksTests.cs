@@ -10,6 +10,12 @@ public sealed class WebLinksTests
     [InlineData("HTTPS://Example.Test/Path")]
     public void PlainWebAddressesAreAccepted(string url) => Assert.NotNull(WebLinks.Accept(url));
 
+    /// <summary>An escaped space, and escaped ordinary text, are still plain web addresses.</summary>
+    [Theory]
+    [InlineData("https://example.com/some%20page")]
+    [InlineData("https://example.com/caf%C3%A9")]
+    public void OrdinaryPercentEscapesAreAccepted(string url) => Assert.NotNull(WebLinks.Accept(url));
+
     [Theory]
     [InlineData("file:///etc/passwd")]
     [InlineData("javascript:alert(1)")]
@@ -51,6 +57,8 @@ public sealed class WebLinksTests
         "https://example.com/\u2066path",           // bidi isolate in the path
         "https://example.com/\ue000",               // private use
         "https://example.com/a\u2028b",             // line separator
+        "https://example.com/%E2%80%AEgnp.exe",     // right-to-left override written as a percent escape
+        "https://example.com/a%E2%80%8Bb",          // zero-width space written as a percent escape
         "https://xn--pple-43d.com/\u0301",          // combining mark is fine, but the unassigned below is not
     };
 
@@ -89,6 +97,12 @@ public sealed class WebLinksTests
     [InlineData("http://[fe80::1]/")]
     [InlineData("http://[fd12:3456::1]/")]
     [InlineData("http://[::ffff:192.168.0.1]/")]
+    [InlineData("http://127.0.0.1./")]
+    [InlineData("http://192.168.1.1./admin")]
+    [InlineData("http://10.0.0.1./")]
+    [InlineData("http://0x7f.1./")]
+    [InlineData("http://2130706433./")]
+    [InlineData("http://169.254.169.254./latest/meta-data")]
     public void LoopbackLinkLocalAndPrivateHostsAreRefused(string url) => Assert.Equal(WebLinkRefusal.LocalNetwork, WebLinks.Check(url).Refusal);
 
     [Theory]

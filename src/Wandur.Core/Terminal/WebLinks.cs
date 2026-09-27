@@ -39,6 +39,9 @@ public static class WebLinks
         if (url.Length > MaximumLength || url.Any(IsHidden)) return (null, WebLinkRefusal.NotAWebLink);
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return (null, WebLinkRefusal.NotAWebLink);
         if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return (null, WebLinkRefusal.NotAWebLink);
+        // The same characters written as percent escapes (%E2%80%AE is a right-to-left override) show decoded in a
+        // browser's address bar or history, so they are refused too. An escaped space is ordinary and allowed.
+        if (Uri.UnescapeDataString(uri.AbsoluteUri).Any(c => c != ' ' && IsHidden(c))) return (null, WebLinkRefusal.NotAWebLink);
         if (uri.UserInfo.Length > 0 || Authority(url).Contains('@', StringComparison.Ordinal)) return (null, WebLinkRefusal.NotAWebLink);
         // The address as written must name its host in ASCII, and the parsed host must be ASCII and already its
         // IDN form: this refuses homographs, punycode look-alikes spelled in Unicode, and fullwidth dots.
@@ -70,8 +73,10 @@ public static class WebLinks
     {
         var host = uri.Host.TrimEnd('.').ToLowerInvariant();
         if (host == "localhost" || host.EndsWith(".localhost", StringComparison.Ordinal)) return true;
-        if (uri.HostNameType is not (UriHostNameType.IPv4 or UriHostNameType.IPv6)) return false;
-        if (!IPAddress.TryParse(uri.Host.Trim('[', ']'), out var address)) return true;
+        // A trailing dot makes .NET class a numeric host as a DNS name (127.0.0.1. and 169.254.169.254. are Dns), yet
+        // it still reaches the address, so the host is classified by whether it parses as an address, not by type.
+        if (!IPAddress.TryParse(host.Trim('[', ']'), out var address))
+            return uri.HostNameType is UriHostNameType.IPv4 or UriHostNameType.IPv6;
         if (address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
         if (IPAddress.IsLoopback(address)) return true;
         if (address.AddressFamily == AddressFamily.InterNetwork)
