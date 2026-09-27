@@ -134,15 +134,20 @@ public sealed class TelnetSessionProtocolTests
         var profile = new ConnectionProfile { Host = "fake.test", Port = 4000 };
         var (session, server) = await ConnectAsync(profile);
         await using var _ = session;
-        Task? resize = null;
-        // Raised by the receive loop between Feed and writing its reply.
-        session.ProtocolStateChanged += _ => resize ??= session.UpdateWindowSizeAsync(130, 60, timeout.Token);
+        // Raised by the receive loop between Feed and writing its reply. The resize can finish writing before the
+        // handler returns, so the task is handed over through a completion source rather than a captured variable.
+        var resize = new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var raised = 0;
+        session.ProtocolStateChanged += _ =>
+        {
+            if (Interlocked.Exchange(ref raised, 1) == 0) resize.SetResult(session.UpdateWindowSizeAsync(130, 60, timeout.Token));
+        };
         byte[] read = [255, 251, 69, 255, 253, 31];
         server.Send(read);
         var reply = new Wandur.Core.Protocol.TelnetParser(TelnetSession.ParserOptions(profile)).Feed(read).Reply;
         byte[] expected = [.. reply, .. WindowSize(130, 60)];
         Assert.Equal(expected, await server.ReadWrittenAsync(expected.Length, timeout.Token));
-        await resize!.WaitAsync(timeout.Token);
+        await (await resize.Task.WaitAsync(timeout.Token)).WaitAsync(timeout.Token);
         Assert.Equal(0, server.Unread);
     }
 
