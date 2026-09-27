@@ -10,7 +10,7 @@ internal sealed record ScriptCompletionContext(int PrefixLength, IReadOnlyList<S
 internal static class ScriptCompletionCatalog
 {
     private static readonly Regex Member = new(@"(?:(?<receiver>[$A-Za-z_][$\w]*)\s*\.\s*)?(?<prefix>[$A-Za-z_][$\w]*)?$", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking, TimeSpan.FromMilliseconds(50));
-    private static readonly Regex Subscription = new("mud\\s*\\.\\s*on\\s*\\(\\s*(?:Events\\s*\\.\\s*(?<kind>Line|Gmcp|Msdp)|[\"'](?<legacy>line|gmcp|msdp)[\"'])\\s*,\\s*(?:function\\s*)?\\(?\\s*(?<parameter>[$A-Za-z_][$\\w]*)\\s*\\)?\\s*(?:=>|\\{)", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking, TimeSpan.FromMilliseconds(50));
+    private static readonly Regex Subscription = new("mud\\s*\\.\\s*on\\s*\\(\\s*(?:Events\\s*\\.\\s*(?<kind>Line|Prompt|Gmcp|Msdp)|[\"'](?<legacy>line|prompt|gmcp|msdp)[\"'])\\s*,\\s*(?:function\\s*)?\\(?\\s*(?<parameter>[$A-Za-z_][$\\w]*)\\s*\\)?\\s*(?:=>|\\{)", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking, TimeSpan.FromMilliseconds(50));
 
     public static ScriptCompletionContext Get(string beforeCaret)
     {
@@ -42,6 +42,7 @@ internal static class ScriptCompletionCatalog
         else if (receiver == "Events") choices =
         [
             new("Line", "Line", L.ScriptCompleteLine),
+            new("Prompt", "Prompt", L.ScriptCompletePrompt),
             new("Gmcp", "Gmcp", L.ScriptCompleteGmcp),
             new("Msdp", "Msdp", L.ScriptCompleteMsdp)
         ];
@@ -57,6 +58,7 @@ internal static class ScriptCompletionCatalog
             choices = kind.ToLowerInvariant() switch
             {
                 "line" => [new("text", "text: string", L.ScriptCompleteText)],
+                "prompt" => [new("text", "text: string", L.ScriptCompletePromptText)],
                 "msdp" => [new("variable", "variable: string", L.ScriptCompleteVariable), new("value", "value: JSON", L.ScriptCompleteValue)],
                 _ => [new("package", "package: string", L.ScriptCompletePackage), new("data", "data: JSON | null", L.ScriptCompleteData)]
             };

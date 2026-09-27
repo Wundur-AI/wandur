@@ -325,15 +325,15 @@ public sealed class JavaScriptEngine
                 if (result && typeof result.then === 'function')
                     throw new TypeError('Async callbacks are not supported.');
             }
-            Object.defineProperty(globalThis, 'Events', { value: Object.freeze({ Line: 'line', Gmcp: 'gmcp', Key: 'key', Msdp: 'msdp' }), writable: false, configurable: false });
+            Object.defineProperty(globalThis, 'Events', { value: Object.freeze({ Line: 'line', Prompt: 'prompt', Gmcp: 'gmcp', Key: 'key', Msdp: 'msdp' }), writable: false, configurable: false });
             Object.defineProperty(globalThis, 'mud', { value: Object.freeze({
                 send: text => action('send', text),
                 echo: text => action('echo', text),
                 alias: (pattern, callback) => register(aliases, pattern, callback),
                 trigger: (pattern, callback) => register(triggers, pattern, callback),
                 on: (event, callback) => {
-                    if (event !== 'line' && event !== 'gmcp' && event !== 'key' && event !== 'msdp')
-                        throw new TypeError('Event must be line, gmcp, msdp or key.');
+                    if (event !== 'line' && event !== 'prompt' && event !== 'gmcp' && event !== 'key' && event !== 'msdp')
+                        throw new TypeError('Event must be line, prompt, gmcp, msdp or key.');
                     checkCallback(callback);
                     listeners.push({ event, callback });
                 },
@@ -366,7 +366,7 @@ public sealed class JavaScriptEngine
                 if (kind !== 'flush') { actions = []; outputSize = 0; emitted = 0; panelCount = 0; panelSize = 0; }
                 clock = Math.max(clock, elapsed);
                 let event = null, message = null;
-                if (kind === 'line' || kind === 'key') event = Object.freeze({ text });
+                if (kind === 'line' || kind === 'prompt' || kind === 'key') event = Object.freeze({ text });
                 else if (kind === 'gmcp') {
                     const match = /^([A-Za-z][A-Za-z0-9_.]*)(?:\s+([\s\S]*))?$/.exec(text);
                     if (match) {
@@ -422,7 +422,7 @@ public sealed class JavaScriptEngine
                         const handler = handlers.get(message.panel + '\u0000' + message.widget + '\u0000' + message.event);
                         if (handler !== undefined) call(handler, message.value === undefined ? null : message.value);
                     }
-                } else if (kind !== 'flush' && kind !== 'gmcp' && kind !== 'key' && kind !== 'msdp' && kind !== 'state') throw new TypeError('Unknown script event.');
+                } else if (kind !== 'flush' && kind !== 'prompt' && kind !== 'gmcp' && kind !== 'key' && kind !== 'msdp' && kind !== 'state') throw new TypeError('Unknown script event.');
                 const result = stringify({ Handled: handled, Actions: actions, Error: null });
                 actions = []; outputSize = 0; emitted = 0; panelCount = 0; panelSize = 0;
                 return result;

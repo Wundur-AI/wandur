@@ -1968,4 +1968,6 @@ Arrêtez après réception d’une liste d’inventaire.</value></data>
   <data name="DaysAgoOne" xml:space="preserve"><value>il y a {0} jour</value></data>
   <data name="WorldsToExploreOne" xml:space="preserve"><value>{0} monde à explorer</value></data>
   <data name="AdultWorlds" xml:space="preserve"><value>Mondes pour adultes</value></data>
+  <data name="ScriptCompletePrompt" xml:space="preserve"><value>Une invite que le serveur a marquée comme terminée (telnet GA ou EOR), sans style ANSI. Données : text: string. Les saisies privées sont exclues.</value></data>
+  <data name="ScriptCompletePromptText" xml:space="preserve"><value>Le texte de l'invite depuis le dernier saut de ligne, sans style ANSI.</value></data>
 </root>

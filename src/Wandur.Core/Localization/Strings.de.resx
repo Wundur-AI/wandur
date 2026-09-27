@@ -1968,4 +1968,6 @@ Stoppe nach einer Inventarliste.</value></data>
   <data name="DaysAgoOne" xml:space="preserve"><value>vor {0} Tag</value></data>
   <data name="WorldsToExploreOne" xml:space="preserve"><value>{0} Welt zu entdecken</value></data>
   <data name="AdultWorlds" xml:space="preserve"><value>Welten für Erwachsene</value></data>
+  <data name="ScriptCompletePrompt" xml:space="preserve"><value>Eine Eingabeaufforderung, die der Server als fertig markiert hat (Telnet GA oder EOR), ohne ANSI-Stil. Daten: text: string. Private Eingaben sind ausgeschlossen.</value></data>
+  <data name="ScriptCompletePromptText" xml:space="preserve"><value>Der Text der Eingabeaufforderung seit dem letzten Zeilenumbruch, ohne ANSI-Stil.</value></data>
 </root>

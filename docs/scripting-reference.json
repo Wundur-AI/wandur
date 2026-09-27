@@ -11,7 +11,7 @@
         { "name": "echo", "kind": "function", "signature": "mud.echo(text)", "description": "Writes local text to the transcript and this script's output. Never re-enters line events." },
         { "name": "alias", "kind": "function", "signature": "mud.alias(pattern, callback)", "description": "Matches a typed command. The first matching alias consumes it. The callback receives a regex match array." },
         { "name": "trigger", "kind": "function", "signature": "mud.trigger(pattern, callback)", "description": "Matches a complete server line. Every matching trigger runs. The callback receives a regex match array." },
-        { "name": "on", "kind": "function", "signature": "mud.on(event, callback)", "description": "Subscribes to Events.Line, Events.Gmcp, Events.Msdp or Events.Key." },
+        { "name": "on", "kind": "function", "signature": "mud.on(event, callback)", "description": "Subscribes to Events.Line, Events.Prompt, Events.Gmcp, Events.Msdp or Events.Key." },
         { "name": "every", "kind": "function", "signature": "mud.every(seconds, callback)", "description": "Repeats a synchronous callback. Missed intervals are not replayed in a burst." },
         { "name": "panel", "kind": "function", "signature": "mud.panel(id, options)", "description": "Creates or reuses a docked panel and returns its widget builder. Options are { title, dock } where dock is left, right or bars.", "options": [
             { "name": "title", "type": "string", "required": false, "description": "The dock tool title. Color codes are stripped from it. Defaults to the panel id, and is kept when a later call omits it." },
@@ -29,6 +29,7 @@
       "description": "Frozen event constants. The object cannot be replaced or extended.",
       "members": [
         { "name": "Line", "kind": "constant", "value": "line" },
+        { "name": "Prompt", "kind": "constant", "value": "prompt" },
         { "name": "Gmcp", "kind": "constant", "value": "gmcp" },
         { "name": "Msdp", "kind": "constant", "value": "msdp" },
         { "name": "Key", "kind": "constant", "value": "key" }
@@ -37,6 +38,7 @@
   ],
   "events": [
     { "constant": "Line", "value": "line", "payload": [ { "name": "text", "type": "string", "description": "One completed server line with ANSI styling removed." } ] },
+    { "constant": "Prompt", "value": "prompt", "payload": [ { "name": "text", "type": "string", "description": "A prompt the server marked as finished with telnet GA or EOR: the text since the last newline or the previous prompt, ANSI styling removed. Only public prompts; worlds that mark no prompts send none." } ] },
     { "constant": "Gmcp", "value": "gmcp", "payload": [
         { "name": "package", "type": "string", "description": "The GMCP package name, for example Char.Vitals." },
         { "name": "data", "type": "json|null", "description": "Parsed JSON from the server, or null when the message carries only a package name." } ] },
@@ -178,7 +180,7 @@
     "sendPolicy": {
       "default": "restricted",
       "allowedFrom": ["alias", "panel button click"],
-      "refusedFrom": ["trigger", "timer", "line event", "gmcp event", "msdp event", "key event", "panel toggle, input and list callbacks", "top-level code"],
+      "refusedFrom": ["trigger", "timer", "line event", "prompt event", "gmcp event", "msdp event", "key event", "panel toggle, input and list callbacks", "top-level code"],
       "description": "A refused mud.send throws a script error naming the policy and stops that script. The user lifts the restriction per script with the Scripts page toggle \"Allow this script to send commands\"."
     },
     "refresh": {

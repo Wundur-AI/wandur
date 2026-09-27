@@ -1968,4 +1968,6 @@ Stop after receiving one inventory listing.</value></data>
   <data name="DaysAgoOne" xml:space="preserve"><value>{0} day ago</value></data>
   <data name="WorldsToExploreOne" xml:space="preserve"><value>{0} world to explore</value></data>
   <data name="AdultWorlds" xml:space="preserve"><value>Adult worlds</value></data>
+  <data name="ScriptCompletePrompt" xml:space="preserve"><value>A prompt the server marked as finished (telnet GA or EOR), without ANSI styling. Payload: text: string. Private input is excluded.</value></data>
+  <data name="ScriptCompletePromptText" xml:space="preserve"><value>The prompt text since the last newline, with ANSI styling removed.</value></data>
 </root>

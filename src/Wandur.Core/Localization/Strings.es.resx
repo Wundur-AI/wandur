@@ -1968,4 +1968,6 @@ Detente después de recibir una lista del inventario.</value></data>
   <data name="DaysAgoOne" xml:space="preserve"><value>hace {0} día</value></data>
   <data name="WorldsToExploreOne" xml:space="preserve"><value>{0} mundo por explorar</value></data>
   <data name="AdultWorlds" xml:space="preserve"><value>Mundos para adultos</value></data>
+  <data name="ScriptCompletePrompt" xml:space="preserve"><value>Un prompt que el servidor marcó como terminado (telnet GA o EOR), sin estilo ANSI. Datos: text: string. La entrada privada queda excluida.</value></data>
+  <data name="ScriptCompletePromptText" xml:space="preserve"><value>El texto del prompt desde el último salto de línea, sin estilo ANSI.</value></data>
 </root>

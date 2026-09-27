@@ -122,9 +122,8 @@ public sealed class TelnetSession : IMudSession
     private async Task ReceiveAsync(CancellationToken token)
     {
         var bytes = new byte[8192];
-        var characters = new char[TextEncoding.GetMaxCharCount(bytes.Length)];
-        var decoder = TextEncoding.GetDecoder();
-        var decoderMayContainPrivateText = false;
+        _characters = new char[TextEncoding.GetMaxCharCount(bytes.Length)];
+        _decoder = TextEncoding.GetDecoder();
         string status = L.ServerClosedTheConnection;
         try
         {
@@ -169,20 +168,17 @@ public sealed class TelnetSession : IMudSession
                     else room = RoomProtocolDecoder.FromMsdp(message.Payload);
                     if (room is not null) RoomReceived?.Invoke(room);
                 }
-                int length = decoder.GetChars(packet.Text, 0, packet.Text.Length, characters, 0, false);
-                // Negotiation-only reads add no bytes to the decoder's pending character.
-                if (packet.Text.Length > 0) decoderMayContainPrivateText |= packet.MayContainPrivateText;
-                if (length > 0)
+                // A prompt mark splits the text: what came before it is decoded and delivered first, then the
+                // prompt is raised, and the rest continues with the same decoder, so a character split across
+                // reads or around the mark completes instead of becoming U+FFFD.
+                var start = 0;
+                foreach (var mark in packet.PromptMarks)
                 {
-                    var text = new string(characters, 0, length);
-                    TextReceived?.Invoke(new(text, decoderMayContainPrivateText));
-                    Output?.Invoke(text);
-                    // Retain provenance only for an incomplete character at this packet's
-                    // end. Complete private text must not suppress the next public read.
-                    // Reads that emit no characters retain provenance until completion.
-                    decoderMayContainPrivateText = packet.MayContainPrivateText &&
-                        TextEncoding.CodePage == Encoding.UTF8.CodePage && HasIncompleteUtf8Suffix(packet.Text);
+                    DeliverText(packet.Text, start, mark.Offset - start, packet.MayContainPrivateText);
+                    start = mark.Offset;
+                    RaisePrompt(packet.MayContainPrivateText);
                 }
+                DeliverText(packet.Text, start, packet.Text.Length - start, packet.MayContainPrivateText);
             }
         }
         catch (OperationCanceledException) { status = L.Disconnected; }
@@ -195,6 +191,57 @@ public sealed class TelnetSession : IMudSession
             PrivateInputChanged?.Invoke(false);
             StatusChanged?.Invoke(new(false, status));
         }
+    }
+
+    private Decoder _decoder = Encoding.UTF8.GetDecoder();
+    private char[] _characters = [];
+    private bool _decoderMayContainPrivateText;
+    /// <summary>The line in progress, for the prompt a mark ends; two lines are enough to hold the current one.</summary>
+    private readonly Wandur.Core.Terminal.AnsiTerminal _promptLine = new(2);
+    private bool _promptLinePrivate;
+    private bool _textSinceMark;
+
+    /// <summary>
+    /// A server prompt: the text since the last newline or the previous mark when the server sent IAC GA or IAC EOR,
+    /// with ANSI styling removed.
+    /// Raised on the receive thread after the text before the mark and before the text after it. A mark with
+    /// no new text since the previous one (GA and EOR together, or GA after every write) raises nothing, and
+    /// neither does a blank line. The flag is set when any part of the line may contain private text.
+    /// </summary>
+    public event Action<ReceivedSessionText>? PromptReceived;
+
+    private void DeliverText(byte[] text, int offset, int count, bool packetPrivate)
+    {
+        var length = _decoder.GetChars(text, offset, count, _characters, 0, false);
+        // Negotiation-only reads add no bytes to the decoder's pending character.
+        if (count > 0) _decoderMayContainPrivateText |= packetPrivate;
+        if (length == 0) return;
+        var decoded = new string(_characters, 0, length);
+        var mayContainPrivateText = _decoderMayContainPrivateText;
+        TextReceived?.Invoke(new(decoded, mayContainPrivateText));
+        Output?.Invoke(decoded);
+        _promptLine.Append(decoded);
+        // The line in progress is private when any part of it since its last newline was.
+        _promptLinePrivate = decoded.Contains('\n') ? mayContainPrivateText : _promptLinePrivate || mayContainPrivateText;
+        _textSinceMark = true;
+        // Retain provenance only for an incomplete character at this segment's
+        // end. Complete private text must not suppress the next public read.
+        // Reads that emit no characters retain provenance until completion.
+        _decoderMayContainPrivateText = packetPrivate &&
+            TextEncoding.CodePage == Encoding.UTF8.CodePage && HasIncompleteUtf8Suffix(text.AsSpan(offset, count));
+    }
+
+    private void RaisePrompt(bool packetPrivate)
+    {
+        if (!_textSinceMark) return;
+        _textSinceMark = false;
+        var line = _promptLine.Lines[^1].Text;
+        var mayContainPrivateText = _promptLinePrivate || packetPrivate;
+        // A mark ends the prompt: the next one starts after it even when the server sends no newline between.
+        _promptLine.Clear();
+        _promptLinePrivate = false;
+        if (string.IsNullOrWhiteSpace(line)) return;
+        PromptReceived?.Invoke(new(line, mayContainPrivateText));
     }
 
     private static bool HasIncompleteUtf8Suffix(ReadOnlySpan<byte> bytes)

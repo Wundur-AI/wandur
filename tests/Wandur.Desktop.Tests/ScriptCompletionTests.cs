@@ -45,7 +45,7 @@ public sealed class ScriptCompletionTests
             window.Show(); Dispatcher.UIThread.RunJobs(); editor.TextArea.Focus(); editor.CaretOffset = editor.Text.Length;
             window.KeyTextInput("."); Dispatcher.UIThread.RunJobs();
             Assert.NotNull(editor.Completion); Assert.True(editor.Completion.IsOpen);
-            Assert.Equal(new[] { "Line", "Gmcp", "Msdp" }, editor.Completion.CompletionList.CompletionData.Select(d => d.Text));
+            Assert.Equal(new[] { "Line", "Prompt", "Gmcp", "Msdp" }, editor.Completion.CompletionList.CompletionData.Select(d => d.Text));
             window.KeyTextInput("Li"); window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None); window.KeyReleaseQwerty(PhysicalKey.Tab, RawInputModifiers.None);
             Dispatcher.UIThread.RunJobs();
             Assert.Equal("mud.on(Events.Line", editor.Text); Assert.Equal(editor.Text, editor.SourceText); Assert.Null(editor.Completion);

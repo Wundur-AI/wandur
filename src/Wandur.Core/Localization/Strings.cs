@@ -1001,4 +1001,6 @@ public static class Strings
     public static string DaysAgoOne => Get(nameof(DaysAgoOne));
     public static string WorldsToExploreOne => Get(nameof(WorldsToExploreOne));
     public static string AdultWorlds => Get(nameof(AdultWorlds));
+    public static string ScriptCompletePrompt => Get(nameof(ScriptCompletePrompt));
+    public static string ScriptCompletePromptText => Get(nameof(ScriptCompletePromptText));
 }

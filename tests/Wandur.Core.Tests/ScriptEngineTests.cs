@@ -97,4 +97,13 @@ public sealed class ScriptEngineTests
         Assert.NotNull(failed.Error);
         Assert.Empty(failed.Actions);
     }
+
+    [Fact]
+    public void PromptEventsReachPromptListenersButNotLineTriggers()
+    {
+        var engine = new JavaScriptEngine();
+        Assert.Null(engine.Load("mud.on(Events.Prompt, e => mud.echo('prompt ' + e.text)); mud.on('line', e => mud.echo('line ' + e.text)); mud.trigger(/HP/, () => mud.echo('trigger'));").Error);
+        Assert.Equal(["prompt HP: 5> "], engine.Dispatch(new("prompt", "HP: 5> ")).Actions.Select(a => a.Text));
+        Assert.Equal(["line HP: 5> ", "trigger"], engine.Dispatch(new("line", "HP: 5> ")).Actions.Select(a => a.Text));
+    }
 }

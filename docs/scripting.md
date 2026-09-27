@@ -43,11 +43,11 @@ New scripts and scripts migrated from the original single-script editor start di
 
 Saved definitions are shared by world identity. Saving merges the edited rules into the on-disk library. Already-open connections retain their loaded definitions until explicitly reloaded. Deleting a rule from configuration requires an inline confirmation and removes its saved definition when you choose **Save world**; reload active connections to remove their previously loaded copy.
 
-The editor includes syntax highlighting, light/dark colors, line numbers, indentation, undo/redo, local output and API examples. Type `mud.` or `Events.` for completion suggestions, or press **Ctrl+Space**. **Tab/Enter** accepts and **Escape** cancels. Event callback parameters receive field suggestions (`text` for Line, `package` and `data` for Gmcp, `variable` and `value` for Msdp). Suggestions show signatures and descriptions. This is focused API completion, not full JavaScript type checking or a language server; dynamic GMCP fields depend on the MUD. **Cmd+S** on macOS or **Ctrl+S** on Windows/Linux saves. JavaScript is embedded; no Python or Node.js installation is required.
+The editor includes syntax highlighting, light/dark colors, line numbers, indentation, undo/redo, local output and API examples. Type `mud.` or `Events.` for completion suggestions, or press **Ctrl+Space**. **Tab/Enter** accepts and **Escape** cancels. Event callback parameters receive field suggestions (`text` for Line and Prompt, `package` and `data` for Gmcp, `variable` and `value` for Msdp). Suggestions show signatures and descriptions. This is focused API completion, not full JavaScript type checking or a language server; dynamic GMCP fields depend on the MUD. **Cmd+S** on macOS or **Ctrl+S** on Windows/Linux saves. JavaScript is embedded; no Python or Node.js installation is required.
 
 ## Events
 
-`Events.Line`, `Events.Gmcp` and `Events.Msdp` are named JavaScript constants on a frozen global object. They are not a TypeScript enum. The object and its values cannot be replaced or extended. Existing scripts using `"line"` or `"gmcp"` strings continue to work.
+`Events.Line`, `Events.Prompt`, `Events.Gmcp` and `Events.Msdp` are named JavaScript constants on a frozen global object. They are not a TypeScript enum. The object and its values cannot be replaced or extended. Existing scripts using `"line"` or `"gmcp"` strings continue to work.
 
 ```js
 // Called for each newly completed server line, with ANSI styling removed.
@@ -66,6 +66,18 @@ mud.on(Events.Gmcp, event => {
 ```
 
 `mud.on(Events.Line, callback)` receives `{text}`. `mud.on(Events.Gmcp, callback)` receives `{package, data}`; `data` is parsed JSON, or `null` when the message contains only a package name. Malformed GMCP messages are ignored. Line subscribers run in registration order before regex triggers. Each script has its own globals and its own engine inside the session's worker process; sending a command does not create another command event or alias invocation.
+
+### Events.Prompt
+
+```js
+// Called once for each prompt the server marks as finished, with ANSI styling removed.
+mud.on(Events.Prompt, event => {
+    const match = /HP:\s*(\d+)/.exec(event.text);
+    if (match) mud.echo("Health " + match[1]);
+});
+```
+
+`mud.on(Events.Prompt, callback)` receives `{text}`: the text the server sent since the last newline or the previous prompt, when it ends that text with telnet GA (go ahead) or EOR (end of record). Many Diku, ROM, SMAUG, LP, IRE and Evennia worlds do; Wandur accepts EOR when a world offers it. A world that marks no prompts sends no prompt events, and prompts still arrive as part of the next `Events.Line` once the server ends the line, exactly as before. A mark with no new text since the previous one (GA and EOR together, or GA after every write) and a blank prompt raise nothing. Prompts follow the line rules for privacy: nothing is delivered while input is private, during automatic login, or when the prompt came in a stretch the server marked private (a password prompt, with echo off), and a prompt that matches the world's password prompt is itself private. Prompt events do not run `mud.trigger` patterns, which match completed lines.
 
 ### Events.Msdp
 
@@ -179,7 +191,7 @@ A world listing in the directory may carry a `scripts` array. Each entry has an 
 
 When you open a world, supplied scripts that are not already in that world's library are added as pack scripts. They are marked **Pack** with their provenance in the Scripts page, their source is read-only, and they start enabled. Use **Duplicate** to make an ordinary hand-written copy you can edit; the copy has no pack marker and no policy.
 
-A pack script starts with a restricted send policy: `mud.send` is refused from triggers, timers, line, GMCP, MSDP and key events, panel toggles, inputs and lists, and from top-level code. It is allowed from an alias and from a panel button click. A refused call raises a script error that names the policy and stops that script until you change the setting. The Scripts page shows **Allow this script to send commands** for each pack script; turning it on lifts the restriction for that script only and is remembered.
+A pack script starts with a restricted send policy: `mud.send` is refused from triggers, timers, line, prompt, GMCP, MSDP and key events, panel toggles, inputs and lists, and from top-level code. It is allowed from an alias and from a panel button click. A refused call raises a script error that names the policy and stops that script until you change the setting. The Scripts page shows **Allow this script to send commands** for each pack script; turning it on lifts the restriction for that script only and is remembered.
 
 Pack scripts are refreshed when the listing's `version` changes: the source and name are replaced while your enable switch and your send choice are kept, so a pack script you disabled stays disabled. Hand-written scripts are never touched by a listing.
 
@@ -212,7 +224,7 @@ Aliases and regex triggers accept a JavaScript `RegExp` or regex string. Their c
 
 ## Privacy and limits
 
-Scripts receive only new completed server lines, not historical transcript or unterminated prompts. Manual private input bypasses aliases. Saved login credentials are never passed to scripts. Private input invalidates queued events and pending actions. Network data containing private text is conservatively excluded, including echo negotiations within one packet and fragmented GMCP messages.
+Scripts receive only new completed server lines and the prompts the server marks with GA or EOR, not historical transcript or other unterminated text. Manual private input bypasses aliases. Saved login credentials are never passed to scripts. Private input invalidates queued events and pending actions. Network data containing private text is conservatively excluded, including echo negotiations within one packet and fragmented GMCP messages.
 
 Each script runs in its own engine inside the session's worker process; a runaway callback stops that script only. One worker process serves every script of a connection: it starts when the first script runs, ends when the connection closes or its world changes, and if it dies every running script is stopped with an error and started again on a fresh process, at most three times in five minutes. Disabling, deleting or disconnecting stops a script and discards its pending actions. A command already on the network cannot be recalled. Failed callbacks discard their pending actions. Per-script errors and output appear when that script is selected. There are no filesystem, network, credential-vault, .NET object, browser, Node.js or npm APIs.
 

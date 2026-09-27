@@ -220,6 +220,8 @@ public sealed partial class WorkspaceController : IAsyncDisposable
                     Dispatch(session, () => ResetAgentContext());
                 };
                 telnet.TextReceived += received => ReceiveText(received.Text, received.MayContainPrivateText);
+                // Queued behind the text before it, under the same privacy stamp as a line.
+                telnet.PromptReceived += received => ReceivePrompt(session, received, wirePrivate);
                 telnet.ProtocolMessageReceived += received => ReceiveProtocol(session, received, wirePrivate);
                 telnet.GmcpLoginReceived += message => Dispatch(session, () => _ = ReceiveGmcpLoginAsync(telnet, message));
                 telnet.GmcpMessageReceived += received =>
@@ -375,6 +377,7 @@ public sealed partial class WorkspaceController : IAsyncDisposable
                     else _channels.Reset();
                 }
                 else if (isPublic && chunk.Event.Kind == "gmcp") FeedChannelProtocol(chunk.Event.Text);
+                else if (isPublic && chunk.Event.Kind == ScriptPromptKind) PromptReceived?.Invoke(chunk.Event.Text);
                 if (chunk.Event is not null) ScriptLibrary.Publish(chunk.Event);
                 else ScriptLibrary.Feed(chunk.Text);
             }

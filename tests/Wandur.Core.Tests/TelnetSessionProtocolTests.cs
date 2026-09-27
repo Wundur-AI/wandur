@@ -169,4 +169,111 @@ public sealed class TelnetSessionProtocolTests
             await Task.Delay(5, timeout.Token);
         }
     }
+
+    /// <summary>Everything the session raised, in order: text as "t:", prompts as "p:" (with "!" when flagged private).</summary>
+    private static List<string> Record(TelnetSession session)
+    {
+        var log = new List<string>();
+        session.TextReceived += text => { lock (log) log.Add("t:" + text.Text + (text.MayContainPrivateText ? "!" : "")); };
+        session.PromptReceived += prompt => { lock (log) log.Add("p:" + prompt.Text + (prompt.MayContainPrivateText ? "!" : "")); };
+        return log;
+    }
+
+    private static async Task WaitForAsync(List<string> log, Func<List<string>, bool> done)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (true) { lock (log) if (done(log)) return; await Task.Delay(5, timeout.Token); }
+    }
+
+    private static byte[] Ascii(string text) => Encoding.UTF8.GetBytes(text);
+
+    [Fact]
+    public async Task GoAheadRaisesOnePromptWithTheLineAfterItsText()
+    {
+        var (session, server) = await ConnectAsync();
+        await using var _ = session;
+        var log = Record(session);
+        server.Send([.. Ascii("Welcome\r\n\u001b[32mHP: 100>\u001b[0m "), 255, 249, .. Ascii("\r\nYou look around.\r\n")]);
+        server.Send(Ascii("end\n"));
+        await WaitForAsync(log, l => l.Count > 0 && l[^1].EndsWith("end\n"));
+        lock (log) Assert.Equal(["t:Welcome\r\n\u001b[32mHP: 100>\u001b[0m ", "p:HP: 100> ", "t:\r\nYou look around.\r\n", "t:end\n"], log);
+    }
+
+    [Fact]
+    public async Task EndOfRecordRaisesOnePromptAndGoAheadWithItDoesNotRaiseASecond()
+    {
+        var (session, server) = await ConnectAsync();
+        await using var _ = session;
+        var log = Record(session);
+        server.Send([255, 251, 25, .. Ascii("Mana: 7> "), 255, 239]);
+        server.Send([.. Ascii("Mana: 8> "), 255, 239, 255, 249]);
+        server.Send(Ascii("done\n"));
+        await WaitForAsync(log, l => l.Count > 0 && l[^1] == "t:done\n");
+        lock (log) Assert.Equal(["t:Mana: 7> ", "p:Mana: 7> ", "t:Mana: 8> ", "p:Mana: 8> ", "t:done\n"], log);
+    }
+
+    [Fact]
+    public async Task APromptSplitAcrossReadsIsRaisedOnceWhenItsMarkArrives()
+    {
+        var (session, server) = await ConnectAsync();
+        await using var _ = session;
+        var log = Record(session);
+        server.Send(Ascii("HP: 1"));
+        server.Send(Ascii("00> "));
+        server.Send(255);
+        server.Send(249);
+        server.Send(Ascii("\n"));
+        await WaitForAsync(log, l => l.Count > 0 && l[^1] == "t:\n");
+        lock (log) Assert.Equal(["t:HP: 1", "t:00> ", "p:HP: 100> ", "t:\n"], log);
+    }
+
+    [Fact]
+    public async Task AUtf8CharacterSplitAcrossReadsBeforeTheMarkIsDecodedWhole()
+    {
+        var (session, server) = await ConnectAsync();
+        await using var _ = session;
+        var log = Record(session);
+        var euro = Encoding.UTF8.GetBytes("\u20ac");
+        server.Send([.. Ascii("Gold "), euro[0], euro[1]]);
+        server.Send([euro[2], .. Ascii("5> "), 255, 249, .. Ascii("\u00e9t\u00e9\n")]);
+        await WaitForAsync(log, l => l.Count > 0 && l[^1].EndsWith("\n"));
+        lock (log)
+        {
+            Assert.Equal("p:Gold \u20ac5> ", Assert.Single(log, e => e.StartsWith("p:")));
+            Assert.Equal("Gold \u20ac5> \u00e9t\u00e9\n", string.Concat(log.Where(e => e.StartsWith("t:")).Select(e => e[2..])));
+            Assert.DoesNotContain(log, e => e.Contains('\ufffd'));
+        }
+    }
+
+    [Fact]
+    public async Task PromptsDuringPrivateStretchesAreFlaggedPrivate()
+    {
+        var (session, server) = await ConnectAsync();
+        await using var _ = session;
+        var log = Record(session);
+        // Server echo off: the password prompt and anything typed are private.
+        server.Send([255, 251, 1, .. Ascii("Password: "), 255, 249]);
+        await WaitForAsync(log, l => l.Any(e => e.StartsWith("p:")));
+        server.Send([255, 252, 1, .. Ascii("\r\n")]);
+        session.SetLocalPrivateInput(true);
+        server.Send([.. Ascii("PIN: "), 255, 249]);
+        await WaitForAsync(log, l => l.Count(e => e.StartsWith("p:")) == 2);
+        session.SetLocalPrivateInput(false);
+        server.Send([.. Ascii("\r\nHP: 9> "), 255, 249]);
+        await WaitForAsync(log, l => l.Count(e => e.StartsWith("p:")) == 3);
+        lock (log) Assert.Equal(["p:Password: !", "p:PIN: !", "p:HP: 9> "], log.Where(e => e.StartsWith("p:")));
+    }
+
+    [Fact]
+    public async Task ABlankLineOrARepeatedMarkRaisesNoPrompt()
+    {
+        var (session, server) = await ConnectAsync();
+        await using var _ = session;
+        var log = Record(session);
+        server.Send([.. Ascii("text\r\n"), 255, 249, 255, 249]);
+        server.Send([255, 249]);
+        server.Send(Ascii("barrier\n"));
+        await WaitForAsync(log, l => l.Count > 0 && l[^1] == "t:barrier\n");
+        lock (log) Assert.DoesNotContain(log, e => e.StartsWith("p:"));
+    }
 }
