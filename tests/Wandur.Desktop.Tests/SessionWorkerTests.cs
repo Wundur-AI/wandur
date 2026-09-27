@@ -162,11 +162,14 @@ public sealed class SessionWorkerTests
             seedState: () => """{"gmcp":{},"msdp":{}}""");
         library.Configure("world", "World");
         library.RefreshState();
-        await ScriptSessionTests.WaitFor(() => library.Items.All(entry => entry.Runtime.IsRunning));
+        // A failure here says what each script reported, so a start that failed or restarted on a CI runner
+        // explains itself in the log instead of showing only a count.
+        string State() => string.Join("; ", library.Items.Select(entry => $"{entry.Name}: running={entry.Runtime.IsRunning}, error={entry.Runtime.Error}")) + $"; starts={library.Worker.Starts}";
+        await ScriptSessionTests.WaitFor(() => library.Items.All(entry => entry.Runtime.IsRunning), State);
         var host = Assert.IsType<ProcessSessionScriptHost>(library.Worker.Host);
         var processId = host.ProcessId;
         Assert.NotNull(processId);
-        Assert.Equal(1, library.Worker.Starts);
+        Assert.True(library.Worker.Starts == 1, "The worker should start once: " + State());
         library.Feed("go\n");
         await ScriptSessionTests.WaitFor(() => echoes.Count == 2);
         Assert.Equal(["one", "two"], echoes);
@@ -185,6 +188,6 @@ public sealed class SessionWorkerTests
         {
             try { return Process.GetProcessById(lastProcess).HasExited; }
             catch (ArgumentException) { return true; }
-        }, TimeSpan.FromSeconds(5)));
+        }, Wandur.Tests.TestTimeouts.Hang));
     }
 }
