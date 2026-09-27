@@ -18,6 +18,10 @@ public interface ITranscriptDisplay : IDisposable
     /// <summary>The text of that first visible row, which is what a reader watches for when the layout moves under them.</summary>
     string TopVisibleText { get; }
     event Action? ViewportChanged;
+    /// <summary>The terminal's character grid, which is what the server is told through NAWS.</summary>
+    (int Columns, int Rows) TerminalSize { get; }
+    /// <summary>The grid changed size while following the tail. Raised on every layout that changes it; callers debounce.</summary>
+    event Action? TerminalSizeChanged;
     /// <summary>A right click on the transcript: the line under the pointer and the selection, for a menu.</summary>
     event Action<TranscriptContext>? MenuRequested;
     /// <summary>Copies the selection to the clipboard; false when nothing was selected or there is no clipboard.</summary>

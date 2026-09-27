@@ -59,6 +59,7 @@ public sealed partial class WorkspaceController : IAsyncDisposable
         ApplyHistorySettings();
         _outputTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(60), DispatcherPriority.Background, (_, _) => { FlushOutput(); TickHistory(); ReplayCachedState(); SaveMap(); ScriptLibrary.Tick(); });
         _outputTimer.Start();
+        InitializeWindowSize();
         Wandur.Core.Localization.UiLanguage.Changed += RefreshLanguage;
     }
 
@@ -164,6 +165,8 @@ public sealed partial class WorkspaceController : IAsyncDisposable
             IMudSession session = profile is null ? new DemoSession() : new TelnetSession(profile);
             _session = session;
             HasSession = true;
+            // Recorded before connecting, so the NAWS reply already carries the real grid.
+            SendWindowSize();
             _mappingRefreshPending = false;
             _protocolBindings = profile?.GetProtocolMapping() is { } mapping ? new Wandur.Core.Protocol.ProtocolBindingEngine(mapping) : null;
             ConfigureChannels(profile);
@@ -489,5 +492,5 @@ public sealed partial class WorkspaceController : IAsyncDisposable
         Changed?.Invoke();
     }
 
-    public async ValueTask DisposeAsync() { if (_disposed) return; _disposed = true; CancelInference(); Wandur.Core.Localization.UiLanguage.Changed -= RefreshLanguage; _outputTimer.Stop(); await DisconnectAsync(); _pages?.Dispose(); Agent?.Dispose(); await ScriptLibrary.DisposeAsync(); Display.Dispose(); }
+    public async ValueTask DisposeAsync() { if (_disposed) return; _disposed = true; CancelInference(); Wandur.Core.Localization.UiLanguage.Changed -= RefreshLanguage; _outputTimer.Stop(); StopWindowSize(); await DisconnectAsync(); _pages?.Dispose(); Agent?.Dispose(); await ScriptLibrary.DisposeAsync(); Display.Dispose(); }
 }

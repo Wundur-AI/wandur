@@ -15,6 +15,10 @@ public sealed class TelnetSession : IMudSession
     private readonly Func<CancellationToken, Task<Stream>>? _open;
     private readonly TelnetParser _parser;
     private readonly object _parserLock = new();
+    /// <summary>Negotiation bytes in the order the parser produced them: Feed replies and NAWS updates. Enqueued
+    /// under <see cref="_parserLock"/>, drained in order under <see cref="_sendLock"/>, so a resize can never
+    /// reach the server ahead of a reply the parser produced before it.</summary>
+    private readonly Queue<byte[]> _negotiation = new();
     private readonly SemaphoreSlim _sendLock = new(1, 1);
     private readonly TcpClient _client = new() { NoDelay = true };
     private CancellationTokenSource? _lifetime;
@@ -130,7 +134,11 @@ public sealed class TelnetSession : IMudSession
                 if (count == 0) break;
                 bool wasPrivate = _parser.ServerEcho;
                 TelnetPacket packet;
-                lock (_parserLock) packet = _parser.Feed(bytes.AsSpan(0, count));
+                lock (_parserLock)
+                {
+                    packet = _parser.Feed(bytes.AsSpan(0, count));
+                    if (packet.Reply.Length > 0) _negotiation.Enqueue(packet.Reply);
+                }
                 _remoteEcho = _parser.ServerEcho;
                 if (packet.MayContainPrivateText)
                 {
@@ -142,7 +150,7 @@ public sealed class TelnetSession : IMudSession
                     ProtocolState = _parser.ProtocolState;
                     ProtocolStateChanged?.Invoke(ProtocolState);
                 }
-                if (packet.Reply.Length > 0) await WriteAsync(packet.Reply, token).ConfigureAwait(false);
+                if (packet.Reply.Length > 0) await FlushNegotiationAsync(token).ConfigureAwait(false);
                 if (wasPrivate != _parser.ServerEcho) PrivateInputChanged?.Invoke(_parser.ServerEcho);
                 // Servers may negotiate both protocols. Keep updates in wire order so an older
                 // room from one protocol cannot overwrite the newest room from the other.
@@ -291,6 +299,46 @@ public sealed class TelnetSession : IMudSession
                 await _stream!.WriteAsync(request.Bytes, timeout.Token).ConfigureAwait(false);
             }
             return true;
+        }
+        finally { _sendLock.Release(); }
+    }
+
+    /// <summary>The smallest and largest window a server is told about; a pane squeezed to a sliver is not a terminal.</summary>
+    public const int MinimumColumns = 20, MinimumRows = 5, MaximumWindowSize = 500;
+
+    /// <summary>
+    /// Records the terminal's size for NAWS. Before the server asks with DO NAWS nothing is sent and the size is
+    /// kept for the reply; once agreed, a changed size is sent at once. Callers debounce; this sends every change.
+    /// The update goes through the same ordered queue as the parser's replies.
+    /// </summary>
+    public async Task UpdateWindowSizeAsync(int columns, int rows, CancellationToken cancellationToken = default)
+    {
+        columns = Math.Clamp(columns, MinimumColumns, MaximumWindowSize);
+        rows = Math.Clamp(rows, MinimumRows, MaximumWindowSize);
+        lock (_parserLock)
+        {
+            var update = _parser.UpdateWindowSize(columns, rows);
+            if (update.Length > 0) _negotiation.Enqueue(update);
+        }
+        if (!_connected || _lifetime is null) return;
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token);
+        timeout.CancelAfter(TimeSpan.FromSeconds(10));
+        await FlushNegotiationAsync(timeout.Token).ConfigureAwait(false);
+    }
+
+    /// <summary>Writes every queued negotiation in order. Whoever holds the send lock drains the whole queue, so
+    /// bytes enqueued earlier are always written before bytes enqueued later.</summary>
+    private async Task FlushNegotiationAsync(CancellationToken token)
+    {
+        await _sendLock.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            while (true)
+            {
+                byte[]? next;
+                lock (_parserLock) if (!_negotiation.TryDequeue(out next)) return;
+                await _stream!.WriteAsync(next, token).ConfigureAwait(false);
+            }
         }
         finally { _sendLock.Release(); }
     }

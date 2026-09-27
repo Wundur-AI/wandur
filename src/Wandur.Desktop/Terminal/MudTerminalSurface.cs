@@ -103,9 +103,21 @@ internal sealed class MudTerminalSurface : Iciclecreek.Terminal.TerminalView
         // Keep following if we were at the tail; preserve a reader's older scroll position.
         var following = Terminal.Buffer.IsAtBottom;
         var result = base.ArrangeOverride(finalSize);
-        if (following) ViewportY = Terminal.Buffer.YBase;
+        if (following)
+        {
+            ViewportY = Terminal.Buffer.YBase;
+            // The split view while scrolled back shortens the grid without the window changing, so only a
+            // layout at the tail says what size the reader's terminal is.
+            var grid = (Terminal.Cols, Terminal.Rows);
+            if (grid != _reportedGrid) { _reportedGrid = grid; GridResized?.Invoke(); }
+        }
         return result;
     }
+
+    private (int Columns, int Rows) _reportedGrid;
+
+    /// <summary>The character grid changed size in a layout pass at the tail.</summary>
+    public event Action? GridResized;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     { base.OnAttachedToVisualTree(e); _attached = true; UpdateTimer(); }
