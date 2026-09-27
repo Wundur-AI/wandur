@@ -1,6 +1,6 @@
 # Claude handoff: Wandur client
 
-Updated September 26, 2026. This file is the entry point for a fresh session.
+Updated September 27, 2026. This file is the entry point for a fresh session.
 Read it, then `docs/verification.md` for what has been verified and when.
 The September 18 handoff about Icesus resource bars and directory refresh is
 complete and recorded in `docs/verification.md`; it no longer needs action.
@@ -64,6 +64,24 @@ room with no observed text), highlighting matches with the theme's accent ring, 
 counting them beside the box. Enter or Next steps through matches in name order, switching floor as needed,
 an "on other floors" dropdown reaches the rest directly, Escape clears the search, and nothing here is ever
 sent to the world.
+
+Telnet protocol cheap wins (branch `feature/protocol-cheap-wins`, SDK 3d22f67):
+`TelnetSession` builds its parser from the profile (`TelnetSession.ParserOptions`:
+MTTS claims UTF-8 only for a UTF-8 profile and SSL only on TLS; EOR and MSSP
+accepted). NAWS sends the transcript's real grid (`ITranscriptDisplay.TerminalSize`,
+reported only from a layout at the tail) and updates it through
+`TelnetSession.UpdateWindowSizeAsync`, debounced 250 ms in
+`WorkspaceController.Protocol.cs`; replies and updates share one ordered queue
+(the SDK's ordering rule). GA and EOR raise `TelnetSession.PromptReceived`,
+then `WorkspaceController.PromptReceived` (public only) and the script event
+`Events.Prompt`. MSSP is kept as `ServerDetails`, shown in the diagnostics
+Messages list and a Server details tab, and its CODEBASE picks the channel
+family when the profile has none (never saved). A Ctrl+click on a transcript
+link asks "Open this link?" and opens only http or https without user info
+(`WebLinks`). An internal `TelnetSession` constructor takes a stream opener,
+and `tests/Wandur.Core.Tests/FakeServerStream.cs` plays the server in memory.
+Not done: MCCP, CHARSET and code pages, MXP, feeding prompts to history and
+the agent's reply wait, a per-world "don't ask again" for links.
 
 ## Operating rules (keep)
 

@@ -1,5 +1,53 @@
 # Client foundation verification
 
+## Telnet protocol cheap wins (2026-09-27, branch feature/protocol-cheap-wins)
+
+- SDK submodule bumped to 3d22f67 (MTTS cycle, NAWS updates, GA and EOR
+  prompt marks, MSSP). Each `TelnetSession` builds its parser from the
+  profile: TTYPE answers `Wandur-WMC`, `XTERM-256COLOR`, then `MTTS n` with
+  ANSI, VT100, 256 colors and truecolor, plus UTF-8 only for a UTF-8 profile
+  and SSL only on TLS (271 UTF-8, 267 Latin-1, 2319 UTF-8 over TLS). EOR and
+  MSSP offers are accepted.
+- NAWS carries the transcript's real character grid, recorded before
+  connecting and sent again when it changes after NAWS is agreed, debounced
+  to 250 ms and clamped to 20..500 columns and 5..500 rows. The grid is read
+  only from a layout at the tail, so the split view while scrolled back does
+  not resize the server's window. Feed replies and NAWS updates share one
+  queue, enqueued under the parser lock and drained in order under the send
+  lock; a test that resizes between Feed and the reply write failed against
+  a direct write and passes with the queue.
+- Prompts: the session decodes up to each GA or EOR mark, raises
+  `PromptReceived` with the text since the last newline or the previous
+  mark, then continues with the same decoder. Repeated marks and blank
+  prompts raise nothing. The controller raises `PromptReceived` for public
+  prompts only and scripts get `Events.Prompt`; private stretches, the
+  Private toggle, auto-login and a line matching the password prompt all
+  withhold it, and text arriving while still private is withheld even when
+  it ends the stretch, as lines are. The JavaScript engine had to learn the
+  new kind, since it throws on unknown event kinds and fails the script.
+- MSSP: the newest table is kept on the session and the controller, listed
+  in diagnostics Messages as JSON (kind MSSP) and shown in a new read-only
+  Server details tab placed last in diagnostics. The client has no
+  per-session world details panel, so diagnostics is the only place. A
+  reported CODEBASE picks the channel family when the profile names none,
+  for the session only; the profile is never changed.
+- Links: Iciclecreek.Avalonia.Terminal 4.0.2 (checked by decompiling the
+  package) raises `UrlClicked` on Ctrl+click over a detected http(s) address
+  or an OSC 8 link and opens nothing itself. The session view now shows
+  "Open this link?" with the full address, Open and Cancel. `WebLinks.Accept`
+  allows only absolute http or https with a host and no user info; other
+  schemes and user info are refused with a notice. No "Don't ask again for
+  this site": it needs a saved per-world list and an editor to revoke it.
+- Verification: Release build with no warnings. The final sequential
+  `dotnet test Wandur.sln -c Release -m:1` passed Core 830 and Desktop 687;
+  the SDK's own 71 protocol tests (not in `Wandur.sln`) pass too. A parallel
+  run of the solution did not finish within 8 minutes, although each project
+  passes alone in 2 to 4 minutes. New
+  tests: `TelnetSessionProtocolTests` and `WebLinksTests` (Core, over an
+  in-memory `FakeServerStream`), `WindowSizeTests`, `PromptEventTests`,
+  `ServerDetailsTests` and `LinkClickTests` (Desktop). No real MUD was
+  contacted and no app window was opened outside the headless tests.
+
 ## Directory in the wandur.net layout (2026-09-26, branch feature/directory-site-look)
 
 - Rows follow the site: a 5:2 art plate cropped to cover (400 wide where the
