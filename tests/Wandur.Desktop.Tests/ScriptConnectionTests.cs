@@ -378,21 +378,32 @@ public sealed class ScriptConnectionTests
         var stream = server.GetStream();
         var script = controller.ScriptLibrary.Items[0];
         await stream.WriteAsync((byte[])[255, 251, 1, .. Encoding.UTF8.GetBytes("Password: ")], timeout.Token);
-        await ScriptSessionTests.WaitFor(() => { controller.FlushOutput(); return controller.IsPrivate; });
+        await ScriptSessionTests.WaitFor(() => { controller.FlushOutput(); return controller.IsPrivate; }, () => "waiting for the password prompt: " + State(controller, script));
         Assert.True(await controller.SendAsync("secret"));
         // The line follows the client's answer to WILL ECHO.
         Assert.EndsWith("secret", await ReadRawLineAsync(stream, timeout.Token));
         await stream.WriteAsync((byte[])[255, 252, 1, .. Encoding.UTF8.GetBytes("Welcome back.\r\n"), .. MsdpFrame("LEVELCOMBAT", "50")], timeout.Token);
-        await ScriptSessionTests.WaitFor(() => { controller.FlushOutput(); return !controller.IsPrivate && controller.Terminal.PlainText.Contains("Welcome back."); });
+        await ScriptSessionTests.WaitFor(() => { controller.FlushOutput(); return !controller.IsPrivate && controller.Terminal.PlainText.Contains("Welcome back."); },
+            () => "waiting for public play after the password: " + State(controller, script));
         // The value in that packet was stamped private; public play asks the world for the script's variables again
         // (after the client's answer to WONT ECHO).
         var received = await ReadUntilAsync(stream, LevelReport, timeout.Token);
         Assert.Equal(LevelReport, received.TakeLast(LevelReport.Length).ToArray());
         await stream.WriteAsync(MsdpFrame("LEVELCOMBAT", "50"), timeout.Token);
-        await ScriptSessionTests.WaitFor(() => { controller.FlushOutput(); return CombatLevel(controller) == "50"; });
+        await ScriptSessionTests.WaitFor(() => { controller.FlushOutput(); return CombatLevel(controller) == "50"; },
+            () => "waiting for the reported level: " + State(controller, script));
         Assert.True(script.Runtime.IsRunning, script.Runtime.Error);
         Assert.DoesNotContain("secret", controller.Terminal.PlainText);
         await controller.DisconnectAsync();
+    }
+
+    /// <summary>What a timed-out wait saw, so a failure on a slow runner names the step that stalled.</summary>
+    private static string State(WorkspaceController controller, Wandur.Desktop.Services.WorldScriptEntry script)
+    {
+        var text = controller.Terminal.PlainText;
+        return $"private={controller.IsPrivate} connected={controller.IsConnected} level='{CombatLevel(controller)}' " +
+            $"running={script.Runtime.IsRunning} paused={script.Runtime.IsPaused} error='{script.Runtime.Error}' " +
+            $"status='{controller.Status}' tail='{text[Math.Max(0, text.Length - 200)..].Replace("secret", "<secret>")}'";
     }
 
     /// <summary>A value the host cache takes while the login handshake owns the session is delivered to a script that
