@@ -403,6 +403,9 @@ public sealed class ScriptConnectionTests
         var text = controller.Terminal.PlainText;
         return $"private={controller.IsPrivate} connected={controller.IsConnected} level='{CombatLevel(controller)}' " +
             $"running={script.Runtime.IsRunning} paused={script.Runtime.IsPaused} error='{script.Runtime.Error}' " +
+            $"cached='{controller.ScriptState.TryGetMsdp("LEVELCOMBAT")}' epoch={controller.ScriptLibrary.Worker.PrivacyEpoch} " +
+            $"workerRunning={controller.ScriptLibrary.Worker.IsRunning} starts={controller.ScriptLibrary.Worker.Starts} " +
+            $"log='{script.Runtime.Log[Math.Max(0, script.Runtime.Log.Length - 300)..]}' " +
             $"status='{controller.Status}' tail='{text[Math.Max(0, text.Length - 200)..].Replace("secret", "<secret>")}'";
     }
 
