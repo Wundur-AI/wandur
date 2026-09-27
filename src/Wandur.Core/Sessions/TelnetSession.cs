@@ -9,9 +9,11 @@ using Wandur.Core.Settings;
 
 namespace Wandur.Core.Sessions;
 
-public sealed class TelnetSession(ConnectionProfile profile) : IMudSession
+public sealed class TelnetSession : IMudSession
 {
-    private readonly TelnetParser _parser = new();
+    private readonly ConnectionProfile profile;
+    private readonly Func<CancellationToken, Task<Stream>>? _open;
+    private readonly TelnetParser _parser;
     private readonly object _parserLock = new();
     private readonly SemaphoreSlim _sendLock = new(1, 1);
     private readonly TcpClient _client = new() { NoDelay = true };
@@ -50,6 +52,36 @@ public sealed class TelnetSession(ConnectionProfile profile) : IMudSession
     }
     private Encoding TextEncoding => profile.Encoding == "latin1" ? Encoding.Latin1 : Encoding.UTF8;
 
+    public TelnetSession(ConnectionProfile profile) : this(profile, null) { }
+
+    /// <param name="open">Replaces the TCP and TLS connection with a stream of the caller's; for tests.</param>
+    internal TelnetSession(ConnectionProfile profile, Func<CancellationToken, Task<Stream>>? open)
+    {
+        this.profile = profile;
+        _open = open;
+        _parser = new(ParserOptions(profile));
+    }
+
+    /// <summary>
+    /// What this connection tells the server: the Wandur name and an xterm terminal type through TTYPE, then the
+    /// MTTS capabilities, which claim UTF-8 only when the profile decodes UTF-8 and add the TLS bit on TLS. EOR
+    /// is accepted so servers mark prompts, and MSSP so a server can describe itself.
+    /// </summary>
+    internal static TelnetParserOptions ParserOptions(ConnectionProfile profile)
+    {
+        var capabilities = MttsCapabilities.Ansi | MttsCapabilities.Vt100 | MttsCapabilities.Colors256 | MttsCapabilities.TrueColor;
+        if (profile.Encoding != "latin1") capabilities |= MttsCapabilities.Utf8;
+        if (profile.UseTls) capabilities |= MttsCapabilities.Ssl;
+        return new()
+        {
+            ClientName = ClientIdentity.TerminalType,
+            TerminalType = "XTERM-256COLOR",
+            Capabilities = capabilities,
+            AcceptEndOfRecord = true,
+            AcceptMssp = true
+        };
+    }
+
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed != 0, this);
@@ -60,9 +92,13 @@ public sealed class TelnetSession(ConnectionProfile profile) : IMudSession
         timeout.CancelAfter(TimeSpan.FromSeconds(15));
         try
         {
-            await _client.ConnectAsync(profile.Host, profile.Port, timeout.Token).ConfigureAwait(false);
-            _stream = _client.GetStream();
-            if (profile.UseTls)
+            if (_open is not null) _stream = await _open(timeout.Token).ConfigureAwait(false);
+            else
+            {
+                await _client.ConnectAsync(profile.Host, profile.Port, timeout.Token).ConfigureAwait(false);
+                _stream = _client.GetStream();
+            }
+            if (profile.UseTls && _open is null)
             {
                 var tls = new SslStream(_stream, leaveInnerStreamOpen: false);
                 _stream = tls;
