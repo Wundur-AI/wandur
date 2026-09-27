@@ -1003,4 +1003,7 @@ public static class Strings
     public static string AdultWorlds => Get(nameof(AdultWorlds));
     public static string ScriptCompletePrompt => Get(nameof(ScriptCompletePrompt));
     public static string ScriptCompletePromptText => Get(nameof(ScriptCompletePromptText));
+    public static string DiagnosticsServerDetails => Get(nameof(DiagnosticsServerDetails));
+    public static string DiagnosticsServerDetailsHelp => Get(nameof(DiagnosticsServerDetailsHelp));
+    public static string DiagnosticsServerDetailsNone => Get(nameof(DiagnosticsServerDetailsNone));
 }

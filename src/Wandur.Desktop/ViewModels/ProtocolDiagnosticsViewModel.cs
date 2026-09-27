@@ -180,7 +180,45 @@ public sealed partial class ProtocolDiagnosticsViewModel : ObservableObject
     partial void OnKindsExpandedChanged(bool value) => RebuildChips();
     partial void OnSelectedEntryChanged(ProtocolDiagnosticEntry? value) => OnPropertyChanged(nameof(Detail));
     partial void OnFollowChanged(bool value) { if (value) SelectedEntry = Visible.LastOrDefault(); }
-    public void RefreshLanguage() { OnPropertyChanged(nameof(Detail)); OnPropertyChanged(nameof(CountLabel)); OnPropertyChanged(nameof(MoreKindsLabel)); }
+    public void RefreshLanguage() { OnPropertyChanged(nameof(Detail)); OnPropertyChanged(nameof(CountLabel)); OnPropertyChanged(nameof(MoreKindsLabel)); OnPropertyChanged(nameof(ServerDetails)); }
+
+    private MsspTable? _server;
+    private string? _serverDetails;
+    /// <summary>The server's MSSP self-description for this session, or null when it sent none.</summary>
+    public MsspTable? Server => _server;
+    public bool HasServerDetails => _serverDetails is not null;
+    /// <summary>The Server details tab: one "NAME: value" line per MSSP variable in the order the server sent them,
+    /// several values joined by commas, or a note that the world has not described itself.</summary>
+    public string ServerDetails => _serverDetails ?? L.DiagnosticsServerDetailsNone;
+
+    /// <summary>
+    /// A new MSSP table replaces the details and is also listed with the protocol messages, as JSON (one value is a
+    /// string, several an array). A remembered secret is masked in both, like every other diagnostics body.
+    /// </summary>
+    public void ReceiveServerDetails(DateTimeOffset receivedAt, MsspTable table, IReadOnlyList<string>? secrets = null)
+    {
+        var known = (secrets ?? []).Where(s => s.Length > 0).OrderByDescending(s => s.Length).ToArray();
+        var redacted = false;
+        string Scrub(string text)
+        {
+            foreach (var secret in known)
+                if (text.Contains(secret, StringComparison.Ordinal)) { text = text.Replace(secret, "[redacted]", StringComparison.Ordinal); redacted = true; }
+            return text;
+        }
+        var body = Scrub(JsonSerializer.Serialize(table.ToDictionary(entry => entry.Key,
+            entry => entry.Value.Count == 1 ? (object)entry.Value[0] : entry.Value), new JsonSerializerOptions { WriteIndented = true }));
+        _server = table;
+        _serverDetails = Scrub(string.Join("\n", table.Select(entry => $"{entry.Key}: {string.Join(", ", entry.Value)}")));
+        AppendContent(receivedAt, 70, new ProtocolDiagnosticContent("MSSP", body, false, false) { Redacted = redacted });
+        OnPropertyChanged(nameof(Server)); OnPropertyChanged(nameof(HasServerDetails)); OnPropertyChanged(nameof(ServerDetails));
+    }
+
+    /// <summary>A new session starts with no server details; clearing the message list leaves them.</summary>
+    public void ResetServerDetails()
+    {
+        _server = null; _serverDetails = null;
+        OnPropertyChanged(nameof(Server)); OnPropertyChanged(nameof(HasServerDetails)); OnPropertyChanged(nameof(ServerDetails));
+    }
 
     /// <summary>The label for the protocol column: GMCP, MSDP, or the telnet option name for anything else that reaches diagnostics.</summary>
     public static string ProtocolName(byte option) => option switch

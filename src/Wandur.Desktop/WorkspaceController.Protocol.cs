@@ -5,8 +5,8 @@ using Wandur.Core.Sessions;
 namespace Wandur.Desktop;
 
 /// <summary>
-/// Telnet features that reach past the transcript: the window size the server is told (NAWS) and the
-/// prompts servers mark with GA or EOR.
+/// Telnet features that reach past the transcript: the window size the server is told (NAWS), the
+/// prompts servers mark with GA or EOR, and the server's own description (MSSP).
 /// </summary>
 public sealed partial class WorkspaceController
 {
@@ -31,6 +31,21 @@ public sealed partial class WorkspaceController
             _pending.Enqueue((session, "", epoch, new(ScriptPromptKind, text), null, -1));
             _pendingCharacters += text.Length;
         }
+    }
+
+    /// <summary>The server's MSSP self-description for this session, or null when it sent none.</summary>
+    public Wandur.Core.Protocol.MsspTable? ServerDetails { get; private set; }
+
+    /// <summary>
+    /// An MSSP table: kept for the session, shown in diagnostics (the Messages list and the Server details tab),
+    /// and its CODEBASE picks the channel family when the profile names none. Nothing is written to the profile.
+    /// </summary>
+    private void ReceiveServerDetails(Wandur.Core.Protocol.MsspTable table)
+    {
+        ServerDetails = table;
+        Diagnostics.ReceiveServerDetails(DateTimeOffset.UtcNow, table, _diagnosticSecrets);
+        UseServerCodebase(table.GetFirst("CODEBASE"));
+        Changed?.Invoke();
     }
 
     /// <summary>How long the terminal must keep one size before the server hears about it, so dragging a

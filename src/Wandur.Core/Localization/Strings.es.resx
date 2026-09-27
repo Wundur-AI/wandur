@@ -1970,4 +1970,7 @@ Detente después de recibir una lista del inventario.</value></data>
   <data name="AdultWorlds" xml:space="preserve"><value>Mundos para adultos</value></data>
   <data name="ScriptCompletePrompt" xml:space="preserve"><value>Un prompt que el servidor marcó como terminado (telnet GA o EOR), sin estilo ANSI. Datos: text: string. La entrada privada queda excluida.</value></data>
   <data name="ScriptCompletePromptText" xml:space="preserve"><value>El texto del prompt desde el último salto de línea, sin estilo ANSI.</value></data>
+  <data name="DiagnosticsServerDetails" xml:space="preserve"><value>Detalles del servidor</value></data>
+  <data name="DiagnosticsServerDetailsHelp" xml:space="preserve"><value>Lo que este mundo dice de sí mismo mediante MSSP: nombre, base de código, jugadores, tiempo activo y los protocolos que declara. Solo lectura y solo para esta sesión. Si el perfil del mundo no indica una base de código, la informada elige las reglas de canales.</value></data>
+  <data name="DiagnosticsServerDetailsNone" xml:space="preserve"><value>Este mundo no se ha descrito mediante MSSP.</value></data>
 </root>

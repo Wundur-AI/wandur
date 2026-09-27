@@ -199,7 +199,7 @@ public sealed partial class WorkspaceController : IAsyncDisposable
             }
             using (SessionOpenTrace.Measure("agent profile"))
                 Agent?.Configure(profile is null ? "demo" : $"{profile.Host.Trim().ToLowerInvariant()}:{profile.Port}:{profile.UseTls}");
-            using (SessionOpenTrace.Measure("diagnostics reset")) { Diagnostics.ClearCommand.Execute(null); ConsoleLog.Clear(); }
+            using (SessionOpenTrace.Measure("diagnostics reset")) { Diagnostics.ClearCommand.Execute(null); Diagnostics.ResetServerDetails(); ServerDetails = null; ConsoleLog.Clear(); }
             _historyWorldKey = profile is null ? "demo" : ClientDatabase.CanonicalEndpoint($"{profile.Host}:{profile.Port}");
             BeginHistory();
             _passwordPrompt = AutoLoginSequence.Compile(profile?.PasswordPrompt ?? AutoLoginSequence.DefaultPasswordPrompt);
@@ -222,6 +222,7 @@ public sealed partial class WorkspaceController : IAsyncDisposable
                 telnet.TextReceived += received => ReceiveText(received.Text, received.MayContainPrivateText);
                 // Queued behind the text before it, under the same privacy stamp as a line.
                 telnet.PromptReceived += received => ReceivePrompt(session, received, wirePrivate);
+                telnet.MsspReceived += table => Dispatch(session, () => ReceiveServerDetails(table));
                 telnet.ProtocolMessageReceived += received => ReceiveProtocol(session, received, wirePrivate);
                 telnet.GmcpLoginReceived += message => Dispatch(session, () => _ = ReceiveGmcpLoginAsync(telnet, message));
                 telnet.GmcpMessageReceived += received =>

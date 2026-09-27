@@ -22,7 +22,27 @@ public sealed partial class WorkspaceController
     private void ConfigureChannels(ConnectionProfile? profile)
     {
         ActiveProfile = profile;
+        _serverCodebase = null;
         _channels = new(ChannelFamilies.For(profile?.ChannelRules, profile?.Codebase));
+    }
+
+    /// <summary>The codebase the server reported through MSSP this session; used only while the profile names none.</summary>
+    private string? _serverCodebase;
+
+    /// <summary>The codebase that picks the channel family: the profile's, else the one the server reported. Never saved.</summary>
+    public string? ChannelCodebase => string.IsNullOrWhiteSpace(ActiveProfile?.Codebase) ? _serverCodebase : ActiveProfile.Codebase;
+
+    /// <summary>
+    /// The server reported its codebase: when the profile names none, the channel family follows it for this session,
+    /// keeping the world's own rules first. The profile itself is not changed.
+    /// </summary>
+    private void UseServerCodebase(string? codebase)
+    {
+        codebase = codebase?.Trim();
+        if (string.IsNullOrEmpty(codebase) || codebase.Length > 200 || codebase == _serverCodebase) return;
+        _serverCodebase = codebase;
+        if (!string.IsNullOrWhiteSpace(ActiveProfile?.Codebase)) return;
+        _channels.Rules = ChannelFamilies.For(ActiveProfile?.ChannelRules, codebase);
     }
 
     /// <summary>
@@ -34,7 +54,7 @@ public sealed partial class WorkspaceController
         if (ActiveProfile is not { } active || Settings.Profiles.FirstOrDefault(p => p.Id == active.Id) is not { } saved) return;
         if (saved.ChannelRules.Equals(active.ChannelRules) && saved.Codebase == active.Codebase) return;
         ActiveProfile = active with { ChannelRules = saved.ChannelRules, Codebase = saved.Codebase };
-        _channels.Rules = ChannelFamilies.For(saved.ChannelRules, saved.Codebase);
+        _channels.Rules = ChannelFamilies.For(saved.ChannelRules, ChannelCodebase);
     }
 
     /// <summary>

@@ -37,6 +37,10 @@ public sealed class TelnetSession : IMudSession
     public event Action<TelnetDataMessage>? ProtocolMessageReceived;
     public event Action<RoomObservation>? RoomReceived;
     public event Action<TelnetProtocolState>? ProtocolStateChanged;
+    /// <summary>The server described itself through MSSP (telnet option 70). Raised on the receive thread.</summary>
+    public event Action<MsspTable>? MsspReceived;
+    /// <summary>The newest MSSP table the server sent on this connection, or null when it sent none.</summary>
+    public MsspTable? Mssp { get; private set; }
     /// <summary>Raised before room metadata even when ECHO enters and leaves within one read.</summary>
     public event Action? PrivateIntervalReceived;
     private volatile bool _remoteEcho;
@@ -143,6 +147,11 @@ public sealed class TelnetSession : IMudSession
                 {
                     Interlocked.Increment(ref _privacyEpoch);
                     PrivateIntervalReceived?.Invoke();
+                }
+                foreach (var table in packet.Mssp)
+                {
+                    Mssp = table;
+                    MsspReceived?.Invoke(table);
                 }
                 if (ProtocolState != _parser.ProtocolState)
                 {

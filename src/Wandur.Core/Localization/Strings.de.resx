@@ -1970,4 +1970,7 @@ Stoppe nach einer Inventarliste.</value></data>
   <data name="AdultWorlds" xml:space="preserve"><value>Welten für Erwachsene</value></data>
   <data name="ScriptCompletePrompt" xml:space="preserve"><value>Eine Eingabeaufforderung, die der Server als fertig markiert hat (Telnet GA oder EOR), ohne ANSI-Stil. Daten: text: string. Private Eingaben sind ausgeschlossen.</value></data>
   <data name="ScriptCompletePromptText" xml:space="preserve"><value>Der Text der Eingabeaufforderung seit dem letzten Zeilenumbruch, ohne ANSI-Stil.</value></data>
+  <data name="DiagnosticsServerDetails" xml:space="preserve"><value>Serverdetails</value></data>
+  <data name="DiagnosticsServerDetailsHelp" xml:space="preserve"><value>Was diese Welt über MSSP über sich selbst angibt: Name, Codebasis, Spieler, Laufzeit und die Protokolle, die sie nennt. Nur lesbar und nur für diese Sitzung. Wenn das Weltprofil keine Codebasis nennt, bestimmt die gemeldete die Kanalregeln.</value></data>
+  <data name="DiagnosticsServerDetailsNone" xml:space="preserve"><value>Diese Welt hat sich nicht über MSSP beschrieben.</value></data>
 </root>

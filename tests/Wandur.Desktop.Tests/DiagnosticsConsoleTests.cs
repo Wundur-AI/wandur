@@ -136,7 +136,7 @@ public sealed class DiagnosticsConsoleTests
         try
         {
             plainWindow.Show(); Dispatcher.UIThread.RunJobs();
-            Assert.Equal(2, plainWindow.GetVisualDescendants().OfType<TabControl>().Single(t => t.Name == "ProtocolDiagnosticTabs").Items.Count);
+            Assert.Equal(3, plainWindow.GetVisualDescendants().OfType<TabControl>().Single(t => t.Name == "ProtocolDiagnosticTabs").Items.Count);
         }
         finally { plainWindow.Close(); }
         var log = new ConsoleLog();
@@ -146,7 +146,7 @@ public sealed class DiagnosticsConsoleTests
         {
             window.Show(); Dispatcher.UIThread.RunJobs();
             var tabs = view.GetVisualDescendants().OfType<TabControl>().Single(t => t.Name == "ProtocolDiagnosticTabs");
-            Assert.Equal(3, tabs.Items.Count);
+            Assert.Equal(4, tabs.Items.Count);
             var follow = view.GetVisualDescendants().OfType<CheckBox>().Single(c => c.Name == "FollowDiagnostics");
             Assert.True(follow.IsEffectivelyVisible);
             tabs.SelectedIndex = 2; Dispatcher.UIThread.RunJobs();

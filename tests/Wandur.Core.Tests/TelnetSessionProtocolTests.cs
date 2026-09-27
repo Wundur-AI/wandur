@@ -276,4 +276,22 @@ public sealed class TelnetSessionProtocolTests
         await WaitForAsync(log, l => l.Count > 0 && l[^1] == "t:barrier\n");
         lock (log) Assert.DoesNotContain(log, e => e.StartsWith("p:"));
     }
+
+    [Fact]
+    public async Task AnMsspTableIsKeptOnTheSession()
+    {
+        var (session, server) = await ConnectAsync();
+        await using var _ = session;
+        var received = new TaskCompletionSource<Wandur.Core.Protocol.MsspTable>(TaskCreationOptions.RunContinuationsAsynchronously);
+        session.MsspReceived += table => received.TrySetResult(table);
+        Assert.Null(session.Mssp);
+        server.Send([255, 251, 70]);
+        server.Send([255, 250, 70, 1, .. Ascii("NAME"), 2, .. Ascii("Fixture World"), 1, .. Ascii("CODEBASE"), 2, .. Ascii("SmaugFUSS 1.9"),
+            1, .. Ascii("PORT"), 2, .. Ascii("4000"), 2, .. Ascii("4001"), 255, 240]);
+        var table = await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Same(table, session.Mssp);
+        Assert.Equal("Fixture World", table.GetFirst("name"));
+        Assert.Equal("SmaugFUSS 1.9", table.GetFirst("CODEBASE"));
+        Assert.Equal(["4000", "4001"], table["PORT"]);
+    }
 }

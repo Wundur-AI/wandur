@@ -1970,4 +1970,7 @@ Stop after receiving one inventory listing.</value></data>
   <data name="AdultWorlds" xml:space="preserve"><value>Adult worlds</value></data>
   <data name="ScriptCompletePrompt" xml:space="preserve"><value>A prompt the server marked as finished (telnet GA or EOR), without ANSI styling. Payload: text: string. Private input is excluded.</value></data>
   <data name="ScriptCompletePromptText" xml:space="preserve"><value>The prompt text since the last newline, with ANSI styling removed.</value></data>
+  <data name="DiagnosticsServerDetails" xml:space="preserve"><value>Server details</value></data>
+  <data name="DiagnosticsServerDetailsHelp" xml:space="preserve"><value>What this world says about itself through MSSP: name, codebase, players, uptime and the protocols it claims. Read-only, kept for this session only. When the world profile names no codebase, the reported one picks the channel rules.</value></data>
+  <data name="DiagnosticsServerDetailsNone" xml:space="preserve"><value>This world has not described itself through MSSP.</value></data>
 </root>

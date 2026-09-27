@@ -105,6 +105,12 @@ public sealed class ProtocolDiagnosticsView : UserControl
         explanation.Margin = new Thickness(14, 8); explanation.TextWrapping = TextWrapping.Wrap;
         var schemaBody = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), Children = { explanation, schema } };
         Grid.SetRow(schema, 1);
+        var server = new DiagnosticsBodyEditor(wordWrap: true, plain: true) { Name = "ProtocolServerDetail" };
+        server.Bind(DiagnosticsBodyEditor.SourceTextProperty, new Binding(nameof(model.ServerDetails)));
+        var serverHelp = Ui.TextKey(nameof(L.DiagnosticsServerDetailsHelp), 13, "muted");
+        serverHelp.Margin = new Thickness(14, 8); serverHelp.TextWrapping = TextWrapping.Wrap;
+        var serverBody = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), Children = { serverHelp, server } };
+        Grid.SetRow(server, 1);
         var tabs = new TabControl { Name = "ProtocolDiagnosticTabs", Items =
         {
             new TabItem { Name = "ProtocolMessagesTab", Header = Ui.TextKey(nameof(L.DiagnosticsMessages), 13), Content = body },
@@ -117,6 +123,8 @@ public sealed class ProtocolDiagnosticsView : UserControl
             // The message count, Follow and Clear above the tabs belong to the protocol list, not the console.
             tabs.SelectionChanged += (_, _) => bar.IsVisible = !ReferenceEquals(tabs.SelectedItem, consoleTab);
         }
+        // Last, so the Messages, Observed fields and Console tabs keep their places.
+        tabs.Items.Add(new TabItem { Name = "ProtocolServerTab", Header = Ui.TextKey(nameof(L.DiagnosticsServerDetails), 13), Content = serverBody });
         var root = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), Children = { bar, tabs } };
         // Diagnostics uses shell text and controls, not terminal ink. Paint its own surface
         // so a light shell with a dark transcript cannot show dark labels on the terminal.
