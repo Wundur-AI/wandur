@@ -1977,4 +1977,7 @@ Stoppe nach einer Inventarliste.</value></data>
   <data name="LinkOpen" xml:space="preserve"><value>Öffnen</value></data>
   <data name="LinkRefused" xml:space="preserve"><value>Dieser Link wurde nicht geöffnet. Wandur öffnet nur Weblinks (http oder https) ohne Benutzername oder Passwort in der Adresse.</value></data>
   <data name="LinkNotOpened" xml:space="preserve"><value>Der Link konnte nicht im Browser geöffnet werden.</value></data>
+  <data name="LinkRefusedLocal" xml:space="preserve"><value>Dieser Link wurde nicht geöffnet: Er zeigt auf diesen Computer oder ein privates Netzwerk, und eine Welt hat keinen Grund, dich dorthin zu schicken.</value></data>
+  <data name="LinkClickHint" xml:space="preserve"><value>Strg+Klick öffnet diesen Link.</value></data>
+  <data name="LinkClickHintMac" xml:space="preserve"><value>Cmd+Klick oder Control+Klick öffnet diesen Link.</value></data>
 </root>

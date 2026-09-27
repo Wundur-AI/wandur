@@ -1,5 +1,7 @@
 using System.Reflection;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
@@ -22,7 +24,12 @@ public sealed class LinkClickTests
     private static T Named<T>(Window window, string name) where T : Control =>
         window.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
 
-    /// <summary>Raises the library's own UrlClicked, as its pointer handling does on a Ctrl+click over a link.</summary>
+    /// <summary>
+    /// Raises the library's own UrlClicked, as its pointer handling does on a Ctrl+click over a link. The library has no
+    /// public way to raise it, so this reads the event's private backing field: brittle across library upgrades, and
+    /// the only place in the tests that does it. If it breaks after an upgrade, check the event still exists and is
+    /// still raised only on Ctrl+click.
+    /// </summary>
     private static void ClickLinkInLibrary(Window window, string url)
     {
         var surface = Assert.Single(window.GetVisualDescendants().OfType<Surface>());
@@ -71,6 +78,10 @@ public sealed class LinkClickTests
     [InlineData("mailto:someone@example.test")]
     [InlineData("https://user:secret@example.test/")]
     [InlineData("https://bank.example@evil.example/login")]
+    [InlineData("https://wandur.net\u202egnp.exe")]
+    [InlineData("https://\u0430pple.com/")]
+    [InlineData("https://app\u200ble.com/")]
+    [InlineData("https://example\uff0ecom/")]
     public async Task OtherSchemesAndUserInfoAreRefusedWithoutAsking(string url)
     {
         await using var controller = NewController();
@@ -89,5 +100,82 @@ public sealed class LinkClickTests
             Assert.Empty(launched);
         }
         finally { window.Close(); }
+    }
+
+    [AvaloniaTheory]
+    [InlineData("http://localhost:8080/")]
+    [InlineData("http://192.168.1.1/admin")]
+    [InlineData("http://0x7f.1/")]
+    [InlineData("http://[::1]/")]
+    public async Task LocalAndPrivateHostsAreRefusedWithTheirOwnNotice(string url)
+    {
+        await using var controller = NewController();
+        var view = new TerminalView(controller);
+        var window = new Window { Width = 900, Height = 550, Content = view };
+        window.Show();
+        try
+        {
+            ClickLinkInLibrary(window, url);
+            Assert.False(Named<Border>(window, "LinkConfirmation").IsVisible);
+            Assert.Equal(L.LinkRefusedLocal, controller.Notice);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public async Task APendingLinkIsDroppedWhenANewSessionStarts()
+    {
+        await using var controller = NewController();
+        var view = new TerminalView(controller);
+        var window = new Window { Width = 900, Height = 550, Content = view };
+        window.Show();
+        try
+        {
+            Assert.True(view.RequestOpenLink("https://example.test/"));
+            Assert.True(Named<Border>(window, "LinkConfirmation").IsVisible);
+            await controller.StartAsync();
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(Named<Border>(window, "LinkConfirmation").IsVisible);
+            Assert.Null(view.PendingLink);
+        }
+        finally { window.Close(); }
+    }
+
+    /// <summary>Cmd+click on macOS, found by the client's own lookup of the link under the pointer; also the hover hint.</summary>
+    [AvaloniaFact]
+    public async Task CommandClickOnALinkAsksAndHoverNamesTheShortcut()
+    {
+        var previous = MudTerminalSurface.CommandClickOpensLinks;
+        MudTerminalSurface.CommandClickOpensLinks = true;
+        await using var controller = NewController();
+        var view = new TerminalView(controller);
+        var window = new Window { Width = 900, Height = 550, Content = view };
+        window.Show();
+        try
+        {
+            controller.Terminal.Append("See https://www.wandur.net/help, then come back.\r\n");
+            controller.FlushOutput();
+            Dispatcher.UIThread.RunJobs();
+            var surface = window.GetVisualDescendants().OfType<MudTerminalSurface>().Single();
+            var row = surface.Terminal.Buffer.ViewportY;
+            var line = surface.Terminal.Buffer.GetLine(row)!.TranslateToString(true, 0, surface.Terminal.Cols);
+            var column = line.IndexOf("wandur", StringComparison.Ordinal);
+            Assert.True(column > 0, line);
+            var point = new Avalonia.Point(Math.Max(0, surface.GutterWidth) + (column + 0.5) * surface.CharWidth, (row - surface.Terminal.Buffer.ViewportY + 0.5) * surface.CharHeight);
+            Assert.Equal("https://www.wandur.net/help", surface.LinkAt(point));
+            Assert.Null(surface.LinkAt(new Avalonia.Point(Math.Max(0, surface.GutterWidth) + 0.5 * surface.CharWidth, point.Y)));
+
+            var inWindow = surface.TranslatePoint(point, window)!.Value;
+            window.MouseMove(inWindow, Avalonia.Input.RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(L.LinkClickHintMac, ToolTip.GetTip(surface));
+
+            window.MouseDown(inWindow, Avalonia.Input.MouseButton.Left, Avalonia.Input.RawInputModifiers.Meta);
+            window.MouseUp(inWindow, Avalonia.Input.MouseButton.Left, Avalonia.Input.RawInputModifiers.Meta);
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(Named<Border>(window, "LinkConfirmation").IsVisible);
+            Assert.Equal(new Uri("https://www.wandur.net/help"), view.PendingLink);
+        }
+        finally { window.Close(); MudTerminalSurface.CommandClickOpensLinks = previous; }
     }
 }

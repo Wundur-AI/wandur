@@ -22,7 +22,7 @@ public interface ITranscriptDisplay : IDisposable
     (int Columns, int Rows) TerminalSize { get; }
     /// <summary>The grid changed size while following the tail. Raised on every layout that changes it; callers debounce.</summary>
     event Action? TerminalSizeChanged;
-    /// <summary>The reader Ctrl+clicked a link in the transcript: a web address in the text or an OSC 8 link. Nothing
+    /// <summary>The reader Ctrl+clicked (or, on macOS, Cmd+clicked) a link in the transcript: a web address in the text or an OSC 8 link. Nothing
     /// is opened here; the address is exactly what the server sent.</summary>
     event Action<string>? LinkClicked;
     /// <summary>A right click on the transcript: the line under the pointer and the selection, for a menu.</summary>

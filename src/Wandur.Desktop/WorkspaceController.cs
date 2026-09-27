@@ -105,6 +105,8 @@ public sealed partial class WorkspaceController : IAsyncDisposable
     /// <summary>Raised when <see cref="CharacterName"/> changes; <see cref="Changed"/> follows.</summary>
     public event Action? CharacterChanged;
     public event Action<ClientSettings>? SettingsSaved;
+    /// <summary>A new session is starting in this tab; anything left over from the previous world should go.</summary>
+    public event Action? SessionStarting;
 
     public void SetManualPrivate(bool enabled) { _manualPrivate = enabled; RefreshScriptState(); Changed?.Invoke(); }
     public void ShowNotice(string? notice) { Notice = notice; Changed?.Invoke(); }
@@ -153,6 +155,7 @@ public sealed partial class WorkspaceController : IAsyncDisposable
         if (_disposed) return;
         if (_startPending || IsConnecting || IsConnected) { ShowNotice(L.DisconnectFromTheCurrentWorldBeforeStartingAnotherSession); return; }
         _startPending = true;
+        SessionStarting?.Invoke();
         IsConnecting = true;
         // Stage before the first Changed so ApplyAppearance never briefly restores the personal theme.
         WorldTheme = profile?.Theme is { IsValid: true } theme ? theme : null;

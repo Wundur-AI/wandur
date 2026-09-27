@@ -352,6 +352,7 @@ public sealed class TerminalView : UserControl
         SyncCommandField();
         _controller.Changed += Refresh; _controller.Display.ViewportChanged += RefreshScroll; _controller.Display.MenuRequested += ShowTranscriptMenu;
         _controller.Display.LinkClicked += OnLinkClicked;
+        _controller.SessionStarting += HideLink;
         Refresh();
         if (_focusWanted) PostFocus();
     }
@@ -359,7 +360,7 @@ public sealed class TerminalView : UserControl
     {
         ThemeService.Applied -= SyncCommandField;
         _focusWanted = false; _pressed = null; _controller.Changed -= Refresh; _controller.Display.ViewportChanged -= RefreshScroll; _controller.Display.MenuRequested -= ShowTranscriptMenu;
-        _controller.Display.LinkClicked -= OnLinkClicked; HideLink();
+        _controller.Display.LinkClicked -= OnLinkClicked; _controller.SessionStarting -= HideLink; HideLink();
         _menu?.Close(); base.OnDetachedFromVisualTree(e);
     }
 
@@ -403,13 +404,15 @@ public sealed class TerminalView : UserControl
     /// </summary>
     internal bool RequestOpenLink(string url)
     {
-        if (Wandur.Core.Terminal.WebLinks.Accept(url) is not { } uri)
+        var (uri, refusal) = Wandur.Core.Terminal.WebLinks.Check(url);
+        if (uri is null)
         {
             HideLink();
-            _controller.ShowNotice(L.LinkRefused);
+            _controller.ShowNotice(refusal == Wandur.Core.Terminal.WebLinkRefusal.LocalNetwork ? L.LinkRefusedLocal : L.LinkRefused);
             return false;
         }
         _pendingLink = uri;
+        // Built from the parsed address, whose host WebLinks has already required to be plain ASCII.
         _linkUrl.Text = uri.AbsoluteUri;
         ToolTip.SetTip(_linkUrl, uri.AbsoluteUri);
         _linkBar.IsVisible = true;

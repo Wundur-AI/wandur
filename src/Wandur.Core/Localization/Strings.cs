@@ -1010,4 +1010,7 @@ public static class Strings
     public static string LinkOpen => Get(nameof(LinkOpen));
     public static string LinkRefused => Get(nameof(LinkRefused));
     public static string LinkNotOpened => Get(nameof(LinkNotOpened));
+    public static string LinkRefusedLocal => Get(nameof(LinkRefusedLocal));
+    public static string LinkClickHint => Get(nameof(LinkClickHint));
+    public static string LinkClickHintMac => Get(nameof(LinkClickHintMac));
 }

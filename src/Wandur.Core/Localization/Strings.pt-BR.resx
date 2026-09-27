@@ -1977,4 +1977,7 @@ Pare após receber uma lista do inventário.</value></data>
   <data name="LinkOpen" xml:space="preserve"><value>Abrir</value></data>
   <data name="LinkRefused" xml:space="preserve"><value>Esse link não foi aberto. O Wandur abre apenas links da web (http ou https) sem nome de usuário ou senha no endereço.</value></data>
   <data name="LinkNotOpened" xml:space="preserve"><value>Não foi possível abrir o link no seu navegador.</value></data>
+  <data name="LinkRefusedLocal" xml:space="preserve"><value>Esse link não foi aberto: ele aponta para este computador ou uma rede privada, e um mundo não tem motivo para enviar você para lá.</value></data>
+  <data name="LinkClickHint" xml:space="preserve"><value>Ctrl+clique para abrir este link.</value></data>
+  <data name="LinkClickHintMac" xml:space="preserve"><value>Cmd+clique ou Control+clique para abrir este link.</value></data>
 </root>

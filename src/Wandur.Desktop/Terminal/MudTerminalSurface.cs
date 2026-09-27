@@ -1,4 +1,7 @@
+using System.Text;
+using System.Text.RegularExpressions;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -59,6 +62,16 @@ internal sealed class MudTerminalSurface : Iciclecreek.Terminal.TerminalView
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         var point = e.GetCurrentPoint(this);
+        _pendingCommandLink = null;
+        // The library opens links on Control+click only, which on macOS is the secondary click habit; Cmd+click is
+        // the Mac convention, so it is taken here with the same press-and-release-on-the-same-link rule.
+        if (CommandClickOpensLinks && e.KeyModifiers == KeyModifiers.Meta && point.Properties.IsLeftButtonPressed &&
+            LinkAt(point.Position) is { } link)
+        {
+            _pendingCommandLink = link;
+            e.Handled = true;
+            return;
+        }
         if (point.Properties.IsRightButtonPressed)
         {
             e.Handled = true;
@@ -67,6 +80,90 @@ internal sealed class MudTerminalSurface : Iciclecreek.Terminal.TerminalView
             return;
         }
         base.OnPointerPressed(e);
+    }
+
+    /// <summary>Cmd+click opens links too; on by default on macOS only. Settable for tests.</summary>
+    internal static bool CommandClickOpensLinks { get; set; } = OperatingSystem.IsMacOS();
+
+    /// <summary>A Cmd+click on a link (macOS). The library raises its own UrlClicked for Control+click.</summary>
+    public event Action<string>? CommandLinkClicked;
+    private string? _pendingCommandLink;
+    private bool _hoverHint;
+
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        if (_pendingCommandLink is { } pending)
+        {
+            _pendingCommandLink = null;
+            e.Handled = true;
+            if (LinkAt(e.GetPosition(this)) == pending) CommandLinkClicked?.Invoke(pending);
+            return;
+        }
+        base.OnPointerReleased(e);
+    }
+
+    /// <summary>
+    /// The library draws a link under the pointer but reports hovering to no one, so the same lookup runs here to show
+    /// how to open it: a tooltip that names Ctrl+click (and Cmd+click on macOS) while the pointer is over a link.
+    /// </summary>
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+        var over = LinkAt(e.GetPosition(this)) is not null;
+        if (over == _hoverHint) return;
+        _hoverHint = over;
+        if (over) Bind(ToolTip.TipProperty, LocalizedText.Binding(CommandClickOpensLinks ? nameof(Wandur.Core.Localization.Strings.LinkClickHintMac) : nameof(Wandur.Core.Localization.Strings.LinkClickHint)));
+        else { ClearValue(ToolTip.TipProperty); ToolTip.SetIsOpen(this, false); }
+    }
+
+    // The library's own detection: http or https up to whitespace or a quote, then trailing punctuation trimmed.
+    private static readonly Regex UrlPattern = new("https?://[^\\s<>\"'`]+", RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// The link drawn at a point in this control: an OSC 8 link on that cell, else a web address found in the logical
+    /// line (wrapped rows joined), the same way the library finds one. Columns follow the library's pointer mapping;
+    /// a wide character earlier on the line can shift the match by a column, which only matters at a link's edge.
+    /// </summary>
+    internal string? LinkAt(Point point)
+    {
+        if (CharWidth <= 0 || CharHeight <= 0) return null;
+        var buffer = Terminal.Buffer;
+        var column = Math.Clamp((int)((point.X - Math.Max(0, GutterWidth)) / CharWidth), 0, Math.Max(0, Terminal.Cols - 1));
+        var row = buffer.ViewportY + Math.Clamp((int)(point.Y / CharHeight), 0, Math.Max(0, Terminal.Rows - 1));
+        if (row < 0 || row >= buffer.Lines.Length || buffer.GetLine(row) is not { } line) return null;
+        if (line.HasLinks && line.TryGetLinkAt(column, out var hyperlink)) return hyperlink.Url;
+        var start = row;
+        while (start > 0 && buffer.GetLine(start)?.IsWrapped == true) start--;
+        var text = new StringBuilder();
+        var offset = -1;
+        for (var i = start; i < buffer.Lines.Length; i++)
+        {
+            var part = buffer.GetLine(i);
+            if (part is null || (i > start && !part.IsWrapped)) break;
+            if (i == row) offset = text.Length + column;
+            text.Append(part.TranslateToString(false, 0, Math.Min(part.Length, Terminal.Cols)).PadRight(Terminal.Cols));
+            if (text.Length > 16_384) break;
+        }
+        if (offset < 0) return null;
+        foreach (Match match in UrlPattern.Matches(text.ToString()))
+        {
+            var url = TrimUrlEnd(match.Value);
+            if (offset >= match.Index && offset < match.Index + url.Length) return url;
+        }
+        return null;
+    }
+
+    private static string TrimUrlEnd(string url)
+    {
+        while (url.Length > 0)
+        {
+            var last = url[^1];
+            if (last is '!' or '"' or '\'' or ',' or '.' or ':' or ';' or '?') { url = url[..^1]; continue; }
+            var open = last switch { ')' => '(', ']' => '[', '}' => '{', _ => '\0' };
+            if (open == '\0' || url.Count(c => c == open) >= url.Count(c => c == last)) break;
+            url = url[..^1];
+        }
+        return url;
     }
 
     /// <summary>The text of the logical line drawn at this height, with wrapped continuations joined.</summary>
@@ -115,6 +212,9 @@ internal sealed class MudTerminalSurface : Iciclecreek.Terminal.TerminalView
     }
 
     private (int Columns, int Rows) _reportedGrid;
+
+    /// <summary>The grid from the last layout at the tail, or null before the first one.</summary>
+    public (int Columns, int Rows)? ReportedGrid => _reportedGrid == default ? null : _reportedGrid;
 
     /// <summary>The character grid changed size in a layout pass at the tail.</summary>
     public event Action? GridResized;

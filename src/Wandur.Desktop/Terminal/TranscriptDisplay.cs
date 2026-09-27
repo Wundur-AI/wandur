@@ -41,6 +41,7 @@ internal sealed class TranscriptDisplay : ITranscriptDisplay
         _surface.GridResized += () => TerminalSizeChanged?.Invoke();
         // The library detects links and reports a Ctrl+click, but opens nothing itself.
         _surface.UrlClicked += OnUrlClicked;
+        _surface.CommandLinkClicked += OnCommandLinkClicked;
         _bindings.Add(_surface.Bind(Iciclecreek.Terminal.TerminalView.BackgroundProperty, new DynamicResourceExtension("TerminalBrush")));
         _bindings.Add(_surface.Bind(Iciclecreek.Terminal.TerminalView.ForegroundProperty, new DynamicResourceExtension("TerminalTextBrush")));
         _bindings.Add(_surface.Bind(Iciclecreek.Terminal.TerminalView.SelectionBrushProperty, new DynamicResourceExtension("TranscriptSelectionBrush")));
@@ -97,11 +98,14 @@ internal sealed class TranscriptDisplay : ITranscriptDisplay
     }
     public string TopVisibleText => _surface.Terminal.Buffer.GetLine(_surface.ViewportY)?.TranslateToString(true).TrimEnd() ?? "";
     public event Action? ViewportChanged;
-    public (int Columns, int Rows) TerminalSize => (_surface.Terminal.Cols, _surface.Terminal.Rows);
+    /// <summary>The grid last seen at the tail: scrolling back opens the split view and shortens the live grid, which
+    /// must not shrink the size the server was told.</summary>
+    public (int Columns, int Rows) TerminalSize => _surface.ReportedGrid ?? (_surface.Terminal.Cols, _surface.Terminal.Rows);
     public event Action? TerminalSizeChanged;
     public event Action<TranscriptContext>? MenuRequested;
     public event Action<string>? LinkClicked;
     private void OnUrlClicked(object? sender, Iciclecreek.Terminal.UrlClickedEventArgs e) { if (!_disposed) LinkClicked?.Invoke(e.Url); }
+    private void OnCommandLinkClicked(string url) { if (!_disposed) LinkClicked?.Invoke(url); }
     public Task<bool> CopySelectionAsync() => _disposed ? Task.FromResult(false) : _surface.CopyAsync();
     public void FollowTail() { _surface.ViewportY = _surface.Terminal.Buffer.YBase; UpdateScroll(); }
     public void ApplySettings(ClientSettings settings)
@@ -183,6 +187,7 @@ internal sealed class TranscriptDisplay : ITranscriptDisplay
         _source.OutputAppended -= Append; _source.Cleared -= Clear;
         _surface.PropertyChanged -= SurfaceChanged;
         _surface.UrlClicked -= OnUrlClicked;
+        _surface.CommandLinkClicked -= OnCommandLinkClicked;
         _surface.StopBlinking();
         foreach (var binding in _bindings) binding.Dispose();
         _surface.Dispose();

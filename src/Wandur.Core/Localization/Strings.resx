@@ -1977,4 +1977,7 @@ Stop after receiving one inventory listing.</value></data>
   <data name="LinkOpen" xml:space="preserve"><value>Open</value></data>
   <data name="LinkRefused" xml:space="preserve"><value>That link was not opened. Wandur opens only web links (http or https) without a user name or password in the address.</value></data>
   <data name="LinkNotOpened" xml:space="preserve"><value>The link could not be opened in your browser.</value></data>
+  <data name="LinkRefusedLocal" xml:space="preserve"><value>That link was not opened: it points to this computer or a private network, which a world has no reason to send you to.</value></data>
+  <data name="LinkClickHint" xml:space="preserve"><value>Ctrl+click to open this link.</value></data>
+  <data name="LinkClickHintMac" xml:space="preserve"><value>Cmd+click or Control+click to open this link.</value></data>
 </root>
