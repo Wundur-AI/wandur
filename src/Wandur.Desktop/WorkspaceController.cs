@@ -225,7 +225,7 @@ public sealed partial class WorkspaceController : IAsyncDisposable
                 telnet.TextReceived += received => ReceiveText(received.Text, received.MayContainPrivateText);
                 // Queued behind the text before it, under the same privacy stamp as a line.
                 telnet.PromptReceived += received => ReceivePrompt(session, received, wirePrivate);
-                telnet.MsspReceived += table => Dispatch(session, () => ReceiveServerDetails(table));
+                telnet.MsspReceived += (table, mayContainPrivateText) => ReceiveMssp(session, table, mayContainPrivateText, wirePrivate);
                 telnet.ProtocolMessageReceived += received => ReceiveProtocol(session, received, wirePrivate);
                 telnet.GmcpLoginReceived += message => Dispatch(session, () => _ = ReceiveGmcpLoginAsync(telnet, message));
                 telnet.GmcpMessageReceived += received =>
@@ -361,6 +361,7 @@ public sealed partial class WorkspaceController : IAsyncDisposable
                     // Cached while scripts get nothing: replayed to them once play is public.
                     if (ScriptState.RecordMsdp(variable, json) && payload is null) _replayMsdp.TryAdd(variable, true);
             Diagnostics.AppendContent(item.Message.ReceivedAt, item.Message.Option, item.Message.Content);
+            if (item.Message.Mssp is { } mssp) { ApplyServerDetails(mssp, item.Message.ServerDetails); continue; }
             if (cachePublic && _protocolBindings is not null) { _protocolBindings.Observe(item.Message.Option, item.Message.Content, item.Message.ReceivedAt); observed = true; }
             FeedAgentProtocol(item.Message.Option, payload);
             // Raw MSDP reaches scripts the same way GMCP does, one event per variable, never while private.

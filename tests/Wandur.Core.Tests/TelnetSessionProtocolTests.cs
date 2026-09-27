@@ -283,7 +283,7 @@ public sealed class TelnetSessionProtocolTests
         var (session, server) = await ConnectAsync();
         await using var _ = session;
         var received = new TaskCompletionSource<Wandur.Core.Protocol.MsspTable>(TaskCreationOptions.RunContinuationsAsynchronously);
-        session.MsspReceived += table => received.TrySetResult(table);
+        session.MsspReceived += (table, _) => received.TrySetResult(table);
         Assert.Null(session.Mssp);
         server.Send([255, 251, 70]);
         server.Send([255, 250, 70, 1, .. Ascii("NAME"), 2, .. Ascii("Fixture World"), 1, .. Ascii("CODEBASE"), 2, .. Ascii("SmaugFUSS 1.9"),

@@ -37,15 +37,34 @@ public sealed partial class WorkspaceController
     public Wandur.Core.Protocol.MsspTable? ServerDetails { get; private set; }
 
     /// <summary>
-    /// An MSSP table: kept for the session, shown in diagnostics (the Messages list and the Server details tab),
-    /// and its CODEBASE picks the channel family when the profile names none. Nothing is written to the profile.
+    /// An MSSP table, on the receive thread: formatted and masked now, while the remembered secrets are those of this
+    /// moment, and queued with the other protocol diagnostics so it lands in wire order. A table from a read that may
+    /// contain private text (an echo-off stretch) is skipped entirely: not listed, not shown, not used.
     /// </summary>
-    private void ReceiveServerDetails(Wandur.Core.Protocol.MsspTable table)
+    private void ReceiveMssp(IMudSession session, Wandur.Core.Protocol.MsspTable table, bool mayContainPrivateText, bool wirePrivate)
+    {
+        if (mayContainPrivateText || wirePrivate) return;
+        var (content, details) = ViewModels.ProtocolDiagnosticsViewModel.FormatServerDetails(table, _diagnosticSecrets);
+        lock (_pendingLock)
+        {
+            var diagnostic = new PendingProtocolDiagnostic(DateTimeOffset.UtcNow, 70, null, content) { Mssp = table, ServerDetails = details };
+            var size = DiagnosticSize(diagnostic);
+            while (_pendingDiagnostics.Count > 0 && (_pendingDiagnosticBytes + size > 524_288 || _pendingDiagnostics.Count >= 200))
+                _pendingDiagnosticBytes -= DiagnosticSize(_pendingDiagnostics.Dequeue().Message);
+            _pendingDiagnostics.Enqueue((session, -1, -1, diagnostic));
+            _pendingDiagnosticBytes += size;
+        }
+    }
+
+    /// <summary>
+    /// Flushed in wire order: the table is kept for the session, shown in the Server details tab, and its CODEBASE
+    /// picks the channel family when the profile names none. Nothing is written to the profile.
+    /// </summary>
+    private void ApplyServerDetails(Wandur.Core.Protocol.MsspTable table, string details)
     {
         ServerDetails = table;
-        Diagnostics.ReceiveServerDetails(DateTimeOffset.UtcNow, table, _diagnosticSecrets);
+        Diagnostics.SetServerDetails(table, details);
         UseServerCodebase(table.GetFirst("CODEBASE"));
-        Changed?.Invoke();
     }
 
     /// <summary>How long the terminal must keep one size before the server hears about it, so dragging a

@@ -191,13 +191,27 @@ public sealed partial class ProtocolDiagnosticsViewModel : ObservableObject
     /// several values joined by commas, or a note that the world has not described itself.</summary>
     public string ServerDetails => _serverDetails ?? L.DiagnosticsServerDetailsNone;
 
-    /// <summary>
-    /// A new MSSP table replaces the details and is also listed with the protocol messages, as JSON (one value is a
-    /// string, several an array). A remembered secret is masked in both, like every other diagnostics body.
-    /// </summary>
-    public void ReceiveServerDetails(DateTimeOffset receivedAt, MsspTable table, IReadOnlyList<string>? secrets = null)
+    /// <summary>A new MSSP table replaces the details shown in the Server details tab.</summary>
+    public void SetServerDetails(MsspTable table, string details)
     {
-        var known = (secrets ?? []).Where(s => s.Length > 0).OrderByDescending(s => s.Length).ToArray();
+        _server = table;
+        _serverDetails = details;
+        OnPropertyChanged(nameof(Server)); OnPropertyChanged(nameof(HasServerDetails)); OnPropertyChanged(nameof(ServerDetails));
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex Escapes = new(
+        "\u001b\\[[0-9;?]*[ -/]*[@-~]|\u001b\\][^\u0007\u001b]*(?:\u0007|\u001b\\\\)?|\u001b.?",
+        System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// An MSSP table as a diagnostics entry and as the Server details text. Remembered secrets are masked in every name
+    /// and value before anything is serialized, so JSON escaping (&amp; as \u0026, é as \u00e9) cannot hide one from
+    /// the mask, the same order the SDK's redactor uses. The JSON body is capped like any formatter body; the details
+    /// text drops ANSI escapes and control characters and gets the same cap.
+    /// </summary>
+    public static (ProtocolDiagnosticContent Content, string Details) FormatServerDetails(MsspTable table, IReadOnlyList<string>? secrets)
+    {
+        var known = (secrets ?? []).Where(s => !string.IsNullOrEmpty(s)).Take(8).OrderByDescending(s => s.Length).ToArray();
         var redacted = false;
         string Scrub(string text)
         {
@@ -205,12 +219,17 @@ public sealed partial class ProtocolDiagnosticsViewModel : ObservableObject
                 if (text.Contains(secret, StringComparison.Ordinal)) { text = text.Replace(secret, "[redacted]", StringComparison.Ordinal); redacted = true; }
             return text;
         }
-        var body = Scrub(JsonSerializer.Serialize(table.ToDictionary(entry => entry.Key,
-            entry => entry.Value.Count == 1 ? (object)entry.Value[0] : entry.Value), new JsonSerializerOptions { WriteIndented = true }));
-        _server = table;
-        _serverDetails = Scrub(string.Join("\n", table.Select(entry => $"{entry.Key}: {string.Join(", ", entry.Value)}")));
-        AppendContent(receivedAt, 70, new ProtocolDiagnosticContent("MSSP", body, false, false) { Redacted = redacted });
-        OnPropertyChanged(nameof(Server)); OnPropertyChanged(nameof(HasServerDetails)); OnPropertyChanged(nameof(ServerDetails));
+        var scrubbed = new List<(string Name, string[] Values)>();
+        foreach (var entry in table) scrubbed.Add((Scrub(entry.Key), entry.Value.Select(Scrub).ToArray()));
+        var json = new Dictionary<string, object>(StringComparer.Ordinal);
+        foreach (var (name, values) in scrubbed) json.TryAdd(name, values.Length == 1 ? values[0] : values);
+        var body = JsonSerializer.Serialize(json, new JsonSerializerOptions { WriteIndented = true });
+        var truncated = body.Length > ProtocolDiagnosticFormatter.MaximumBodyCharacters;
+        if (truncated) body = body[..ProtocolDiagnosticFormatter.MaximumBodyCharacters];
+        static string Plain(string text) => new(Escapes.Replace(text, "").Where(c => !char.IsControl(c)).ToArray());
+        var details = string.Join("\n", scrubbed.Select(entry => $"{Plain(entry.Name)}: {string.Join(", ", entry.Values.Select(Plain))}"));
+        if (details.Length > ProtocolDiagnosticFormatter.MaximumBodyCharacters) details = details[..ProtocolDiagnosticFormatter.MaximumBodyCharacters];
+        return (new ProtocolDiagnosticContent("MSSP", body, false, truncated) { Redacted = redacted }, details);
     }
 
     /// <summary>A new session starts with no server details; clearing the message list leaves them.</summary>

@@ -7,7 +7,12 @@ namespace Wandur.Desktop;
 
 public sealed partial class WorkspaceController
 {
-    private sealed record PendingProtocolDiagnostic(DateTimeOffset ReceivedAt, byte Option, byte[]? Payload, ProtocolDiagnosticContent Content);
+    private sealed record PendingProtocolDiagnostic(DateTimeOffset ReceivedAt, byte Option, byte[]? Payload, ProtocolDiagnosticContent Content)
+    {
+        /// <summary>An MSSP table and its sanitized details text, applied when the entry is flushed.</summary>
+        public MsspTable? Mssp { get; init; }
+        public string ServerDetails { get; init; } = "";
+    }
     private readonly Queue<(IMudSession Session, long Epoch, long CacheEpoch, PendingProtocolDiagnostic Message)> _pendingDiagnostics = new();
     private int _pendingDiagnosticBytes;
     private volatile string[] _diagnosticSecrets = [];
@@ -16,7 +21,7 @@ public sealed partial class WorkspaceController
         if (value.Length is > 0 and <= 8192 && !_diagnosticSecrets.Contains(value, StringComparer.Ordinal))
             _diagnosticSecrets = [value, .. _diagnosticSecrets.Take(7)];
     }
-    private static int DiagnosticSize(PendingProtocolDiagnostic message) => (message.Payload?.Length ?? 0) + message.Content.Body.Length * 2;
+    private static int DiagnosticSize(PendingProtocolDiagnostic message) => (message.Payload?.Length ?? 0) + (message.Content.Body.Length + message.ServerDetails.Length) * 2;
 
     private ProtocolBindingEngine? _protocolBindings;
     private readonly Wandur.Models.GameState _emptyGameState = new();
