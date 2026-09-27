@@ -38,6 +38,15 @@
   allows only absolute http or https with a host and no user info; other
   schemes and user info are refused with a notice. No "Don't ask again for
   this site": it needs a saved per-world list and an editor to revoke it.
+- Review fix round 1: links refuse format, control, private use, surrogate,
+  unassigned and separator characters, non-ASCII hosts (homographs,
+  fullwidth dots) and loopback, link-local, private and localhost hosts
+  (including `0x7f.1`), with Cmd+click on macOS and a hover tooltip; MSSP is
+  masked per name and value before serializing, capped, stripped of ANSI
+  and control characters for display, skipped when the read may be private,
+  and queued with the other diagnostics; the NAWS size keeps the grid last
+  seen at the tail while scrolled back; a resize write is never cancelled
+  mid-frame; a pending link bar goes when a new session starts.
 - Verification: Release build with no warnings. The final sequential
   `dotnet test Wandur.sln -c Release -m:1` passed Core 830 and Desktop 687;
   the SDK's own 71 protocol tests (not in `Wandur.sln`) pass too. A parallel

@@ -378,9 +378,14 @@ public sealed class TelnetSession : IMudSession
             if (update.Length > 0) _negotiation.Enqueue(update);
         }
         if (!_connected || _lifetime is null) return;
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token);
-        timeout.CancelAfter(TimeSpan.FromSeconds(10));
-        await FlushNegotiationAsync(timeout.Token).ConfigureAwait(false);
+        // The flush runs on the connection's lifetime token only. Cancelling a write half way would leave a torn
+        // IAC SB NAWS in the stream, and the parser already counts that size as sent, so it would never be resent.
+        // The lifetime ends only when the connection closes, when a torn frame no longer matters. The caller's token
+        // (and any timeout it carries) just stops waiting; the write carries on and the next flush follows it.
+        var flush = FlushNegotiationAsync(_lifetime.Token);
+        _ = flush.ContinueWith(static task => _ = task.Exception, CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        await flush.WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Writes every queued negotiation in order. Whoever holds the send lock drains the whole queue, so

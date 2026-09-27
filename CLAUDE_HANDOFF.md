@@ -76,9 +76,12 @@ reported only from a layout at the tail) and updates it through
 then `WorkspaceController.PromptReceived` (public only) and the script event
 `Events.Prompt`. MSSP is kept as `ServerDetails`, shown in the diagnostics
 Messages list and a Server details tab, and its CODEBASE picks the channel
-family when the profile has none (never saved). A Ctrl+click on a transcript
-link asks "Open this link?" and opens only http or https without user info
-(`WebLinks`). An internal `TelnetSession` constructor takes a stream opener,
+family when the profile has none (never saved). Ctrl+click a link to open it;
+on macOS the library's shortcut is Control, not Cmd, so the client adds its own
+Cmd+click there (`MudTerminalSurface.LinkAt`, which also drives a hover tooltip
+naming the shortcut). Either asks "Open this link?" and opens only public http
+or https addresses without user info, hidden or look-alike characters, or
+local and private-network hosts (`WebLinks`). An internal `TelnetSession` constructor takes a stream opener,
 and `tests/Wandur.Core.Tests/FakeServerStream.cs` plays the server in memory.
 Not done: MCCP, CHARSET and code pages, MXP, feeding prompts to history and
 the agent's reply wait, a per-world "don't ask again" for links.

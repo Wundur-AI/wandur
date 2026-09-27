@@ -16,8 +16,8 @@ internal sealed class FakeServerStream : Stream
     private int _offset;
     private int _readCursor;
 
-    /// <summary>Called before every client write, with the bytes about to be written.</summary>
-    public Func<byte[], Task>? BeforeWrite { get; set; }
+    /// <summary>Called before every client write, with the bytes about to be written and the write's token.</summary>
+    public Func<byte[], CancellationToken, Task>? BeforeWrite { get; set; }
 
     /// <summary>Queues one server read. Each call arrives as its own read, so a test controls every split.</summary>
     public void Send(params byte[] bytes) => _incoming.Writer.TryWrite(bytes);
@@ -65,7 +65,7 @@ internal sealed class FakeServerStream : Stream
     public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
         var bytes = buffer.ToArray();
-        if (BeforeWrite is { } hook) await hook(bytes);
+        if (BeforeWrite is { } hook) await hook(bytes, cancellationToken);
         lock (_written) _written.AddRange(bytes);
         _writtenSignal.Release();
     }

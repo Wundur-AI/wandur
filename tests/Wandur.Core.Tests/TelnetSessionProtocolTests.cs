@@ -146,28 +146,29 @@ public sealed class TelnetSessionProtocolTests
         Assert.Equal(0, server.Unread);
     }
 
+    /// <summary>
+    /// A caller that gives up waiting must not cut a NAWS update off half written: the parser already counts that size
+    /// as sent, so a torn frame would corrupt the stream and the size would never be sent again.
+    /// </summary>
     [Fact]
-    public async Task ResizesAndRepliesStayInParserOrderUnderLoad()
+    public async Task GivingUpOnAResizeDoesNotCancelTheWriteInProgress()
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var (session, server) = await ConnectAsync();
         await using var _ = session;
         server.Send(255, 253, 31);
         await server.ReadWrittenAsync(3 + WindowSize(100, 40).Length, timeout.Token);
-        // Slow every write down so resizes and replies pile up behind one another.
-        server.BeforeWrite = _ => Task.Delay(1);
-        var resizes = Enumerable.Range(0, 40).Select(i => Task.Run(() => session.UpdateWindowSizeAsync(100 + i, 40, timeout.Token))).ToArray();
-        // DONT NAWS then DO NAWS makes the parser resend the size it holds in its reply.
-        for (var i = 0; i < 10; i++) server.Send(255, 254, 31, 255, 253, 31);
-        await Task.WhenAll(resizes).WaitAsync(timeout.Token);
-        await session.UpdateWindowSizeAsync(200, 70, timeout.Token);
-        byte[] last = WindowSize(200, 70);
-        while (true)
-        {
-            var written = server.Written;
-            if (written.Length >= last.Length && written.AsSpan()[^last.Length..].SequenceEqual(last)) break;
-            await Task.Delay(5, timeout.Token);
-        }
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var writing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        // The write honours its token, as a socket write does.
+        server.BeforeWrite = async (_, token) => { writing.TrySetResult(); await gate.Task.WaitAsync(token); };
+        using var caller = new CancellationTokenSource();
+        var resize = session.UpdateWindowSizeAsync(90, 30, caller.Token);
+        await writing.Task.WaitAsync(timeout.Token);
+        caller.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => resize);
+        gate.SetResult();
+        Assert.Equal(WindowSize(90, 30), await server.ReadWrittenAsync(WindowSize(90, 30).Length, timeout.Token));
     }
 
     /// <summary>Everything the session raised, in order: text as "t:", prompts as "p:" (with "!" when flagged private).</summary>
