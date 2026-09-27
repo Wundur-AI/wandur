@@ -9,6 +9,26 @@ namespace Wandur.Desktop.Tests;
 [Collection(UiLanguageCollection.Name)]
 public sealed class SessionWorkerTests
 {
+    /// <summary>Disposing drains the queue while the pump may still be reading it. With the queue declared for a
+    /// single reader, that second reader could be handed a null item, and dispose once threw a NullReferenceException
+    /// on a CI runner. The window is too narrow to reproduce here on demand, so this is a guard: disposing in the
+    /// middle of a busy queue, many times over, must never throw.</summary>
+    [Fact]
+    public async Task DisposingWhileThePumpIsReadingNeverThrows()
+    {
+        for (var round = 0; round < 500; round++)
+        {
+            var worker = new SessionScriptWorker(new RecordingScriptFactory());
+            using var stop = new CancellationTokenSource();
+            // Another thread keeps the pump reading while dispose drains the queue.
+            var feeder = Task.Run(() => { while (!stop.IsCancellationRequested) worker.Publish(new ScriptEvent("line", "x")); }, TestContext.Current.CancellationToken);
+            SpinWait.SpinUntil(() => false, round % 5);
+            await worker.DisposeAsync();
+            stop.Cancel();
+            await feeder;
+        }
+    }
+
     private static MemoryScriptLibraryStore ThreeEnabledScripts(out Guid[] ids)
     {
         var store = new MemoryScriptLibraryStore();
