@@ -139,11 +139,13 @@ public sealed class ScriptSessionTests
         Assert.Contains("Script failed deliberately", scripts.Error);
     }
 
-    internal static async Task WaitFor(Func<bool> predicate)
+    /// <summary>Pumps the dispatcher until <paramref name="predicate"/> holds, failing only after the shared hang
+    /// guard; <paramref name="describe"/>, when given, says what was seen instead.</summary>
+    internal static async Task WaitFor(Func<bool> predicate, Func<string>? describe = null)
     {
-        var until = DateTime.UtcNow.AddSeconds(5);
+        var until = DateTime.UtcNow + Wandur.Tests.TestTimeouts.Hang;
         while (!predicate() && DateTime.UtcNow < until) { Dispatcher.UIThread.RunJobs(); await Task.Delay(10); }
-        Assert.True(predicate());
+        Assert.True(predicate(), describe?.Invoke());
     }
 }
 

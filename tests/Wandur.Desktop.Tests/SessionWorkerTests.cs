@@ -9,6 +9,28 @@ namespace Wandur.Desktop.Tests;
 [Collection(UiLanguageCollection.Name)]
 public sealed class SessionWorkerTests
 {
+    /// <summary>Disposing drains the queue while the pump may still be reading it. With the queue declared for a
+    /// single reader, that second reader could be handed a null item, and dispose once threw a NullReferenceException
+    /// on a CI runner. The window is too narrow to reproduce here on demand, so this is a guard: disposing in the
+    /// middle of a busy queue, many times over, must never throw. It runs on the headless UI thread like the rest:
+    /// the pump calls into the UI dispatcher, and reaching it from a plain test binds the dispatcher to a pool thread,
+    /// which then fails whichever headless test initialises next.</summary>
+    [AvaloniaFact]
+    public async Task DisposingWhileThePumpIsReadingNeverThrows()
+    {
+        for (var round = 0; round < 500; round++)
+        {
+            var worker = new SessionScriptWorker(new RecordingScriptFactory());
+            using var stop = new CancellationTokenSource();
+            // Another thread keeps the pump reading while dispose drains the queue.
+            var feeder = Task.Run(() => { while (!stop.IsCancellationRequested) worker.Publish(new ScriptEvent("line", "x")); }, TestContext.Current.CancellationToken);
+            SpinWait.SpinUntil(() => false, round % 5);
+            await worker.DisposeAsync();
+            stop.Cancel();
+            await feeder;
+        }
+    }
+
     private static MemoryScriptLibraryStore ThreeEnabledScripts(out Guid[] ids)
     {
         var store = new MemoryScriptLibraryStore();
@@ -162,11 +184,14 @@ public sealed class SessionWorkerTests
             seedState: () => """{"gmcp":{},"msdp":{}}""");
         library.Configure("world", "World");
         library.RefreshState();
-        await ScriptSessionTests.WaitFor(() => library.Items.All(entry => entry.Runtime.IsRunning));
+        // A failure here says what each script reported, so a start that failed or restarted on a CI runner
+        // explains itself in the log instead of showing only a count.
+        string State() => string.Join("; ", library.Items.Select(entry => $"{entry.Name}: running={entry.Runtime.IsRunning}, error={entry.Runtime.Error}")) + $"; starts={library.Worker.Starts}";
+        await ScriptSessionTests.WaitFor(() => library.Items.All(entry => entry.Runtime.IsRunning), State);
         var host = Assert.IsType<ProcessSessionScriptHost>(library.Worker.Host);
         var processId = host.ProcessId;
         Assert.NotNull(processId);
-        Assert.Equal(1, library.Worker.Starts);
+        Assert.True(library.Worker.Starts == 1, "The worker should start once: " + State());
         library.Feed("go\n");
         await ScriptSessionTests.WaitFor(() => echoes.Count == 2);
         Assert.Equal(["one", "two"], echoes);
@@ -185,6 +210,6 @@ public sealed class SessionWorkerTests
         {
             try { return Process.GetProcessById(lastProcess).HasExited; }
             catch (ArgumentException) { return true; }
-        }, TimeSpan.FromSeconds(5)));
+        }, Wandur.Tests.TestTimeouts.Hang));
     }
 }

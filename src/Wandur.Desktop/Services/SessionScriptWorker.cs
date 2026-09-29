@@ -27,7 +27,9 @@ public sealed class SessionScriptWorker : IAsyncDisposable
     private readonly Func<string?>? _seedState;
     private readonly List<SessionScripts> _scripts = [];
     private readonly ScriptLineBuffer _lines = new();
-    private readonly Channel<Work> _queue = Channel.CreateUnbounded<Work>(new UnboundedChannelOptions { SingleReader = true });
+    // Two readers: the pump, and DisposeAsync draining what the pump never reached. A single-reader channel is not
+    // safe for that (a concurrent TryRead can be handed a null item), so the channel is declared for many readers.
+    private readonly Channel<Work> _queue = Channel.CreateUnbounded<Work>(new UnboundedChannelOptions { SingleReader = false });
     private readonly Queue<long> _failures = new();
     private readonly CancellationTokenSource _lifetime = new();
     private readonly object _hostLock = new();

@@ -24,7 +24,7 @@ public sealed class ScriptConnectionTests
         await using var controller = new WorkspaceController(new Wandur.Desktop.Terminal.TranscriptDisplayFactory(), store, vault, new MemoryRoomMapStore(), factory, scripts);
         await controller.SaveWorldAsync(profile, "secret", true);
         profile = Assert.Single(controller.Settings.Profiles);
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var timeout = new CancellationTokenSource(Wandur.Tests.TestTimeouts.Hang);
         await controller.StartAsync(profile);
         using var server = await listener.AcceptTcpClientAsync(timeout.Token);
         using var reader = new StreamReader(server.GetStream(), Encoding.UTF8, leaveOpen: true);
@@ -47,7 +47,7 @@ public sealed class ScriptConnectionTests
         var store = new SettingsStore(Path.Combine(Path.GetTempPath(), "wandur-script-privacy-" + Guid.NewGuid(), "settings.json"));
         await using var controller = new WorkspaceController(new Wandur.Desktop.Terminal.TranscriptDisplayFactory(), store, new MemoryPasswordVault(), new MemoryRoomMapStore(), factory, new MemoryScriptLibraryStore());
         using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var timeout = new CancellationTokenSource(Wandur.Tests.TestTimeouts.Hang);
         await controller.StartAsync(new ConnectionProfile { Host = "127.0.0.1", Port = ((IPEndPoint)listener.LocalEndpoint).Port });
         using var server = await listener.AcceptTcpClientAsync(timeout.Token);
         await controller.ScriptLibrary.Items[0].Runtime.RunAsync();
@@ -58,7 +58,7 @@ public sealed class ScriptConnectionTests
         var fields = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
         var pending = (System.Collections.ICollection)typeof(WorkspaceController).GetField("_pending", fields)!.GetValue(controller)!;
         var gate = typeof(WorkspaceController).GetField("_pendingLock", fields)!.GetValue(controller)!;
-        Assert.True(SpinWait.SpinUntil(() => { lock (gate) return pending.Count > 0; }, TimeSpan.FromSeconds(2)));
+        Assert.True(SpinWait.SpinUntil(() => { lock (gate) return pending.Count > 0; }, Wandur.Tests.TestTimeouts.Hang));
         controller.SetManualPrivate(false);
         controller.FlushOutput();
         // A public line acts as a barrier proving the previous queued work has been processed.
@@ -74,7 +74,7 @@ public sealed class ScriptConnectionTests
         var store = new SettingsStore(Path.Combine(Path.GetTempPath(), "wandur-gmcp-privacy-" + Guid.NewGuid(), "settings.json"));
         await using var controller = new WorkspaceController(new Wandur.Desktop.Terminal.TranscriptDisplayFactory(), store, new MemoryPasswordVault(), new MemoryRoomMapStore(), factory, new MemoryScriptLibraryStore());
         using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var timeout = new CancellationTokenSource(Wandur.Tests.TestTimeouts.Hang);
         await controller.StartAsync(new ConnectionProfile { Host = "127.0.0.1", Port = ((IPEndPoint)listener.LocalEndpoint).Port });
         using var server = await listener.AcceptTcpClientAsync(timeout.Token);
         await controller.ScriptLibrary.Items[0].Runtime.RunAsync();
@@ -84,7 +84,7 @@ public sealed class ScriptConnectionTests
         var fields = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
         var pending = (System.Collections.ICollection)typeof(WorkspaceController).GetField("_pending", fields)!.GetValue(controller)!;
         var gate = typeof(WorkspaceController).GetField("_pendingLock", fields)!.GetValue(controller)!;
-        Assert.True(SpinWait.SpinUntil(() => { lock (gate) return pending.Count > 0; }, TimeSpan.FromSeconds(2)));
+        Assert.True(SpinWait.SpinUntil(() => { lock (gate) return pending.Count > 0; }, Wandur.Tests.TestTimeouts.Hang));
         controller.FlushOutput();
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
         server.GetStream().Write(Gmcp("Room.Info {\"num\":1}"));
@@ -100,7 +100,7 @@ public sealed class ScriptConnectionTests
         await using var controller = new WorkspaceController(new Wandur.Desktop.Terminal.TranscriptDisplayFactory(), store,
             new MemoryPasswordVault(), new MemoryRoomMapStore(), new InlineScriptFactory(), new MemoryScriptLibraryStore());
         using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var timeout = new CancellationTokenSource(Wandur.Tests.TestTimeouts.Hang);
         await controller.StartAsync(new ConnectionProfile { Host = "127.0.0.1", Port = ((IPEndPoint)listener.LocalEndpoint).Port, Name = "MSDP test" });
         using var server = await listener.AcceptTcpClientAsync(timeout.Token);
         var script = controller.ScriptLibrary.Items[0].Runtime;
@@ -128,7 +128,7 @@ public sealed class ScriptConnectionTests
         var fields = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
         var queued = (System.Collections.ICollection)typeof(WorkspaceController).GetField("_pendingDiagnostics", fields)!.GetValue(controller)!;
         var gate = typeof(WorkspaceController).GetField("_pendingLock", fields)!.GetValue(controller)!;
-        Assert.True(SpinWait.SpinUntil(() => { lock (gate) return queued.Count > 0; }, TimeSpan.FromSeconds(3)));
+        Assert.True(SpinWait.SpinUntil(() => { lock (gate) return queued.Count > 0; }, Wandur.Tests.TestTimeouts.Hang));
         controller.SetManualPrivate(false);
         controller.FlushOutput();
         await server.GetStream().WriteAsync(Subnegotiation([1, .. Encoding.UTF8.GetBytes("SHIPHULL"), 2, .. Encoding.UTF8.GetBytes("900")]), timeout.Token);
@@ -161,7 +161,7 @@ public sealed class ScriptConnectionTests
         await using var controller = new WorkspaceController(new Wandur.Desktop.Terminal.TranscriptDisplayFactory(), store, vault, new MemoryRoomMapStore(), new InlineScriptFactory(), scripts);
         await controller.SaveWorldAsync(profile, "secret", true);
         profile = Assert.Single(controller.Settings.Profiles);
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var timeout = new CancellationTokenSource(Wandur.Tests.TestTimeouts.Hang);
         await controller.StartAsync(profile);
         using var server = await listener.AcceptTcpClientAsync(timeout.Token);
         using var reader = new StreamReader(server.GetStream(), Encoding.UTF8, leaveOpen: true);
@@ -194,7 +194,7 @@ public sealed class ScriptConnectionTests
         await using var controller = new WorkspaceController(new Wandur.Desktop.Terminal.TranscriptDisplayFactory(), store,
             new MemoryPasswordVault(), new MemoryRoomMapStore(), new InlineScriptFactory(), new MemoryScriptLibraryStore());
         using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var timeout = new CancellationTokenSource(Wandur.Tests.TestTimeouts.Hang);
         await controller.StartAsync(new ConnectionProfile { Host = "127.0.0.1", Port = ((IPEndPoint)listener.LocalEndpoint).Port, Name = "Report test" });
         using var server = await listener.AcceptTcpClientAsync(timeout.Token);
         var stream = server.GetStream();
@@ -233,7 +233,7 @@ public sealed class ScriptConnectionTests
         await using var controller = new WorkspaceController(new Wandur.Desktop.Terminal.TranscriptDisplayFactory(), store,
             new MemoryPasswordVault(), new MemoryRoomMapStore(), new InlineScriptFactory(), new MemoryScriptLibraryStore());
         using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var timeout = new CancellationTokenSource(Wandur.Tests.TestTimeouts.Hang);
         await controller.StartAsync(new ConnectionProfile { Host = "127.0.0.1", Port = ((IPEndPoint)listener.LocalEndpoint).Port, Name = "Private test" });
         using var server = await listener.AcceptTcpClientAsync(timeout.Token);
         var stream = server.GetStream();
@@ -244,7 +244,7 @@ public sealed class ScriptConnectionTests
         var fields = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
         var queued = (System.Collections.ICollection)typeof(WorkspaceController).GetField("_pendingDiagnostics", fields)!.GetValue(controller)!;
         var gate = typeof(WorkspaceController).GetField("_pendingLock", fields)!.GetValue(controller)!;
-        Assert.True(SpinWait.SpinUntil(() => { lock (gate) return queued.Count > 0; }, TimeSpan.FromSeconds(3)));
+        Assert.True(SpinWait.SpinUntil(() => { lock (gate) return queued.Count > 0; }, Wandur.Tests.TestTimeouts.Hang));
         controller.SetManualPrivate(false);
         controller.FlushOutput();
         await stream.WriteAsync(MsdpFrame("HEALTH", "5"), timeout.Token);
@@ -266,7 +266,7 @@ public sealed class ScriptConnectionTests
         var store = new SettingsStore(Path.Combine(directory, "settings.json"));
         await using var controller = new WorkspaceController(new Wandur.Desktop.Terminal.TranscriptDisplayFactory(), store, new MemoryPasswordVault(), new MemoryRoomMapStore(), new InlineScriptFactory(), new MemoryScriptLibraryStore());
         using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var timeout = new CancellationTokenSource(Wandur.Tests.TestTimeouts.Hang);
         await controller.StartAsync(new ConnectionProfile { Host = "127.0.0.1", Port = ((IPEndPoint)listener.LocalEndpoint).Port, Name = "Script test" });
         using var server = await listener.AcceptTcpClientAsync(timeout.Token);
         using var reader = new StreamReader(server.GetStream(), Encoding.UTF8, leaveOpen: true);
@@ -371,28 +371,77 @@ public sealed class ScriptConnectionTests
     public async Task AValueReportedInThePacketThatEndsThePasswordPromptReachesARunningPackScript()
     {
         using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var timeout = new CancellationTokenSource(Wandur.Tests.TestTimeouts.Hang);
         var (controller, server, _) = await StartPackSessionAsync(listener, "wandur-pack-password-", timeout.Token);
         await using var owned = controller;
         using var connection = server;
         var stream = server.GetStream();
         var script = controller.ScriptLibrary.Items[0];
         await stream.WriteAsync((byte[])[255, 251, 1, .. Encoding.UTF8.GetBytes("Password: ")], timeout.Token);
-        await ScriptSessionTests.WaitFor(() => { controller.FlushOutput(); return controller.IsPrivate; });
+        await ScriptSessionTests.WaitFor(() => { controller.FlushOutput(); return controller.IsPrivate; }, () => "waiting for the password prompt: " + State(controller, script));
         Assert.True(await controller.SendAsync("secret"));
         // The line follows the client's answer to WILL ECHO.
         Assert.EndsWith("secret", await ReadRawLineAsync(stream, timeout.Token));
         await stream.WriteAsync((byte[])[255, 252, 1, .. Encoding.UTF8.GetBytes("Welcome back.\r\n"), .. MsdpFrame("LEVELCOMBAT", "50")], timeout.Token);
-        await ScriptSessionTests.WaitFor(() => { controller.FlushOutput(); return !controller.IsPrivate && controller.Terminal.PlainText.Contains("Welcome back."); });
+        await ScriptSessionTests.WaitFor(() => { controller.FlushOutput(); return !controller.IsPrivate && controller.Terminal.PlainText.Contains("Welcome back."); },
+            () => "waiting for public play after the password: " + State(controller, script));
         // The value in that packet was stamped private; public play asks the world for the script's variables again
         // (after the client's answer to WONT ECHO).
         var received = await ReadUntilAsync(stream, LevelReport, timeout.Token);
         Assert.Equal(LevelReport, received.TakeLast(LevelReport.Length).ToArray());
         await stream.WriteAsync(MsdpFrame("LEVELCOMBAT", "50"), timeout.Token);
-        await ScriptSessionTests.WaitFor(() => { controller.FlushOutput(); return CombatLevel(controller) == "50"; });
+        await ScriptSessionTests.WaitFor(() => { controller.FlushOutput(); return CombatLevel(controller) == "50"; },
+            () => "waiting for the reported level: " + State(controller, script));
         Assert.True(script.Runtime.IsRunning, script.Runtime.Error);
         Assert.DoesNotContain("secret", controller.Terminal.PlainText);
         await controller.DisconnectAsync();
+    }
+
+    /// <summary>The server's echo changes reach the UI as queued callbacks, and the output flush can see newer text
+    /// first: the prompt check ends the private stretch while "echo off" is still queued. Applied late with the value
+    /// it was queued with, that callback made the session private again for a moment, and the flip discarded a
+    /// public value the scripts had already been handed (seen on Windows CI). A late callback applies the current
+    /// echo state instead, so nothing flips.</summary>
+    [AvaloniaFact]
+    public async Task AnEchoChangeAppliedAfterNewerOutputDoesNotFlipScriptPrivacyAgain()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
+        using var timeout = new CancellationTokenSource(Wandur.Tests.TestTimeouts.Hang);
+        var (controller, server, _) = await StartPackSessionAsync(listener, "wandur-pack-late-echo-", timeout.Token);
+        await using var owned = controller;
+        using var connection = server;
+        var stream = server.GetStream();
+        // Written and flushed without awaiting, so no queued UI callback runs until the test says so.
+        stream.Write((byte[])[255, 251, 1, .. Encoding.UTF8.GetBytes("Password: ")]);
+        FlushUntil(controller, () => controller.IsPrivate);
+        stream.Write((byte[])[255, 252, 1, .. Encoding.UTF8.GetBytes("Welcome back.\r\n")]);
+        FlushUntil(controller, () => !controller.IsPrivate && controller.Terminal.PlainText.Contains("Welcome back."));
+        var epoch = controller.ScriptLibrary.Worker.PrivacyEpoch;
+        // Both echo callbacks run now, after the output that superseded them.
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.False(controller.IsPrivate);
+        Assert.Equal(epoch, controller.ScriptLibrary.Worker.PrivacyEpoch);
+        await controller.DisconnectAsync();
+    }
+
+    /// <summary>Flushes output until the condition holds, without running queued UI callbacks.</summary>
+    private static void FlushUntil(WorkspaceController controller, Func<bool> done)
+    {
+        var until = DateTime.UtcNow + Wandur.Tests.TestTimeouts.Hang;
+        while (!done() && DateTime.UtcNow < until) { controller.FlushOutput(); Thread.Sleep(10); }
+        Assert.True(done());
+    }
+
+    /// <summary>What a timed-out wait saw, so a failure on a slow runner names the step that stalled.</summary>
+    private static string State(WorkspaceController controller, Wandur.Desktop.Services.WorldScriptEntry script)
+    {
+        var text = controller.Terminal.PlainText;
+        return $"private={controller.IsPrivate} connected={controller.IsConnected} level='{CombatLevel(controller)}' " +
+            $"running={script.Runtime.IsRunning} paused={script.Runtime.IsPaused} error='{script.Runtime.Error}' " +
+            $"cached='{controller.ScriptState.TryGetMsdp("LEVELCOMBAT")}' epoch={controller.ScriptLibrary.Worker.PrivacyEpoch} " +
+            $"workerRunning={controller.ScriptLibrary.Worker.IsRunning} starts={controller.ScriptLibrary.Worker.Starts} " +
+            $"log='{script.Runtime.Log[Math.Max(0, script.Runtime.Log.Length - 300)..]}' " +
+            $"status='{controller.Status}' tail='{text[Math.Max(0, text.Length - 200)..].Replace("secret", "<secret>")}'";
     }
 
     /// <summary>A value the host cache takes while the login handshake owns the session is delivered to a script that
@@ -401,7 +450,7 @@ public sealed class ScriptConnectionTests
     public async Task ValuesCachedWhileTheLoginHandshakeOwnsTheSessionAreReplayedToARunningScriptWhenItEnds()
     {
         using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var timeout = new CancellationTokenSource(Wandur.Tests.TestTimeouts.Hang);
         var (controller, server, profile) = await StartPackSessionAsync(listener, "wandur-pack-replay-", timeout.Token);
         await using var owned = controller;
         using var connection = server;
