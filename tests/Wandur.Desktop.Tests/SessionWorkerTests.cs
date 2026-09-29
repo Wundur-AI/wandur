@@ -12,8 +12,10 @@ public sealed class SessionWorkerTests
     /// <summary>Disposing drains the queue while the pump may still be reading it. With the queue declared for a
     /// single reader, that second reader could be handed a null item, and dispose once threw a NullReferenceException
     /// on a CI runner. The window is too narrow to reproduce here on demand, so this is a guard: disposing in the
-    /// middle of a busy queue, many times over, must never throw.</summary>
-    [Fact]
+    /// middle of a busy queue, many times over, must never throw. It runs on the headless UI thread like the rest:
+    /// the pump calls into the UI dispatcher, and reaching it from a plain test binds the dispatcher to a pool thread,
+    /// which then fails whichever headless test initialises next.</summary>
+    [AvaloniaFact]
     public async Task DisposingWhileThePumpIsReadingNeverThrows()
     {
         for (var round = 0; round < 500; round++)
