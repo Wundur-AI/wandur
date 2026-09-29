@@ -188,11 +188,7 @@ public sealed class SessionScripts : IAsyncDisposable
         if (generation != _generation || _disposed) return false;
         // Privacy invalidates actions, not a fatal failure of the engine.
         if (result.Error is not null) { Fail(result.Error); return false; }
-        if (!Valid(generation, privacy))
-        {
-            _worker.Note($"refused g{generation}/{_generation} p{privacy}/{_worker.PrivacyEpoch} running={IsRunning} private={_isPrivate()}");
-            return false;
-        }
+        if (!Valid(generation, privacy)) return false;
         try { return await ApplyActionsAsync(result, generation, privacy); }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {

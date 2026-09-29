@@ -247,7 +247,11 @@ public sealed partial class WorkspaceController : IAsyncDisposable
                 // Stamp privacy on the receiving thread, before any queued UI callback can run.
                 _agentRunner?.CancelPending();
                 lock (_pendingLock) { wirePrivate = value; _scriptOutputEpoch++; _cacheEpoch++; }
-                Dispatch(session, () => { _serverPrivate = value; RefreshScriptState(); Changed?.Invoke(); });
+                // The callback can run after later output was flushed, so it applies the echo state as it is now, not
+                // the value it was queued with: a late "echo off" would otherwise make play private again for a moment,
+                // and the flip discards public events the scripts were already handed. Output from the interval itself
+                // is already stamped private above, so skipping a superseded state hides nothing.
+                Dispatch(session, () => { lock (_pendingLock) _serverPrivate = wirePrivate; RefreshScriptState(); Changed?.Invoke(); });
             };
             Changed?.Invoke();
             try
@@ -267,8 +271,6 @@ public sealed partial class WorkspaceController : IAsyncDisposable
         }
         finally { _startPending = false; IsConnecting = false; _lifecycle.Release(); Changed?.Invoke(); }
     }
-
-    private bool _tracedPrivate;
 
     private void RefreshScriptState()
     {
@@ -293,13 +295,6 @@ public sealed partial class WorkspaceController : IAsyncDisposable
                 _scriptPrivacyBlocked = blocked; _scriptOutputEpoch++;
             }
             if (_cachePrivate != IsPrivate) { _cachePrivate = IsPrivate; _cacheEpoch++; }
-        }
-        var scriptsPrivate = IsPrivate || _login is not null;
-        if (scriptsPrivate != _tracedPrivate)
-        {
-            _tracedPrivate = scriptsPrivate;
-            var prompt = CurrentPrompt;
-            ScriptLibrary.Worker.Note($"flip private={scriptsPrivate} manual={_manualPrivate} server={_serverPrivate} prompt={_promptPrivate} login={_login is not null} last=[{prompt[..Math.Min(prompt.Length, 12)]}]");
         }
         ScriptLibrary.RefreshState();
         // Scripts activated just now are still seeding, so they get the cache that way rather than as events.

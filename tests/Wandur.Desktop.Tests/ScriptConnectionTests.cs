@@ -397,6 +397,41 @@ public sealed class ScriptConnectionTests
         await controller.DisconnectAsync();
     }
 
+    /// <summary>The server's echo changes reach the UI as queued callbacks, and the output flush can see newer text
+    /// first: the prompt check ends the private stretch while "echo off" is still queued. Applied late with the value
+    /// it was queued with, that callback made the session private again for a moment, and the flip discarded a
+    /// public value the scripts had already been handed (seen on Windows CI). A late callback applies the current
+    /// echo state instead, so nothing flips.</summary>
+    [AvaloniaFact]
+    public async Task AnEchoChangeAppliedAfterNewerOutputDoesNotFlipScriptPrivacyAgain()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
+        using var timeout = new CancellationTokenSource(Wandur.Tests.TestTimeouts.Hang);
+        var (controller, server, _) = await StartPackSessionAsync(listener, "wandur-pack-late-echo-", timeout.Token);
+        await using var owned = controller;
+        using var connection = server;
+        var stream = server.GetStream();
+        // Written and flushed without awaiting, so no queued UI callback runs until the test says so.
+        stream.Write((byte[])[255, 251, 1, .. Encoding.UTF8.GetBytes("Password: ")]);
+        FlushUntil(controller, () => controller.IsPrivate);
+        stream.Write((byte[])[255, 252, 1, .. Encoding.UTF8.GetBytes("Welcome back.\r\n")]);
+        FlushUntil(controller, () => !controller.IsPrivate && controller.Terminal.PlainText.Contains("Welcome back."));
+        var epoch = controller.ScriptLibrary.Worker.PrivacyEpoch;
+        // Both echo callbacks run now, after the output that superseded them.
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.False(controller.IsPrivate);
+        Assert.Equal(epoch, controller.ScriptLibrary.Worker.PrivacyEpoch);
+        await controller.DisconnectAsync();
+    }
+
+    /// <summary>Flushes output until the condition holds, without running queued UI callbacks.</summary>
+    private static void FlushUntil(WorkspaceController controller, Func<bool> done)
+    {
+        var until = DateTime.UtcNow + Wandur.Tests.TestTimeouts.Hang;
+        while (!done() && DateTime.UtcNow < until) { controller.FlushOutput(); Thread.Sleep(10); }
+        Assert.True(done());
+    }
+
     /// <summary>What a timed-out wait saw, so a failure on a slow runner names the step that stalled.</summary>
     private static string State(WorkspaceController controller, Wandur.Desktop.Services.WorldScriptEntry script)
     {
@@ -405,7 +440,6 @@ public sealed class ScriptConnectionTests
             $"running={script.Runtime.IsRunning} paused={script.Runtime.IsPaused} error='{script.Runtime.Error}' " +
             $"cached='{controller.ScriptState.TryGetMsdp("LEVELCOMBAT")}' epoch={controller.ScriptLibrary.Worker.PrivacyEpoch} " +
             $"workerRunning={controller.ScriptLibrary.Worker.IsRunning} starts={controller.ScriptLibrary.Worker.Starts} " +
-            $"trace='{controller.ScriptLibrary.Worker.Trace}' " +
             $"log='{script.Runtime.Log[Math.Max(0, script.Runtime.Log.Length - 300)..]}' " +
             $"status='{controller.Status}' tail='{text[Math.Max(0, text.Length - 200)..].Replace("secret", "<secret>")}'";
     }
