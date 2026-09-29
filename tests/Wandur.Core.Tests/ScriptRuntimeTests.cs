@@ -210,8 +210,11 @@ public sealed class ScriptRuntimeTests
         var failures = new List<string>();
         host.Failed += failures.Add;
         Assert.Null((await host.LoadAsync("a", "mud.alias(/.*/, () => {});")).Error);
-        await Assert.ThrowsAsync<ScriptWorkerException>(() => host.DispatchAsync(["a"], new("command", "test-host-unresponsive")).WaitAsync(TimeSpan.FromSeconds(6)));
+        await Assert.ThrowsAsync<ScriptWorkerException>(() => host.DispatchAsync(["a"], new("command", "test-host-unresponsive")).WaitAsync(Wandur.Tests.TestTimeouts.Hang));
         Assert.False(host.IsRunning);
+        // The notice can trail the refused request on a slow runner; once it is in, a second one must not follow.
+        var until = DateTime.UtcNow + Wandur.Tests.TestTimeouts.Hang;
+        while (failures.Count == 0 && DateTime.UtcNow < until) await Task.Delay(20);
         await Task.Delay(200);
         Assert.Single(failures);
         await Assert.ThrowsAsync<ScriptWorkerException>(() => host.DispatchAsync(["a"], new("command", "x")));
@@ -227,7 +230,7 @@ public sealed class ScriptRuntimeTests
         var processId = host.ProcessId;
         Assert.NotNull(processId);
         // The request that carries the crash marker never gets a reply: the exit is seen as a failure.
-        await Assert.ThrowsAsync<ScriptWorkerException>(() => host.DispatchAsync(["a"], new("command", "test-host-crash")).WaitAsync(TimeSpan.FromSeconds(6)));
+        await Assert.ThrowsAsync<ScriptWorkerException>(() => host.DispatchAsync(["a"], new("command", "test-host-crash")).WaitAsync(Wandur.Tests.TestTimeouts.Hang));
         Assert.NotEmpty(await failed.Task.WaitAsync(TimeSpan.FromSeconds(3)));
         Assert.False(host.IsRunning);
         Assert.True(SpinWait.SpinUntil(() =>
