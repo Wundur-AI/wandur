@@ -268,6 +268,8 @@ public sealed partial class WorkspaceController : IAsyncDisposable
         finally { _startPending = false; IsConnecting = false; _lifecycle.Release(); Changed?.Invoke(); }
     }
 
+    private bool _tracedPrivate;
+
     private void RefreshScriptState()
     {
         if (IsPrivate || _login is not null) _historyRecorder?.Received("", true, _diagnosticSecrets);
@@ -291,6 +293,13 @@ public sealed partial class WorkspaceController : IAsyncDisposable
                 _scriptPrivacyBlocked = blocked; _scriptOutputEpoch++;
             }
             if (_cachePrivate != IsPrivate) { _cachePrivate = IsPrivate; _cacheEpoch++; }
+        }
+        var scriptsPrivate = IsPrivate || _login is not null;
+        if (scriptsPrivate != _tracedPrivate)
+        {
+            _tracedPrivate = scriptsPrivate;
+            var prompt = CurrentPrompt;
+            ScriptLibrary.Worker.Note($"flip private={scriptsPrivate} manual={_manualPrivate} server={_serverPrivate} prompt={_promptPrivate} login={_login is not null} last=[{prompt[..Math.Min(prompt.Length, 12)]}]");
         }
         ScriptLibrary.RefreshState();
         // Scripts activated just now are still seeding, so they get the cache that way rather than as events.
