@@ -40,6 +40,15 @@ public sealed class SessionScriptWorker : IAsyncDisposable
     private int _starts;
     private bool _wasPrivate;
     private bool _disposed;
+    // What happened to recent events, for a test that times out on a slow runner to report where one went.
+    private readonly Queue<string> _trace = new();
+    internal string Trace { get { lock (_trace) return string.Join(" | ", _trace); } }
+    private void Note(string what, ScriptEvent? input)
+    {
+        if (input is null || input.Kind is "line" or "tick") return;
+        Note(what + " " + input.Kind + ":" + input.Text[..Math.Min(input.Text.Length, 40)]);
+    }
+    internal void Note(string what) { lock (_trace) { _trace.Enqueue(what); while (_trace.Count > 12) _trace.Dequeue(); } }
 
     public SessionScriptWorker(IScriptRuntimeFactory factory, Func<string?>? seedState = null)
     {
@@ -103,6 +112,7 @@ public sealed class SessionScriptWorker : IAsyncDisposable
                 return false;
             }
             Interlocked.Increment(ref _pendingEvents);
+            Note($"queued@{work.Privacy}", work.Input);
         }
         if (!_pumping) { _pumping = true; _ = Task.Run(PumpAsync); }
         if (_queue.Writer.TryWrite(work)) return true;
@@ -210,11 +220,12 @@ public sealed class SessionScriptWorker : IAsyncDisposable
     private async Task DispatchAsync(Work work, CancellationToken token)
     {
         var targets = await Dispatcher.UIThread.InvokeAsync(() => Targets(work));
-        if (targets.Count == 0) return;
+        if (targets.Count == 0) { Note("untargeted", work.Input); return; }
         var host = Host;
         if (host is null) return;
         var ids = targets.Select(target => target.Script.Id).ToArray();
         var results = await host.DispatchAsync(ids, work.Input!, token);
+        Note($"dispatched({results.Count})", work.Input);
         var handled = await Dispatcher.UIThread.InvokeAsync(async () =>
         {
             var any = false;
@@ -233,7 +244,7 @@ public sealed class SessionScriptWorker : IAsyncDisposable
     private List<(SessionScripts Script, long Generation)> Targets(Work work)
     {
         var targets = new List<(SessionScripts, long)>();
-        if (work.Privacy != PrivacyEpoch) return targets;
+        if (work.Privacy != PrivacyEpoch) { Note($"stale@{work.Privacy}/{PrivacyEpoch}", work.Input); return targets; }
         if (work.Script is { } script)
         {
             if (script.Valid(work.Generation, work.Privacy)) targets.Add((script, work.Generation));
