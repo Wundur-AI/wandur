@@ -7,7 +7,7 @@ builds self-contained downloads for every platform and publishes a GitHub Releas
 ## Before the first release
 
 - The SDK submodule must be fetchable. `external/wandur-sdk` points at
-  `https://github.com/YouCantGoThatWay/wandur-sdk.git`; that repository has to contain the commit
+  `https://github.com/Wundur-AI/wandur-sdk.git`; that repository has to contain the commit
   the client pins (`git -C external/wandur-sdk rev-parse HEAD`). If it does not, every CI checkout
   fails before anything builds. Push `wandur-sdk` first.
 - Optional: run the workflow by hand for a dry run. Actions, Release, Run workflow, pick the

@@ -311,7 +311,7 @@ the agent's reply wait, a per-world "don't ask again" for links.
   `wandur-sdk/`, `wandur-discovery/`, `wandur-site/`, `room-classifier/`, with
   a top-level `CLAUDE.md` pointing at the handoffs. `wandur-sdk` and
   `wandur-discovery` have no remote history yet; the owner pushes them first,
-  after which the submodule URL `https://github.com/YouCantGoThatWay/wandur-sdk.git`
+  after which the submodule URL `https://github.com/Wundur-AI/wandur-sdk.git`
   in `.gitmodules` resolves for anyone cloning.
 - Follow-up from the session-open work: with the terrain classifier
   installed, `RoomsNeedingInference` hashes every room on the UI thread after
