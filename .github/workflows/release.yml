@@ -2,8 +2,10 @@ name: Release
 
 # A v* tag builds self-contained downloads for Windows, Linux and both Mac architectures, then
 # publishes a GitHub Release as github-actions[bot] with GITHUB_TOKEN. The tag is the version.
-# Run it by hand (workflow_dispatch) for a dry run: same builds, uploaded as workflow artifacts,
-# no release. See docs/releasing.md.
+# On a tag the Mac downloads are Developer ID signed, notarized and stapled, with the Wundur-AI
+# organization secrets MACOS_CERT_P12, MACOS_CERT_PASSWORD, ASC_KEY_P8, ASC_KEY_ID and
+# ASC_ISSUER_ID. Run it by hand (workflow_dispatch) for a dry run: same builds, ad-hoc signed,
+# uploaded as workflow artifacts, no release and no secrets. See docs/releasing.md.
 
 on:
   push:
@@ -57,8 +59,10 @@ jobs:
 
   package:
     needs: [version, test]
+    environment: release
     strategy:
-      fail-fast: true
+      # One Mac leg failing (a notarization hiccup) must not cancel the other mid-submission.
+      fail-fast: false
       matrix:
         include:
           - rid: win-x64
@@ -73,6 +77,8 @@ jobs:
     env:
       VERSION: ${{ needs.version.outputs.version }}
       RID: ${{ matrix.rid }}
+      # A tag push signs and notarizes the Mac downloads; a dry run stays ad-hoc and reads no secret.
+      SIGN_MAC: ${{ startsWith(matrix.rid, 'osx-') && github.event_name == 'push' }}
     defaults:
       run:
         shell: bash
@@ -98,12 +104,111 @@ jobs:
         if: runner.os != 'macOS'
         run: bash scripts/package-portable.sh --rid "$RID" --version "$VERSION" --output dist
 
+      # Every failure below is an ::error annotation: a job's log needs a signed-in viewer, while
+      # annotations show on the run's summary page. Values are never printed, only their lengths.
+      - name: Check the signing secrets
+        if: runner.os == 'macOS' && github.event_name == 'push'
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          bad=0
+          for name in MACOS_CERT_P12 MACOS_CERT_PASSWORD ASC_KEY_P8 ASC_KEY_ID ASC_ISSUER_ID; do
+            value="${!name}"
+            echo "$name: ${#value} characters"
+            if [[ -z "$value" ]]; then
+              echo "::error title=Signing secret missing::$name is empty. Check the Wundur-AI organization secret exists and is shared with this repository."
+              bad=1
+            fi
+          done
+          [[ $bad -eq 0 ]] || exit 1
+          p12="$RUNNER_TEMP/check.p12"
+          trap 'rm -f "$p12"' EXIT
+          if ! printf '%s' "$MACOS_CERT_P12" | base64 --decode > "$p12" 2>/dev/null || [[ ! -s "$p12" ]]; then
+            echo "::error title=MACOS_CERT_P12::MACOS_CERT_P12 is not valid base64 (expected: base64 -i cert.p12 | pbcopy)."
+            exit 1
+          fi
+          # A .p12 exported from Keychain Access may use ciphers OpenSSL 3 only reads with -legacy.
+          keys() { openssl pkcs12 -in "$p12" -passin env:MACOS_CERT_PASSWORD -nocerts -nodes "$@" 2>/dev/null | grep -c "PRIVATE KEY-----" || true; }
+          found="$(keys)"
+          [[ "$found" -gt 0 ]] || found="$(keys -legacy)"
+          if [[ "$found" -eq 0 ]]; then
+            echo "::error title=MACOS_CERT_P12::The .p12 does not open with MACOS_CERT_PASSWORD, or holds no private key. Export the Developer ID Application certificate together with its key from Keychain Access."
+            exit 1
+          fi
+          echo "MACOS_CERT_P12 opens with its password and holds a private key"
+          if [[ "$ASC_KEY_P8" != *"BEGIN PRIVATE KEY"* ]]; then
+            echo "::error title=ASC_KEY_P8::ASC_KEY_P8 should be the whole AuthKey_<id>.p8 file, from -----BEGIN PRIVATE KEY----- to the END line."
+            exit 1
+          fi
+          [[ "$ASC_KEY_ID" =~ ^[A-Z0-9]{10}$ ]] \
+            || { echo "::error title=ASC_KEY_ID::ASC_KEY_ID should be the 10-character key id from App Store Connect."; exit 1; }
+          [[ "$ASC_ISSUER_ID" =~ ^[0-9a-fA-F-]{36}$ ]] \
+            || { echo "::error title=ASC_ISSUER_ID::ASC_ISSUER_ID should be the issuer UUID from App Store Connect (Users and Access, Integrations)."; exit 1; }
+
+      # A keychain of its own for this job, so nothing touches the runner's login keychain and
+      # the cleanup step can delete it whole.
+      - name: Signing keychain
+        id: keychain
+        if: runner.os == 'macOS' && github.event_name == 'push'
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/wandur-signing.keychain-db"
+          keychain_password="$(openssl rand -base64 24)"
+          p12="$RUNNER_TEMP/cert.p12"
+          trap 'rm -f "$p12"' EXIT
+          printf '%s' "$MACOS_CERT_P12" | base64 --decode > "$p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          if ! security import "$p12" -k "$keychain" -P "$MACOS_CERT_PASSWORD" -f pkcs12 -T /usr/bin/codesign >/dev/null; then
+            echo "::error title=Signing keychain::security import could not read MACOS_CERT_P12 with MACOS_CERT_PASSWORD."
+            exit 1
+          fi
+          # Lets codesign use the key without a dialog nobody is there to click.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain" >/dev/null
+          existing=()
+          while IFS= read -r line; do existing+=("$(echo "$line" | tr -d ' "')"); done < <(security list-keychains -d user)
+          security list-keychains -d user -s "$keychain" "${existing[@]}"
+          echo "path=$keychain" >> "$GITHUB_OUTPUT"
+          # find-identity lines look like:  1) <sha1> "Developer ID Application: Name (TEAM)"
+          match="$(security find-identity -v -p codesigning "$keychain" \
+            | sed -nE 's/^ *[0-9]+\) ([0-9A-F]{40}) "(Developer ID Application:.*)"/\1 \2/p' | head -1)"
+          if [[ -z "$match" ]]; then
+            echo "::error title=Signing keychain::No valid Developer ID Application identity in MACOS_CERT_P12. find-identity sees: $(security find-identity -v -p codesigning "$keychain" | sed -nE 's/^ *[0-9]+\) [0-9A-F]{40} "(.*)"/\1;/p' | tr -d '\n')"
+            exit 1
+          fi
+          echo "identity=${match%% *}" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Signing as::${match#* }"
+
       - name: Package macOS
         if: runner.os == 'macOS'
+        env:
+          ASC_KEY_P8: ${{ github.event_name == 'push' && secrets.ASC_KEY_P8 || '' }}
+          ASC_KEY_ID: ${{ github.event_name == 'push' && secrets.ASC_KEY_ID || '' }}
+          ASC_ISSUER_ID: ${{ github.event_name == 'push' && secrets.ASC_ISSUER_ID || '' }}
+          SIGN_IDENTITY: ${{ steps.keychain.outputs.identity }}
         run: |
+          dmg="dist/Wandur-$VERSION-macos-${RID#osx-}.dmg"
+          if [[ "$SIGN_MAC" != true ]]; then
+            bash scripts/package-macos.sh --rid "$RID" --version "$VERSION" --self-contained \
+              --output "$RUNNER_TEMP/mac" --build-number "$GITHUB_RUN_NUMBER" --sign-adhoc
+            bash scripts/macos/make-dmg.sh "$RUNNER_TEMP/mac/Wandur.app" "$dmg"
+            exit 0
+          fi
           bash scripts/package-macos.sh --rid "$RID" --version "$VERSION" --self-contained \
-            --output "$RUNNER_TEMP/mac" --build-number "$GITHUB_RUN_NUMBER" --sign-adhoc
-          bash scripts/macos/make-dmg.sh "$RUNNER_TEMP/mac/Wandur.app" "dist/Wandur-$VERSION-macos-${RID#osx-}.dmg"
+            --output "$RUNNER_TEMP/mac" --build-number "$GITHUB_RUN_NUMBER" --no-sign
+          key="$RUNNER_TEMP/AuthKey.p8"
+          trap 'rm -f "$key"' EXIT
+          (umask 077 && printf '%s\n' "$ASC_KEY_P8" > "$key")
+          WANDUR_SIGN_IDENTITY="$SIGN_IDENTITY" WANDUR_NOTARY_KEY="$key" \
+            WANDUR_NOTARY_KEY_ID="$ASC_KEY_ID" WANDUR_NOTARY_ISSUER="$ASC_ISSUER_ID" \
+            bash scripts/macos/sign-and-notarize.sh "$RUNNER_TEMP/mac/Wandur.app" "$dmg"
 
       # --script-worker starts the runtime and the Wandur assemblies, answers one request and
       # exits: no window, no network. It proves the self-contained download starts at all.
@@ -124,15 +229,32 @@ jobs:
               trap 'hdiutil detach "$smoke/volume" || hdiutil detach -force "$smoke/volume"' EXIT
               [[ -L "$smoke/volume/Applications" ]]
               codesign --verify --strict --deep "$smoke/volume/Wandur.app"
+              if [[ "$SIGN_MAC" == true ]]; then
+                dmg="dist/Wandur-$VERSION-macos-${RID#osx-}.dmg"
+                spctl --assess --type open --context context:primary-signature -vv "$dmg" \
+                  || { echo "::error title=Gatekeeper::Gatekeeper does not accept $dmg"; exit 1; }
+                xcrun stapler validate "$dmg" \
+                  || { echo "::error title=Notarization::$dmg has no valid stapled ticket"; exit 1; }
+                spctl --assess --type exec -vv "$smoke/volume/Wandur.app" \
+                  || { echo "::error title=Gatekeeper::Gatekeeper does not accept Wandur.app inside $dmg"; exit 1; }
+              fi
               app="$smoke/volume/Wandur.app/Contents/MacOS/Wandur"
               if [[ "$RID" == osx-x64 ]] && ! arch -x86_64 /usr/bin/true 2>/dev/null; then
                 echo "::notice::No Rosetta on this runner; osx-x64 was packaged but not started."
                 exit 0
               fi ;;
           esac
-          reply="$(echo '{"Kind":"shutdown"}' | "$app" --script-worker)"
+          reply="$(echo '{"Kind":"shutdown"}' | "$app" --script-worker)" || true
           echo "$reply"
-          [[ "$reply" == *'"Results":[]'* ]]
+          [[ "$reply" == *'"Results":[]'* ]] \
+            || { echo "::error title=Smoke test::The $RID download did not start: $reply"; exit 1; }
+
+      - name: Delete the signing keychain
+        if: always() && runner.os == 'macOS' && github.event_name == 'push'
+        run: |
+          keychain="$RUNNER_TEMP/wandur-signing.keychain-db"
+          [[ -f "$keychain" ]] && security delete-keychain "$keychain" || true
+          rm -f "$RUNNER_TEMP/cert.p12" "$RUNNER_TEMP/check.p12" "$RUNNER_TEMP/AuthKey.p8"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
