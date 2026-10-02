@@ -122,7 +122,11 @@ two Mac disk images, and publishes a GitHub Release as the `github-actions` bot.
   Unsigned, so SmartScreen shows "Windows protected your PC" until they click More info, Run
   anyway.
 - **macOS:** `Wandur-<version>-macos-arm64.dmg` and `...-macos-x64.dmg`, each a disk image
-  with `Wandur.app` and an Applications shortcut to drag it onto.
+  that opens as an installer window: `Wandur.app` on the left, an Applications shortcut on the
+  right, and a background that says to drag one onto the other. The layout is
+  `scripts/macos/dmg-settings.py`, built with dmgbuild; the background is
+  `scripts/macos/dmg-background.tiff`, drawn by `scripts/macos/dmg-background.py` (run it on a
+  Mac and commit the result after changing the design, keeping both files' positions in step).
   Signed with the Developer ID of Wundur AI Learning, LLC and notarized, so the app opens with
   a double-click. (Releases up to v0.1.2 were ad-hoc signed until replaced: Gatekeeper called
   the app from an unidentified developer, and users had to use Open Anyway in System Settings >
