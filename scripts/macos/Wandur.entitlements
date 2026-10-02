@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  Hardened runtime entitlements for the Developer ID build (scripts/release-macos-signed.sh).
+  Hardened runtime entitlements for the Developer ID build (scripts/macos/sign-and-notarize.sh).
   The app is not sandboxed, so network, Keychain and file access need no entitlement here.
   Each key below relaxes one hardened runtime check; keep this list as short as it can be.
+  XML comments may not contain two hyphens in a row: codesign rejects the whole file.
 -->
 <plist version="1.0">
 <dict>
@@ -16,9 +17,9 @@
   <true/>
   <!--
     Not included: com.apple.security.cs.allow-unsigned-executable-memory (writable and executable
-    memory outside MAP_JIT). Tested on September 26, 2026 with .NET 10: ad-hoc hardened-runtime
-    bundles (codesign --options runtime -s -) carrying only the two keys in this file started
-    in --script-worker mode and answered a request, both osx-arm64 natively and osx-x64 under
+    memory outside MAP_JIT). Tested on September 26, 2026 with .NET 10: hardened-runtime bundles
+    signed with an ad-hoc identity, carrying only the two keys in this file, started
+    in script worker mode and answered a request, both osx-arm64 natively and osx-x64 under
     Rosetta. The same two bundles also opened the main window with an empty data directory
     and ran for 10 seconds (Avalonia.Native, Skia and SQLite loaded; no world connected).
     If a signed build crashes with a code-signing or memory-protection fault, add this key
