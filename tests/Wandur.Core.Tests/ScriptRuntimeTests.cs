@@ -203,6 +203,28 @@ public sealed class ScriptRuntimeTests
         Assert.Empty(failures);
     }
 
+    /// <summary>The first dispatch of a worker runs code paths the load did not, and on a slow machine compiling them
+    /// takes longer than the request deadline. It gets <see cref="ProcessSessionScriptHost.WarmUpAllowance"/>; a later
+    /// dispatch that hangs is still cut off at the ordinary deadline.</summary>
+    [Fact]
+    public async Task TheFirstDispatchMayBeSlowButLaterOnesKeepTheDeadline()
+    {
+        Assert.True(TimeSpan.FromSeconds(3) > ProcessSessionScriptHost.RequestDeadline);
+        Assert.True(TimeSpan.FromSeconds(3) < ProcessSessionScriptHost.RequestDeadline + ProcessSessionScriptHost.WarmUpAllowance);
+        await using var host = CreateHost();
+        var failures = new List<string>();
+        host.Failed += failures.Add;
+        Assert.Null((await host.LoadAsync("a", "mud.alias(/^go/, () => mud.send(\"north\"));")).Error);
+        var first = await host.DispatchAsync(["a"], new("command", "go test-host-slow-first-dispatch")).WaitAsync(Wandur.Tests.TestTimeouts.Hang);
+        Assert.Equal(new ScriptAction("send", "north"), Assert.Single(first[0].Actions));
+        Assert.Empty(failures);
+
+        var timer = Stopwatch.StartNew();
+        await Assert.ThrowsAsync<ScriptWorkerException>(() => host.DispatchAsync(["a"], new("command", "test-host-unresponsive")).WaitAsync(Wandur.Tests.TestTimeouts.Hang));
+        Assert.True(timer.Elapsed < ProcessSessionScriptHost.RequestDeadline + ProcessSessionScriptHost.WarmUpAllowance,
+            $"a warm worker's hung dispatch took {timer.Elapsed.TotalSeconds:0.0}s to be cut off");
+    }
+
     [Fact]
     public async Task ParentDeadlineTerminatesAnUnresponsiveWorkerAndRaisesFailedOnce()
     {

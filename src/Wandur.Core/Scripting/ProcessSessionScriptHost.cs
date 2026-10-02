@@ -21,6 +21,12 @@ public sealed class ProcessSessionScriptHost(string executablePath, string? entr
     /// script engine is not script work: on a cold disk, a busy machine or under an antivirus scan of the new
     /// process it can take seconds, and counting it against the deadline failed healthy workers.</summary>
     public static readonly TimeSpan StartupAllowance = TimeSpan.FromSeconds(15);
+    /// <summary>Extra time for the first request of each kind a worker process answers. The first dispatch runs
+    /// code paths the load did not (handlers, panel actions, the send policy), and compiling them took a slow
+    /// Windows runner past the deadline, which then killed a healthy worker.</summary>
+    public static readonly TimeSpan WarmUpAllowance = TimeSpan.FromSeconds(5);
+    // The request kinds this worker process has answered at least once; cleared when a new process starts.
+    private readonly HashSet<string> _answeredKinds = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _requests = new(1, 1);
     private readonly object _sync = new();
     private readonly CancellationTokenSource _lifetime = new();
@@ -118,8 +124,10 @@ public sealed class ProcessSessionScriptHost(string executablePath, string? entr
                     _replies = new(started.StandardOutput);
                     // Drain stderr without retaining logs or allowing a full pipe to block the child.
                     _ = DrainErrorsAsync(started.StandardError, _lifetime.Token);
+                    _answeredKinds.Clear();
                     deadline += StartupAllowance;
                 }
+                if (!_answeredKinds.Contains(request.Kind)) deadline += WarmUpAllowance;
                 process = _process;
                 replies = _replies!;
             }
@@ -133,7 +141,11 @@ public sealed class ProcessSessionScriptHost(string executablePath, string? entr
             var reply = JsonSerializer.Deserialize<WorkerReply>(line) ?? throw new JsonException("Invalid worker response.");
             if (reply.Error is not null) throw new ScriptWorkerException(reply.Error);
             ValidateReply(reply, expectedIds);
-            lock (_sync) if (_stopped) throw new OperationCanceledException();
+            lock (_sync)
+            {
+                if (_stopped) throw new OperationCanceledException();
+                _answeredKinds.Add(request.Kind);
+            }
             return reply.Results;
         }
         catch (OperationCanceledException)
