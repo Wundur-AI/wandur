@@ -25,6 +25,10 @@ namespace Wandur.Desktop;
 
 public sealed partial class MainWindow : Window
 {
+    /// <summary>The name the app goes by on the system: the window title, the Dock and the taskbar. The skin's title
+    /// plaque keeps the short "Wandur" as its wordmark; About and the protocol identity say "Wandur Mud Client (WMC)".</summary>
+    internal const string AppName = "Wandur Mud Client";
+
     public SessionWorkspace Sessions { get; }
     public WorldCatalog Catalog { get; }
     public WorkspaceController Controller => Sessions.Active.Controller;
@@ -86,7 +90,7 @@ public sealed partial class MainWindow : Window
         _profileAutomationFactory = profileAutomationFactory ?? new ProfileAutomationFactory(scriptRuntimes, scriptLibraryStore);
         Catalog = catalog ?? new WorldCatalog(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(store.FilePath))!, "directory.json"));
         Sessions = new(displays, store, passwords, maps, scriptRuntimes, scriptLibraryStore, knowledge, Catalog, agents, classification, usage, history);
-        Title = "Wandur";
+        Title = AppName;
         Icon = new WindowIcon(Avalonia.Platform.AssetLoader.Open(new Uri("avares://Wandur/Assets/icon-256.png")));
         Width = 1380; Height = 900; MinWidth = 1040; MinHeight = 680;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -918,9 +922,9 @@ public sealed partial class MainWindow : Window
                 _worldPicker.SelectedItem = match;
         }
         // Character first: it is what tells two sessions on one world apart at a glance; then the world, then the app.
-        Title = !Controller.HasSession ? "Wandur" : Controller.CharacterName.Length == 0 ? $"{Controller.WorldName} · Wandur" : $"{Controller.CharacterName} · {Controller.WorldName} · Wandur";
+        Title = !Controller.HasSession ? AppName : Controller.CharacterName.Length == 0 ? $"{Controller.WorldName} · {AppName}" : $"{Controller.CharacterName} · {Controller.WorldName} · {AppName}";
         // Keep the app identity visible before the world, including when a long world name is trimmed.
-        // The full "character · world · Wandur" stays on the OS title, where there is room.
+        // The full "character · world · Wandur Mud Client" stays on the OS title, where there is room.
         var oldPlaqueLabel = _plaqueLabel;
         _plaqueLabel = !Controller.HasSession || Controller.WorldName.Length == 0 ? "Wandur" : $"Wandur - {Controller.WorldName}";
         _appTitle.Text = _skinTitleActive ? PlateTitle() : Title;

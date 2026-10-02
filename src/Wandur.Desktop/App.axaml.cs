@@ -32,7 +32,7 @@ public partial class App : Application
     private async void AboutClicked(object? sender, EventArgs args)
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: MainWindow window })
-            await window.ShowInformationAsync(L.AboutWandur, "Wandur", L.ADoorwayToOtherWorldsAnOpenSourceMUD);
+            await window.ShowInformationAsync(L.AboutWandur, Wandur.Core.Protocol.ClientIdentity.DisplayName, L.ADoorwayToOtherWorldsAnOpenSourceMUD);
     }
 
     private async void PreferencesClicked(object? sender, EventArgs args)

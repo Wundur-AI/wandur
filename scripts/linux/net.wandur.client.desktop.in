@@ -4,7 +4,7 @@
 # absolute, quoted path of the Wandur in this folder, because a .desktop file cannot refer
 # to a path relative to itself.
 Type=Application
-Name=Wandur
+Name=Wandur Mud Client
 GenericName=MUD Client
 Comment=Play text MUDs and MUSHes
 Exec=Wandur

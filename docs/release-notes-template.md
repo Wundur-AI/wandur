@@ -25,7 +25,8 @@ just `Wandur.exe`), open the folder and run `Wandur.exe`. The build is not code-
 SmartScreen may say "Windows protected your PC". Click **More info**, then **Run anyway**.
 Windows asks once per download.
 
-**macOS.** Open the `.dmg` and drag Wandur onto Applications.
+**macOS.** Open the `.dmg` and drag Wandur Mud Client onto Applications. If an earlier version called Wandur is
+still in Applications, delete it; your worlds and settings are kept.
 
 <!-- macos-first-run:start -->
 The macOS builds are signed and notarized, so Wandur opens with a double-click like any other app.

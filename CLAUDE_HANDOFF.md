@@ -176,7 +176,7 @@ the agent's reply wait, a per-world "don't ask again" for links.
   See the Inline completion section of `docs/client-architecture.md`.
 - Last green run on main (September 19, after 061c31a): Core 475,
   Desktop 315; on `refactor/session-worker`: Core 602, Desktop see the
-  branch's commit message; `artifacts/macos/Wandur.app` rebuilt by
+  branch's commit message; `artifacts/macos/Wandur Mud Client.app` rebuilt by
   `scripts/package-macos.sh`. The discovery suite (25) now runs in
   `wandur-discovery`. No worktrees; tree clean.
 - Verification commands: `dotnet build Wandur.sln -c Release`, then

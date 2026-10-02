@@ -164,7 +164,7 @@ for rid in osx-arm64 osx-x64; do
   echo "== $rid"
   bash "$src/scripts/package-macos.sh" --rid "$rid" --version "$version" --self-contained \
     --output "$work/$arch" --no-sign
-  app="$work/$arch/Wandur.app"
+  app="$work/$arch/Wandur Mud Client.app"
   dmg="$out_dir/Wandur-$version-macos-$arch.dmg"
   WANDUR_SIGN_IDENTITY="$sign_hash" WANDUR_NOTARY_PROFILE="$profile" \
     WANDUR_NOTARY_KEY="" WANDUR_NOTARY_KEY_ID="" WANDUR_NOTARY_ISSUER="" \
@@ -187,7 +187,7 @@ for rid in osx-arm64 osx-x64; do
   mkdir -p "$volume"
   hdiutil attach -nobrowse -readonly -mountpoint "$volume" "$dmg" >/dev/null
   checked=0
-  codesign --verify --strict --deep "$volume/Wandur.app" && spctl -a -t exec -vv "$volume/Wandur.app" && checked=1
+  codesign --verify --strict --deep "$volume/Wandur Mud Client.app" && spctl -a -t exec -vv "$volume/Wandur Mud Client.app" && checked=1
   hdiutil detach "$volume" >/dev/null || hdiutil detach -force "$volume" >/dev/null
   [[ $checked -eq 1 ]] || fail "the app inside $dmg does not pass codesign and Gatekeeper"
   dmgs+=("$dmg")

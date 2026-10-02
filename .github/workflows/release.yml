@@ -199,7 +199,7 @@ jobs:
           if [[ "$SIGN_MAC" != true ]]; then
             bash scripts/package-macos.sh --rid "$RID" --version "$VERSION" --self-contained \
               --output "$RUNNER_TEMP/mac" --build-number "$GITHUB_RUN_NUMBER" --sign-adhoc
-            bash scripts/macos/make-dmg.sh "$RUNNER_TEMP/mac/Wandur.app" "$dmg"
+            bash scripts/macos/make-dmg.sh "$RUNNER_TEMP/mac/Wandur Mud Client.app" "$dmg"
             exit 0
           fi
           bash scripts/package-macos.sh --rid "$RID" --version "$VERSION" --self-contained \
@@ -209,7 +209,7 @@ jobs:
           (umask 077 && printf '%s\n' "$ASC_KEY_P8" > "$key")
           WANDUR_SIGN_IDENTITY="$SIGN_IDENTITY" WANDUR_NOTARY_KEY="$key" \
             WANDUR_NOTARY_KEY_ID="$ASC_KEY_ID" WANDUR_NOTARY_ISSUER="$ASC_ISSUER_ID" \
-            bash scripts/macos/sign-and-notarize.sh "$RUNNER_TEMP/mac/Wandur.app" "$dmg"
+            bash scripts/macos/sign-and-notarize.sh "$RUNNER_TEMP/mac/Wandur Mud Client.app" "$dmg"
 
       # --script-worker starts the runtime and the Wandur assemblies, answers one request and
       # exits: no window, no network. It proves the self-contained download starts at all.
@@ -229,17 +229,17 @@ jobs:
                 "dist/Wandur-$VERSION-macos-${RID#osx-}.dmg"
               trap 'hdiutil detach "$smoke/volume" || hdiutil detach -force "$smoke/volume"' EXIT
               [[ -L "$smoke/volume/Applications" ]]
-              codesign --verify --strict --deep "$smoke/volume/Wandur.app"
+              codesign --verify --strict --deep "$smoke/volume/Wandur Mud Client.app"
               if [[ "$SIGN_MAC" == true ]]; then
                 dmg="dist/Wandur-$VERSION-macos-${RID#osx-}.dmg"
                 spctl --assess --type open --context context:primary-signature -vv "$dmg" \
                   || { echo "::error title=Gatekeeper::Gatekeeper does not accept $dmg"; exit 1; }
                 xcrun stapler validate "$dmg" \
                   || { echo "::error title=Notarization::$dmg has no valid stapled ticket"; exit 1; }
-                spctl --assess --type exec -vv "$smoke/volume/Wandur.app" \
-                  || { echo "::error title=Gatekeeper::Gatekeeper does not accept Wandur.app inside $dmg"; exit 1; }
+                spctl --assess --type exec -vv "$smoke/volume/Wandur Mud Client.app" \
+                  || { echo "::error title=Gatekeeper::Gatekeeper does not accept the app inside $dmg"; exit 1; }
               fi
-              app="$smoke/volume/Wandur.app/Contents/MacOS/Wandur"
+              app="$smoke/volume/Wandur Mud Client.app/Contents/MacOS/Wandur"
               if [[ "$RID" == osx-x64 ]] && ! arch -x86_64 /usr/bin/true 2>/dev/null; then
                 echo "::notice::No Rosetta on this runner; osx-x64 was packaged but not started."
                 exit 0

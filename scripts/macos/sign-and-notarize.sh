@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Developer ID signs a finished Wandur.app, wraps it in a disk image, signs the image, notarizes it
+# Developer ID signs a finished Wandur Mud Client.app, wraps it in a disk image, signs the image, notarizes it
 # and staples the ticket. Used by the release workflow and by scripts/release-macos-signed.sh.
 #
-#   scripts/macos/sign-and-notarize.sh <path/to/Wandur.app> <out.dmg>
+#   scripts/macos/sign-and-notarize.sh <path/to/Wandur Mud Client.app> <out.dmg>
 #
 # Environment:
 #   WANDUR_SIGN_IDENTITY   codesign identity, by SHA-1 hash or common name (required). It must be
@@ -28,7 +28,7 @@ fail() {
   exit 1
 }
 
-[[ $# -eq 2 ]] || fail "usage: sign-and-notarize.sh <Wandur.app> <out.dmg>"
+[[ $# -eq 2 ]] || fail "usage: sign-and-notarize.sh <app bundle> <out.dmg>"
 app="${1%/}"
 dmg="$2"
 here="$(cd "$(dirname "$0")" && pwd -P)"

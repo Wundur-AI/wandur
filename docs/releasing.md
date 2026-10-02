@@ -122,7 +122,7 @@ two Mac disk images, and publishes a GitHub Release as the `github-actions` bot.
   Unsigned, so SmartScreen shows "Windows protected your PC" until they click More info, Run
   anyway.
 - **macOS:** `Wandur-<version>-macos-arm64.dmg` and `...-macos-x64.dmg`, each a disk image
-  that opens as an installer window: `Wandur.app` on the left, an Applications shortcut on the
+  that opens as an installer window: `Wandur Mud Client.app` on the left, an Applications shortcut on the
   right, and a background that says to drag one onto the other. The layout is
   `scripts/macos/dmg-settings.py`, built with dmgbuild; the background is
   `scripts/macos/dmg-background.tiff`, drawn by `scripts/macos/dmg-background.py` (run it on a
