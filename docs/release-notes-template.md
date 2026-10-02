@@ -3,8 +3,7 @@ Wandur {{VERSION}}, a desktop client for MUDs, MUSHes and other text games. More
 ## What's in this build
 
 The Wandur client built from tag `{{TAG}}`, for Windows, macOS (Apple silicon and Intel) and
-Linux. Each download is self-contained: the .NET runtime is included, so there is nothing else
-to install. The changes since the previous release are listed at the end of these notes.
+Linux. Each download is self-contained, so there is nothing else to install. The changes since the previous release are listed at the end of these notes.
 
 ## Downloads
 
