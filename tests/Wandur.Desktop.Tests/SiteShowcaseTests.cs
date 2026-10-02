@@ -20,7 +20,7 @@ public sealed class SiteShowcaseTests
 {
     [AvaloniaTheory]
     [InlineData("Slate")]
-    [InlineData("Paper")]
+    [InlineData("Midnight")]
     public async Task TheLanternRoadRendersAWorkspaceWorthShowing(string theme)
     {
         await using var session = await LanternRoadSession.OpenAsync(new() { Theme = theme });
