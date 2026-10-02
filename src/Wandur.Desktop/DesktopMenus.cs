@@ -152,6 +152,8 @@ internal sealed class DesktopMenus
         var native = (NativeMenuItem)menu.Native.Items[index];
         var fallback = (MenuItem)menu.Fallback.Items[index]!;
         native.ToggleType = MenuItemToggleType.CheckBox;
+        // The window menu (Windows and Linux) draws a check only for a toggle item, as the native one does.
+        fallback.ToggleType = MenuItemToggleType.CheckBox;
         _refreshChecks.Add(() => { native.IsChecked = value(); fallback.IsChecked = value(); });
     }
     public void Refresh()
