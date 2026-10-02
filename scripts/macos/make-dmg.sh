@@ -12,7 +12,10 @@
 # A disk image keeps the extended attributes that hold the signatures of the managed .dll files in
 # Contents/MacOS; a zip only keeps them when macOS's own tools unpack it.
 set -euo pipefail
-DMGBUILD_VERSION=1.6.5  # the newest that still runs on the system Python 3.9 of a stock Mac
+# 1.6.7, not earlier: 1.6.5 also stored a bookmark to the background at the path the image was mounted on
+# while it was built, which macOS 26's Finder prefers, cannot resolve, and then shows no background at all.
+# 1.6.7 dropped it, leaving the alias, which resolves inside the mounted image. It needs Python 3.10 or later.
+DMGBUILD_VERSION=1.6.7
 
 [[ $# -eq 2 ]] || { echo "usage: make-dmg.sh <Wandur.app> <out.dmg>" >&2; exit 2; }
 app="${1%/}"
@@ -25,17 +28,25 @@ rm -f "$out"
 work="$(mktemp -d "${TMPDIR:-/tmp}/wandur-dmg.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 python="${PYTHON:-python3}"
-if ! "$python" -c "import dmgbuild" 2>/dev/null; then
+if ! "$python" -c "import dmgbuild, importlib.metadata as m; assert m.version('dmgbuild') == '$DMGBUILD_VERSION'" 2>/dev/null; then
+  "$python" -c 'import sys; sys.exit(sys.version_info < (3, 10))' \
+    || { echo "make-dmg.sh needs Python 3.10 or later for dmgbuild $DMGBUILD_VERSION (found $("$python" --version 2>&1)); install one (brew install python) or set PYTHON" >&2; exit 1; }
   "$python" -m venv "$work/venv"
   "$work/venv/bin/pip" install --quiet --disable-pip-version-check "dmgbuild==$DMGBUILD_VERSION"
   python="$work/venv/bin/python"
 fi
 
+# The volume carries the version ("Wandur 0.1.3"). The background is found through an alias that names the
+# volume, so an older Wandur image still mounted under the plain name would take the lookup and leave this
+# window without its background; a different name per release avoids that, and the title says what it is.
+version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist" 2>/dev/null || true)"
+volume="Wandur${version:+ $version}"
+
 args=(-s "$here/dmg-settings.py" -D "app=$app" -D "background=$here/dmg-background.tiff")
 [[ -f "$app/Contents/Resources/Wandur.icns" ]] && args+=(-D "volume_icon=$app/Contents/Resources/Wandur.icns")
 # hdiutil, under dmgbuild, fails now and then with "Resource busy" while Spotlight or another process still
 # holds the fresh volume; one retry after a pause gets past it.
-build() { "$python" -m dmgbuild "${args[@]}" Wandur "$out" >/dev/null; }
+build() { "$python" -m dmgbuild "${args[@]}" "$volume" "$out" >/dev/null; }
 if ! build; then
   echo "dmgbuild failed; retrying once in 5 seconds" >&2
   rm -f "$out"

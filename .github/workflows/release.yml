@@ -99,7 +99,7 @@ jobs:
       # scripts/macos/make-dmg.sh lays out the disk image window with dmgbuild (the version it pins).
       - name: Install Pillow and dmgbuild
         if: runner.os == 'macOS'
-        run: python -m pip install --disable-pip-version-check pillow dmgbuild==1.6.5
+        run: python -m pip install --disable-pip-version-check pillow dmgbuild==1.6.7
 
       - name: Package Windows or Linux
         if: runner.os != 'macOS'
