@@ -23,8 +23,9 @@
 # state of this working tree does not matter.
 #
 # Output: artifacts/release/Wandur-<version>-macos-{arm64,x64}.dmg and SHA256SUMS-macos.txt.
-# Order per architecture: sign the app inside out, make the disk image, sign the image, then
-# notarize and staple the image (notarizing it covers the app inside).
+# The signing itself is scripts/macos/sign-and-notarize.sh, the same script the release workflow
+# runs: sign the app inside out, make the disk image, sign it, notarize and staple it. It is
+# taken from this checkout rather than the tag, so a tag older than that script can be signed.
 # This script prints the signing identity's common name and nothing else about the certificate.
 set -euo pipefail
 export AVALONIA_TELEMETRY_OPTOUT=1 DOTNET_CLI_TELEMETRY_OPTOUT=1
@@ -86,10 +87,11 @@ export_tree() {
 src="$work/src"
 export_tree "$project_root" "$tag_commit" "$src"
 echo "Building $tag (${tag_commit:0:12}) from a clean export"
-entitlements="$src/scripts/macos/Wandur.entitlements"
-for needed in scripts/package-macos.sh scripts/macos/make-dmg.sh scripts/macos/signed-notes.py \
+[[ -f "$src/scripts/package-macos.sh" ]] || fail "$tag has no scripts/package-macos.sh; tag a commit that includes the release scripts"
+signer="$project_root/scripts/macos/sign-and-notarize.sh"
+for needed in scripts/macos/sign-and-notarize.sh scripts/macos/make-dmg.sh scripts/macos/signed-notes.py \
               scripts/macos/Wandur.entitlements; do
-  [[ -f "$src/$needed" ]] || fail "$tag has no $needed; tag a commit that includes the release scripts"
+  [[ -f "$project_root/$needed" ]] || fail "this checkout has no $needed"
 done
 
 # 2. Signing identity. find-identity lines look like:  1) <sha1> "Developer ID Application: Name (TEAM)"
@@ -156,8 +158,6 @@ fi
 # 4. Build, sign, package, notarize.
 mkdir -p "$out_dir"
 
-sign() { codesign --force --timestamp --options runtime --sign "$sign_hash" "$@"; }
-
 dmgs=()
 for rid in osx-arm64 osx-x64; do
   arch="${rid#osx-}"
@@ -165,21 +165,10 @@ for rid in osx-arm64 osx-x64; do
   bash "$src/scripts/package-macos.sh" --rid "$rid" --version "$version" --self-contained \
     --output "$work/$arch" --no-sign
   app="$work/$arch/Wandur.app"
-
-  # Inside out, without --deep: every file in Contents/MacOS is nested code to codesign, the
-  # managed .dll files included (their signatures go into extended attributes), and the main
-  # executable is signed last, as part of the bundle, with the entitlements. Deepest paths
-  # first, so the satellite resource folders are sealed before anything that contains them.
-  xattr -cr "$app"
-  count=0
-  while IFS= read -r file; do
-    [[ "$file" == "$app/Contents/MacOS/Wandur" ]] && continue
-    out="$(sign "$file" 2>&1)" || { echo "$out" >&2; fail "codesign failed on ${file#"$app/"}"; }
-    count=$((count + 1))
-  done < <(find "$app/Contents/MacOS" -type f | awk -F/ '{ print NF "\t" $0 }' | sort -rn | cut -f2-)
-  out="$(sign --entitlements "$entitlements" "$app" 2>&1)" || { echo "$out" >&2; fail "codesign failed on the bundle"; }
-  echo "signed $count nested files and the bundle"
-  codesign --verify --strict --deep --verbose=2 "$app"
+  dmg="$out_dir/Wandur-$version-macos-$arch.dmg"
+  WANDUR_SIGN_IDENTITY="$sign_hash" WANDUR_NOTARY_PROFILE="$profile" \
+    WANDUR_NOTARY_KEY="" WANDUR_NOTARY_KEY_ID="" WANDUR_NOTARY_ISSUER="" \
+    bash "$signer" "$app" "$dmg"
 
   # The script worker mode starts the runtime and the Wandur assemblies without opening a
   # window or a connection; it proves the entitlements let the hardened runtime JIT.
@@ -192,24 +181,6 @@ for rid in osx-arm64 osx-x64; do
   else
     echo "skipping the $arch start check: this Mac cannot run $arch code"
   fi
-
-  dmg="$out_dir/Wandur-$version-macos-$arch.dmg"
-  rm -f "$dmg"
-  bash "$src/scripts/macos/make-dmg.sh" "$app" "$dmg"
-  out="$(codesign --force --timestamp --sign "$sign_hash" "$dmg" 2>&1)" || { echo "$out" >&2; fail "codesign failed on $dmg"; }
-
-  echo "notarizing $arch (usually a few minutes)"
-  result="$(xcrun notarytool submit "$dmg" --keychain-profile "$profile" --wait --output-format json || true)"
-  status="$(python3 -c 'import json,sys; print(json.loads(sys.stdin.read() or "{}").get("status",""))' <<<"$result" 2>/dev/null || true)"
-  if [[ "$status" != "Accepted" ]]; then
-    id="$(python3 -c 'import json,sys; print(json.loads(sys.stdin.read() or "{}").get("id",""))' <<<"$result" 2>/dev/null || true)"
-    echo "error: notarization of $arch returned '${status:-no result}'." >&2
-    [[ -n "$id" ]] && xcrun notarytool log "$id" --keychain-profile "$profile" >&2 || echo "$result" >&2
-    exit 1
-  fi
-  xcrun stapler staple "$dmg"
-  xcrun stapler validate "$dmg"
-  spctl -a -t open --context context:primary-signature -vv "$dmg"
 
   # What a user gets: the app as it sits in the image, checked by Gatekeeper.
   volume="$work/volume-$arch"
@@ -245,7 +216,7 @@ gh release upload "$tag" "${dmgs[@]}" "$out_dir/SHA256SUMS.txt" --repo "$repo" -
 
 # Only after the signed images are in place: the notes stop telling Mac users to right-click.
 gh release view "$tag" --repo "$repo" --json body --jq .body > "$work/notes-before.md"
-python3 "$src/scripts/macos/signed-notes.py" "$work/notes-before.md" "$work/notes.md"
+python3 "$project_root/scripts/macos/signed-notes.py" "$work/notes-before.md" "$work/notes.md"
 gh release edit "$tag" --repo "$repo" --notes-file "$work/notes.md" >/dev/null
 echo "Uploaded to $tag as $release_account, and updated the release notes:"
 printf '  %s\n' "${dmgs[@]}" "$out_dir/SHA256SUMS.txt"
