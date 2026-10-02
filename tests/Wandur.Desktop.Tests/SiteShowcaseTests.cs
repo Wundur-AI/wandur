@@ -25,7 +25,7 @@ namespace Wandur.Desktop.Tests;
 public sealed class SiteShowcaseTests
 {
     [AvaloniaTheory]
-    [InlineData("Hull")]
+    [InlineData("Slate")]
     [InlineData("Paper")]
     public async Task TheLanternRoadRendersAWorkspaceWorthShowing(string theme)
     {
@@ -139,8 +139,8 @@ public sealed class SiteShowcaseTests
         finally { await window.Sessions.DisposeAsync(); window.Close(); }
     }
 
-    /// <summary>Find a MUD with the live directory and its real art, filtered to fantasy worlds, then the first world's
-    /// page. Read-only against https://api.wandur.net, everything else in a temp folder; skipped unless WANDUR_LIVE=1,
+    /// <summary>Find a MUD in the main window with the live directory and its real art, filtered to fantasy worlds, then
+    /// the first world's page. Read-only against https://api.wandur.net, everything else in a temp folder; skipped unless WANDUR_LIVE=1,
     /// so the test suite never reaches the network.</summary>
     [AvaloniaFact]
     public async Task TheLiveDirectoryRendersAListAndAWorldPageWorthShowing()
@@ -151,28 +151,28 @@ public sealed class SiteShowcaseTests
         using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
         using var catalog = new Wandur.Core.Discovery.WorldCatalog(Path.Combine(directory, "directory.json"), new Uri("https://api.wandur.net/"), http);
         await catalog.LoadAsync(force: true);
+        // Find a MUD as the client shows it: inside the main window, opened from the toolbar, in Slate.
         var store = new SettingsStore(Path.Combine(directory, "settings.json"));
-        store.Save(new ClientSettings { Theme = "Ember", Language = "en", UseWorldThemes = false });
-        var sessions = new SessionWorkspace(new TranscriptDisplayFactory(), store, new MemoryPasswordVault(),
-            new MemoryRoomMapStore(), new RecordingScriptFactory(), new MemoryScriptLibraryStore(), catalog: catalog);
-        var model = sessions.Browser(catalog);
-        model.Query = new() { Facets = new Dictionary<string, string> { ["Theme"] = "Fantasy" } };
-        var browser = new WorldBrowserView(model, catalog);
-        var window = new Window { Content = browser, Width = 1280, Height = 900 };
+        store.Save(new ClientSettings { Theme = "Slate", Language = "en", FontSize = 16, UseWorldThemes = false, ClassifyRoomsLocally = false });
+        var window = new MainWindow(new TranscriptDisplayFactory(), store, new MemoryPasswordVault(), new MemoryRoomMapStore(),
+            new RecordingScriptFactory(), new MemoryScriptLibraryStore(), catalog: catalog) { Width = 1600, Height = 1000 };
         try
         {
-            window.Show();
+            window.Show(); Dispatcher.UIThread.RunJobs();
+            await window.BrowseWorldsAsync(); Dispatcher.UIThread.RunJobs();
+            var browser = window.GetVisualDescendants().OfType<WorldBrowserView>().Single();
+            var model = Assert.IsType<Wandur.Desktop.ViewModels.WorldBrowserViewModel>(browser.DataContext);
+            model.Query = new() { Facets = new Dictionary<string, string> { ["Theme"] = "Fantasy" } };
             Image[] Plates() => browser.GetVisualDescendants().OfType<Image>().Where(i => i.Name == "DirectoryRowArtwork" && i.IsEffectivelyVisible).ToArray();
             await Settle(window, () => Plates() is { Length: > 0 } plates && plates.All(p => p.Source is not null));
             Save(window, "showcase-directory.png");
 
             var first = browser.GetVisualDescendants().OfType<Button>().First(b => b.Name == "DirectoryRowExplore" && b.IsEffectivelyVisible);
             first.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
-            window.Height = 1000;
             await Settle(window, () => browser.GetVisualDescendants().OfType<Image>().Any(i => i.Name == "DirectoryArtwork" && i.Source is not null));
             Save(window, "showcase-world.png");
         }
-        finally { window.Close(); await sessions.DisposeAsync(); Directory.Delete(directory, true); }
+        finally { await window.Sessions.DisposeAsync(); window.Close(); Directory.Delete(directory, true); }
 
         static async Task Settle(Window window, Func<bool> ready)
         {
