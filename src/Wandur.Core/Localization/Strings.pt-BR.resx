@@ -582,7 +582,7 @@ Saídas: norte · leste
     <value>Encontrar um MUD · Wandur</value>
   </data>
   <data name="FindYourNextWorld" xml:space="preserve">
-    <value>Encontre seu próximo mundo</value>
+    <value>Explorar MUDs</value>
   </data>
   <data name="SearchMUDServersByNameThemeLanguageOrAddress" xml:space="preserve">
     <value>Pesquise servidores MUD por nome, tema, idioma ou endereço.</value>
@@ -1943,16 +1943,16 @@ Pare após receber uma lista do inventário.</value></data>
   <data name="BeginnerFriendly" xml:space="preserve"><value>Bom para iniciantes</value></data>
   <data name="BeginnerFriendlyHint" xml:space="preserve"><value>O diretório indica que este mundo acolhe novos jogadores.</value></data>
   <data name="AboutWorld" xml:space="preserve"><value>Sobre {0}</value></data>
-  <data name="FindYourPlace" xml:space="preserve"><value>Encontre seu lugar</value></data>
+  <data name="FindYourPlace" xml:space="preserve"><value>Estilo de jogo</value></data>
   <data name="WorldDetails" xml:space="preserve"><value>Detalhes do mundo</value></data>
   <data name="WorldStatus" xml:space="preserve"><value>Status</value></data>
   <data name="PlayStyle" xml:space="preserve"><value>Estilo de jogo</value></data>
   <data name="RoleplayStyle" xml:space="preserve"><value>Roleplay: {0}</value></data>
   <data name="ConnectWithAnyClient" xml:space="preserve"><value>Conecte com qualquer cliente</value></data>
   <data name="CopyAddress" xml:space="preserve"><value>Copiar endereço</value></data>
-  <data name="AGlimpseInside" xml:space="preserve"><value>Uma espiada lá dentro</value></data>
+  <data name="AGlimpseInside" xml:space="preserve"><value>Ilustração</value></data>
   <data name="AroundTheWorld" xml:space="preserve"><value>Pelo mundo</value></data>
-  <data name="DirectoryLede" xml:space="preserve"><value>Mundos vivos. Pessoas reais. Histórias para se perder.</value></data>
+  <data name="DirectoryLede" xml:space="preserve"><value>Pesquise por gênero, idioma, código-base ou tag. O status online e o número de jogadores vêm das verificações de hora em hora do wandur.net.</value></data>
   <data name="SortLabel" xml:space="preserve"><value>Ordenar:</value></data>
   <data name="PlayersObservedAgo" xml:space="preserve"><value>{0} jogadores, {1}</value></data>
   <data name="CountedAgo" xml:space="preserve"><value>{0} contou {1}, {2}</value></data>

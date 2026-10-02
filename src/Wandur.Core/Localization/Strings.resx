@@ -582,7 +582,7 @@ Exits: north · east
     <value>Find a MUD · Wandur</value>
   </data>
   <data name="FindYourNextWorld" xml:space="preserve">
-    <value>Find your next world</value>
+    <value>Browse MUDs</value>
   </data>
   <data name="SearchMUDServersByNameThemeLanguageOrAddress" xml:space="preserve">
     <value>Search MUD servers by name, theme, language, or address.</value>
@@ -1943,16 +1943,16 @@ Stop after receiving one inventory listing.</value></data>
   <data name="BeginnerFriendly" xml:space="preserve"><value>Beginner friendly</value></data>
   <data name="BeginnerFriendlyHint" xml:space="preserve"><value>The directory lists this world as welcoming to new players.</value></data>
   <data name="AboutWorld" xml:space="preserve"><value>About {0}</value></data>
-  <data name="FindYourPlace" xml:space="preserve"><value>Find your place</value></data>
+  <data name="FindYourPlace" xml:space="preserve"><value>Play style</value></data>
   <data name="WorldDetails" xml:space="preserve"><value>World details</value></data>
   <data name="WorldStatus" xml:space="preserve"><value>Status</value></data>
   <data name="PlayStyle" xml:space="preserve"><value>Play style</value></data>
   <data name="RoleplayStyle" xml:space="preserve"><value>Roleplay {0}</value></data>
   <data name="ConnectWithAnyClient" xml:space="preserve"><value>Connect with any client</value></data>
   <data name="CopyAddress" xml:space="preserve"><value>Copy address</value></data>
-  <data name="AGlimpseInside" xml:space="preserve"><value>A glimpse inside</value></data>
+  <data name="AGlimpseInside" xml:space="preserve"><value>Artwork</value></data>
   <data name="AroundTheWorld" xml:space="preserve"><value>Around the world</value></data>
-  <data name="DirectoryLede" xml:space="preserve"><value>Living worlds. Real people. Stories worth getting lost in.</value></data>
+  <data name="DirectoryLede" xml:space="preserve"><value>Search by genre, language, codebase or tag. Online status and player counts come from wandur.net's hourly checks.</value></data>
   <data name="SortLabel" xml:space="preserve"><value>Sort:</value></data>
   <data name="PlayersObservedAgo" xml:space="preserve"><value>{0} players, {1}</value></data>
   <data name="CountedAgo" xml:space="preserve"><value>{0} counted {1}, {2}</value></data>

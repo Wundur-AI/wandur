@@ -215,7 +215,7 @@ public sealed class DirectorySiteLookCaptureTests
         return png.ToArray();
     }
 
-    private sealed class Fixture : IAsyncDisposable
+    internal sealed class Fixture : IAsyncDisposable
     {
         private readonly string _directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "wandur-directory-site-" + Guid.NewGuid());
         private readonly HttpClient _http;
@@ -225,6 +225,18 @@ public sealed class DirectorySiteLookCaptureTests
         public Fixture(string theme)
         {
             Directory.CreateDirectory(_directory);
+            Catalog = FictionalCatalog(_directory, out _http);
+            var store = new SettingsStore(System.IO.Path.Combine(_directory, "settings.json"));
+            store.Save(new ClientSettings { Theme = theme, UseWorldThemes = false });
+            Window = new MainWindow(new TranscriptDisplayFactory(), store, new MemoryPasswordVault(),
+                new MemoryRoomMapStore(), new RecordingScriptFactory(), new MemoryScriptLibraryStore(), catalog: Catalog)
+                { Width = 900, Height = 600 };
+        }
+
+        /// <summary>Four fictional worlds and their drawn art, served from a cached snapshot with no network, credited to
+        /// <paramref name="source"/>. The caller disposes the catalog and the client.</summary>
+        internal static WorldCatalog FictionalCatalog(string directory, out HttpClient http, string source = "Test directory")
+        {
             var online = new WorldAvailability { Online = true };
             var worlds = new[]
             {
@@ -237,7 +249,7 @@ public sealed class DirectorySiteLookCaptureTests
                     Population = new() { LatestCount = 142, Source = "wandur", ObservedAt = DateTimeOffset.UtcNow.AddMinutes(-20) },
                     Features = new() { Theme = "Science fiction", Kind = "MUD", Language = "English", Codebase = "Custom", Roleplaying = "Encouraged", PlayerKilling = "Restricted", WorldSize = "5000+", Location = "Canada", DevelopmentStatus = "Operational" },
                     Tags = ["Roleplay", "Exploration", "Trading"], GeneratedArtworkPath = "worlds/starfall/art", BannerUrl = "https://art.example.org/starfall-banner.png",
-                    WebsiteUrl = "https://starfall.example.org", Source = new() { Name = "Test directory", ListingUrl = "https://listing.example.org/starfall" },
+                    WebsiteUrl = "https://starfall.example.org", Source = new() { Name = source, ListingUrl = "https://listing.example.org/starfall" },
                     Community = new() { Rating = 4.6m, RatingCount = 12, Rank = 3, MonthlyVotes = 90 }
                 },
                 new WorldListing
@@ -247,34 +259,29 @@ public sealed class DirectorySiteLookCaptureTests
                     Description = "Ancient forests and uneasy kingdoms.", Availability = online,
                     Population = new() { LatestCount = 86, Source = "mudverse" },
                     Features = new() { Theme = "Fantasy", Language = "English", Roleplaying = "Suggested" }, Tags = ["Fantasy", "Exploration", "Crafting", "Clans"],
-                    GeneratedArtworkPath = "worlds/emberwild/art", Source = new() { Name = "Test directory" }
+                    GeneratedArtworkPath = "worlds/emberwild/art", Source = new() { Name = source }
                 },
                 new WorldListing
                 {
                     Id = "harbor", Name = "The Last Harbor", Host = "harbor.example.org", Port = 5000, BeginnerFriendly = true,
                     Summary = "A windswept port of secrets, sea voyages, and stories waiting beyond the shoreline.",
                     Availability = online, Population = new() { LatestCount = 53, Source = "wandur", ObservedAt = DateTimeOffset.UtcNow.AddMinutes(-40) },
-                    Features = new() { Theme = "Adventure" }, Tags = ["Story-rich"], GeneratedArtworkPath = "worlds/harbor/art", Source = new() { Name = "Test directory" }
+                    Features = new() { Theme = "Adventure" }, Tags = ["Story-rich"], GeneratedArtworkPath = "worlds/harbor/art", Source = new() { Name = source }
                 },
                 new WorldListing
                 {
                     Id = "moss", Name = "Moss & Myth", Host = "moss.example.org", Port = 6000,
                     Summary = "Small adventures and lasting friendships in an ever-growing woodland world.",
                     Availability = new() { Online = false }, Features = new() { Theme = "Fantasy" }, Tags = ["Social", "Cozy", "Gardening"],
-                    Source = new() { Name = "Test directory" }
+                    Source = new() { Name = source }
                 }
             };
             var snapshot = JsonSerializer.Serialize(new { format = "wandur.directory", schema_version = 2, fetched_at = DateTimeOffset.UtcNow, worlds },
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
-            var cache = System.IO.Path.Combine(_directory, "directory.json");
+            var cache = System.IO.Path.Combine(directory, "directory.json");
             File.WriteAllText(cache, snapshot);
-            _http = new HttpClient(new ArtHandler(snapshot));
-            Catalog = new WorldCatalog(cache, new Uri("https://directory.example.org/"), _http);
-            var store = new SettingsStore(System.IO.Path.Combine(_directory, "settings.json"));
-            store.Save(new ClientSettings { Theme = theme, UseWorldThemes = false });
-            Window = new MainWindow(new TranscriptDisplayFactory(), store, new MemoryPasswordVault(),
-                new MemoryRoomMapStore(), new RecordingScriptFactory(), new MemoryScriptLibraryStore(), catalog: Catalog)
-                { Width = 900, Height = 600 };
+            http = new HttpClient(new ArtHandler(snapshot));
+            return new WorldCatalog(cache, new Uri("https://directory.example.org/"), http);
         }
 
         public async ValueTask DisposeAsync()
