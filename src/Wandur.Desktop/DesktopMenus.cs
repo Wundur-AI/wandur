@@ -34,7 +34,7 @@ internal sealed class DesktopMenus
         var save = Action(nameof(L.SaveTranscript), window.ExportAsync, Key.S, enabled: () => window.Controller.Display.PlainText.Length > 0);
         var close = Action(nameof(L.CloseWorkspaceItem), () => window.Workspace.CloseSelectedAsync(), Key.W);
         var preferences = Action(nameof(L.Preferences), window.PreferencesAsync, Key.OemComma);
-        var about = Action(nameof(L.AboutWandur), () => window.ShowInformationAsync(L.AboutWandur, "Wandur", L.ADoorwayToOtherWorldsAnOpenSourceMUD));
+        var about = Action(nameof(L.AboutWandur), () => window.ShowInformationAsync(L.AboutWandur, Wandur.Core.Protocol.ClientIdentity.DisplayName, L.ADoorwayToOtherWorldsAnOpenSourceMUD));
         var quit = Action(OperatingSystem.IsMacOS() ? nameof(L.QuitWandur) : nameof(L.Exit), () => { window.Close(); return Task.CompletedTask; });
         var file = Group(nameof(L.File), newTab, add, Action(nameof(L.BrowseWorlds), window.BrowseWorldsAsync), demo, null, save, null, close);
         if (!OperatingSystem.IsMacOS()) AddItems(file.Native, file.Fallback, [null, quit]);

@@ -57,7 +57,7 @@ public sealed class SessionCharacterTests
         try
         {
             window.Show(); Dispatcher.UIThread.RunJobs();
-            Assert.Equal("Wandur", window.Title);
+            Assert.Equal(MainWindow.AppName, window.Title);
             Assert.DoesNotContain("·", Status());
 
             // The first session opens as the account: the login name is the only name there is.
@@ -70,7 +70,7 @@ public sealed class SessionCharacterTests
             Assert.Equal("account", controller.CharacterName);
             Assert.Equal("Legends of the Jedi · account", firstTab.Title);
             Assert.Equal("Legends of the Jedi · account", Row(firstTab));
-            Assert.Equal("account · Legends of the Jedi · Wandur", window.Title);
+            Assert.Equal("account · Legends of the Jedi · " + MainWindow.AppName, window.Title);
             Assert.StartsWith("●  Legends of the Jedi · account  ·  ", Status());
 
             // The world names the character through the mapping (MSDP CHARACTERNAME): the reported name wins everywhere.
@@ -85,7 +85,7 @@ public sealed class SessionCharacterTests
             Assert.Equal(1, changes);
             Assert.Equal("Legends of the Jedi · Talek", firstTab.Title);
             Assert.Equal("Legends of the Jedi · Talek", Row(firstTab));
-            Assert.Equal("Talek · Legends of the Jedi · Wandur", window.Title);
+            Assert.Equal("Talek · Legends of the Jedi · " + MainWindow.AppName, window.Title);
             Assert.StartsWith("●  Legends of the Jedi · Talek  ·  ", Status());
             // The world remembers who played there last, for both profiles of the world.
             Assert.Equal("Talek", usage.Load()[account.Id].LastCharacter);
@@ -99,18 +99,18 @@ public sealed class SessionCharacterTests
             await ScriptSessionTests.WaitFor(() => secondTab.Controller.IsConnected);
             Dispatcher.UIThread.RunJobs();
             Assert.Equal("Legends of the Jedi · Mira", secondTab.Title);
-            Assert.Equal("Mira · Legends of the Jedi · Wandur", window.Title);
+            Assert.Equal("Mira · Legends of the Jedi · " + MainWindow.AppName, window.Title);
             Assert.StartsWith("●  Legends of the Jedi · Mira  ·  ", Status());
             Assert.Equal(["Legends of the Jedi · Talek", "Legends of the Jedi · Mira"],
                 window.Workspace.Navigation.OpenEntries.Where(entry => entry.Key is SessionTab).Select(entry => entry.Title));
             window.Sessions.Select(firstTab); Dispatcher.UIThread.RunJobs();
-            Assert.Equal("Talek · Legends of the Jedi · Wandur", window.Title);
+            Assert.Equal("Talek · Legends of the Jedi · " + MainWindow.AppName, window.Title);
             Assert.StartsWith("●  Legends of the Jedi · Talek  ·  ", Status());
             Assert.Equal("Legends of the Jedi · Talek", firstTab.Title);
 
             // A tab without a session shows the app alone, and no title ever carried an em dash.
             window.Sessions.NewTab(); Dispatcher.UIThread.RunJobs();
-            Assert.Equal("Wandur", window.Title);
+            Assert.Equal(MainWindow.AppName, window.Title);
             Assert.DoesNotContain("·", Status());
             Assert.All(titles, title => Assert.DoesNotContain("\u2014", title));
         }

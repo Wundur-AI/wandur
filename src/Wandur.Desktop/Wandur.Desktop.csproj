@@ -2,6 +2,10 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <AssemblyName>Wandur</AssemblyName>
+    <!-- What Windows shows in the file's details and Task Manager. The executable stays Wandur.exe. -->
+    <Product>Wandur Mud Client</Product>
+    <AssemblyTitle>Wandur Mud Client</AssemblyTitle>
+    <Description>Wandur Mud Client (WMC)</Description>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationIcon>Assets/Wandur.ico</ApplicationIcon>
   </PropertyGroup>

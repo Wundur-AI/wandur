@@ -12,7 +12,7 @@ usage: package-macos.sh [--clean] [--force]
                         [--output DIR] [--build-number N] [--sign-adhoc|--no-sign]
 
 With no --rid this is the local development build: a framework-dependent bundle
-at artifacts/macos/Wandur.app, version 0.1.0.
+at "artifacts/macos/Wandur Mud Client.app", version 0.1.0.
 
   --clean  Delete obj/ and bin/ first. Off by default: a cold graph here has
            produced a Wandur.deps.json missing its own project references, which
@@ -32,7 +32,7 @@ at artifacts/macos/Wandur.app, version 0.1.0.
                     GitHub Actions, otherwise the numeric version plus a UTC
                     timestamp (0.1.0.202609261730), so every local build differs.
   --self-contained  Bundle the .NET runtime, so users need nothing installed.
-  --output          Directory for Wandur.app (default artifacts/macos/<rid>).
+  --output          Directory for "Wandur Mud Client.app" (default artifacts/macos/<rid>).
   --sign-adhoc      Ad-hoc sign the finished bundle (codesign --deep -s -). The
                     default with --rid: an unsigned bundle fails verification and
                     Apple Silicon will not run it once downloaded.
@@ -120,7 +120,9 @@ if [[ -n "$rid" ]]; then
 else
   bundle_parent="$project_root/artifacts/macos"
 fi
-app_bundle="$bundle_parent/Wandur.app"
+# The bundle's file name is what Finder, the Dock and Launchpad show. The executable inside stays Wandur, and
+# CFBundleName stays the short "Wandur" for the menu bar, which has little room.
+app_bundle="$bundle_parent/Wandur Mud Client.app"
 
 # The bundle is replaced with rsync --delete, which pulls files out from under a
 # running process. Quit the app rather than debug the crash that follows.
@@ -240,7 +242,7 @@ cat > "$app_bundle/Contents/Info.plist" <<PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>CFBundleName</key><string>Wandur</string>
-  <key>CFBundleDisplayName</key><string>Wandur</string>
+  <key>CFBundleDisplayName</key><string>Wandur Mud Client</string>
   <key>CFBundleIdentifier</key><string>net.wandur.client</string>
   <key>CFBundleExecutable</key><string>Wandur</string>
   <key>CFBundlePackageType</key><string>APPL</string>

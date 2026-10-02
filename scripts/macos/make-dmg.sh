@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Wraps a finished Wandur.app in a compressed disk image laid out as an installer window: the app on the left,
+# Wraps a finished Wandur Mud Client.app in a compressed disk image laid out as an installer window: the app on the left,
 # an Applications shortcut on the right, and a background that says to drag one onto the other. Used by the
 # release workflow and scripts/macos/sign-and-notarize.sh.
 #
-#   scripts/macos/make-dmg.sh <path/to/Wandur.app> <out.dmg>
+#   scripts/macos/make-dmg.sh <path/to/Wandur Mud Client.app> <out.dmg>
 #
 # The layout is scripts/macos/dmg-settings.py, built with dmgbuild (pinned below), which writes the window's
 # .DS_Store directly instead of scripting Finder. dmgbuild comes from the Python on PATH when it has it (the
@@ -17,7 +17,7 @@ set -euo pipefail
 # 1.6.7 dropped it, leaving the alias, which resolves inside the mounted image. It needs Python 3.10 or later.
 DMGBUILD_VERSION=1.6.7
 
-[[ $# -eq 2 ]] || { echo "usage: make-dmg.sh <Wandur.app> <out.dmg>" >&2; exit 2; }
+[[ $# -eq 2 ]] || { echo "usage: make-dmg.sh <app bundle> <out.dmg>" >&2; exit 2; }
 app="${1%/}"
 out="$2"
 here="$(cd "$(dirname "$0")" && pwd -P)"
