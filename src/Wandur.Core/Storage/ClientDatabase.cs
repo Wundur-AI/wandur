@@ -10,7 +10,11 @@ namespace Wandur.Core.Storage;
 /// closes its pooled connections, which on Windows is what lets the file be deleted, moved or replaced.</remarks>
 public sealed class ClientDatabase(string path) : IDisposable
 {
-    private readonly object _initializationGate = new();
+    // First-open setup is serialized per file across the process, not per instance: two instances for one
+    // file racing through it (create the schema, switch to WAL) have had SQLite answer BEGIN IMMEDIATE with
+    // a bare "SQL logic error" on Linux.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, object> InitializationGates = new();
+    private const int InitializationAttempts = 5;
     private bool _initialized;
     public string FilePath { get; } = Path.GetFullPath(path);
     private string ConnectionString => new SqliteConnectionStringBuilder
@@ -31,12 +35,15 @@ public sealed class ClientDatabase(string path) : IDisposable
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
             connection = new SqliteConnection(ConnectionString);
             connection.Open();
-            lock (_initializationGate)
+            if (!Volatile.Read(ref _initialized))
             {
-                if (!_initialized)
+                lock (InitializationGates.GetOrAdd(FilePath, _ => new object()))
                 {
-                    Initialize(connection);
-                    _initialized = true;
+                    if (!_initialized)
+                    {
+                        connection = InitializeWithRetry(connection);
+                        Volatile.Write(ref _initialized, true);
+                    }
                 }
             }
             return connection;
@@ -130,6 +137,33 @@ public sealed class ClientDatabase(string path) : IDisposable
             catch (ArgumentException ex) { throw new IOException(L.InvalidWorldProfile, ex); }
         }
         return host + ":" + port.ToString(CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>Another process can still be setting up the same new file (a second copy of the app). Setup is
+    /// idempotent, so a failed attempt is retried on a fresh connection after a short pause.</summary>
+    private SqliteConnection InitializeWithRetry(SqliteConnection connection)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                Initialize(connection);
+                return connection;
+            }
+            catch (SqliteException) when (attempt < InitializationAttempts)
+            {
+                connection.Dispose();
+                Thread.Sleep(50 * attempt);
+                connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+            }
+            catch
+            {
+                // The caller only holds the first connection; this one is ours to close.
+                connection.Dispose();
+                throw;
+            }
+        }
     }
 
     private static void Initialize(SqliteConnection connection)
