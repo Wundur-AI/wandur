@@ -582,7 +582,7 @@ Ausgänge: Norden · Osten
     <value>MUD finden · Wandur</value>
   </data>
   <data name="FindYourNextWorld" xml:space="preserve">
-    <value>Finde deine nächste Welt</value>
+    <value>MUDs entdecken</value>
   </data>
   <data name="SearchMUDServersByNameThemeLanguageOrAddress" xml:space="preserve">
     <value>Suche MUD-Server nach Name, Thema, Sprache oder Adresse.</value>
@@ -1943,16 +1943,16 @@ Stoppe nach einer Inventarliste.</value></data>
   <data name="BeginnerFriendly" xml:space="preserve"><value>Einsteigerfreundlich</value></data>
   <data name="BeginnerFriendlyHint" xml:space="preserve"><value>Das Verzeichnis führt diese Welt als offen für neue Spieler.</value></data>
   <data name="AboutWorld" xml:space="preserve"><value>Über {0}</value></data>
-  <data name="FindYourPlace" xml:space="preserve"><value>Finde deinen Platz</value></data>
+  <data name="FindYourPlace" xml:space="preserve"><value>Spielstil</value></data>
   <data name="WorldDetails" xml:space="preserve"><value>Weltdetails</value></data>
   <data name="WorldStatus" xml:space="preserve"><value>Status</value></data>
   <data name="PlayStyle" xml:space="preserve"><value>Spielstil</value></data>
   <data name="RoleplayStyle" xml:space="preserve"><value>Rollenspiel: {0}</value></data>
   <data name="ConnectWithAnyClient" xml:space="preserve"><value>Mit jedem Client verbinden</value></data>
   <data name="CopyAddress" xml:space="preserve"><value>Adresse kopieren</value></data>
-  <data name="AGlimpseInside" xml:space="preserve"><value>Ein Blick hinein</value></data>
+  <data name="AGlimpseInside" xml:space="preserve"><value>Illustration</value></data>
   <data name="AroundTheWorld" xml:space="preserve"><value>Rund um die Welt</value></data>
-  <data name="DirectoryLede" xml:space="preserve"><value>Lebendige Welten. Echte Menschen. Geschichten, in denen man sich verlieren kann.</value></data>
+  <data name="DirectoryLede" xml:space="preserve"><value>Suche nach Genre, Sprache, Codebasis oder Tag. Online-Status und Spielerzahlen stammen aus den stündlichen Prüfungen von wandur.net.</value></data>
   <data name="SortLabel" xml:space="preserve"><value>Sortieren:</value></data>
   <data name="PlayersObservedAgo" xml:space="preserve"><value>{0} Spieler, {1}</value></data>
   <data name="CountedAgo" xml:space="preserve"><value>{0} zählte {1}, {2}</value></data>
