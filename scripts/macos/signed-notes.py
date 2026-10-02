@@ -4,7 +4,9 @@
   signed-notes.py <body-in> <body-out>
 
 Replaces everything between <!-- macos-first-run:start --> and <!-- macos-first-run:end -->
-(the right-click, Open instructions from docs/release-notes-template.md) with one sentence.
+with the sentence docs/release-notes-template.md now carries for signed builds. The release
+workflow signs on every tag, so this is only for an older release whose notes still give the
+right-click, Open instructions and whose Mac images scripts/release-macos-signed.sh replaced.
 The markers stay, so running it again gives the same result. Fails unless there is exactly
 one marked paragraph.
 """
@@ -13,7 +15,7 @@ import sys
 
 START = "<!-- macos-first-run:start -->"
 END = "<!-- macos-first-run:end -->"
-SIGNED = "The macOS builds are signed and notarized."
+SIGNED = "The macOS builds are signed and notarized, so Wandur opens with a double-click like any other app."
 
 if len(sys.argv) != 3:
     sys.exit(__doc__)

@@ -28,13 +28,7 @@ Windows asks once per download.
 **macOS.** Open the `.dmg` and drag Wandur onto Applications.
 
 <!-- macos-first-run:start -->
-Until a signed and notarized build is attached to this release, macOS blocks the first launch.
-On macOS 15 and later: open Wandur once and click **Done** in the dialog that says "Apple could
-not verify "Wandur" is free of malware that may harm your Mac or compromise your privacy." Then
-open System Settings > Privacy & Security, scroll to Security, click **Open Anyway** next to
-the message about Wandur, confirm with your password, and click **Open Anyway** once more.
-On macOS 14 and earlier: right-click (or Control-click) Wandur in Applications, choose
-**Open**, then **Open** again in the dialog. You only do this once.
+The macOS builds are signed and notarized, so Wandur opens with a double-click like any other app.
 <!-- macos-first-run:end -->
 
 **Linux.** Unpack and run it from the folder:
