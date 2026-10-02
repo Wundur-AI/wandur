@@ -43,8 +43,14 @@ public sealed partial class WorldCatalog : IWorldDirectory, IDisposable
         _cache = cache;
         _time = timeProvider ?? TimeProvider.System;
         BaseUri = baseUri ?? new Uri((Environment.GetEnvironmentVariable("WANDUR_DIRECTORY_URL") ?? "https://api.wandur.net").TrimEnd('/') + "/");
-        _http = http ?? new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
         _ownsHttp = http is null;
+        if (http is null)
+        {
+            // The catalog's own client: every directory, art and theme request carries the client's name and version.
+            http = new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd(ClientUserAgent.Value);
+        }
+        _http = http;
         try
         {
             if (_cache.ReadSnapshot() is { } json)

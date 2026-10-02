@@ -18,6 +18,8 @@ public sealed class ModelPackageInstallerTests
     }
 
     /// <summary>Probes for a free loopback port and starts a listener on it.</summary>
+    // Dispose the listener once and never Stop it first: on macOS and Linux, Dispose after Stop binds the port
+    // again to remove it, and fails with "Address already in use" when a parallel test has taken the port.
     internal static (HttpListener Listener, int Port) StartListener(int startPort = 40000, int endPort = 40200)
     {
         for (var attempt = startPort; attempt < endPort; attempt++)
@@ -93,7 +95,6 @@ public sealed class ModelPackageInstallerTests
         Assert.Equal("9.9.9", package.Version);
         await Task.Delay(50);
         Assert.Contains(progress, p => p >= 0.99);
-        listener.Stop();
     }
 
     [Fact]
@@ -126,8 +127,6 @@ public sealed class ModelPackageInstallerTests
         var installer = new ModelPackageInstaller(root, new HttpClient());
         var package = await installer.DownloadAsync(new Uri($"http://127.0.0.1:{portA}/model.zip"), null, CancellationToken.None);
         Assert.Equal("9.9.9", package.Version);
-        listenerA.Stop();
-        listenerB.Stop();
 
         // A listener that always redirects to itself must eventually be rejected once the depth cap is exceeded.
         var (loopListener, loopPort) = StartListener();
@@ -147,7 +146,6 @@ public sealed class ModelPackageInstallerTests
         var loopRoot = Path.Combine(Path.GetTempPath(), "wandur-models-" + Guid.NewGuid());
         var loopInstaller = new ModelPackageInstaller(loopRoot, new HttpClient());
         await Assert.ThrowsAsync<HttpRequestException>(() => loopInstaller.DownloadAsync(new Uri($"http://127.0.0.1:{loopPort}/model.zip"), null, CancellationToken.None));
-        loopListener.Stop();
     }
 
     [Fact]

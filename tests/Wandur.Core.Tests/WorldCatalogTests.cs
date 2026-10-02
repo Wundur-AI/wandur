@@ -786,7 +786,7 @@ public sealed class WorldCatalogTests : IDisposable
         }
         finally
         {
-            listener.Stop(); listener.Close();
+            listener.Close();
             await Task.WhenAny(serving, Task.Delay(TimeSpan.FromSeconds(5)));
         }
     }
