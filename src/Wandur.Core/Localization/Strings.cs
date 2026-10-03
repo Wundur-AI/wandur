@@ -1011,4 +1011,16 @@ public static class Strings
     public static string LinkRefusedLocal => Get(nameof(LinkRefusedLocal));
     public static string LinkClickHint => Get(nameof(LinkClickHint));
     public static string LinkClickHintMac => Get(nameof(LinkClickHintMac));
+    public static string CheckForUpdatesMenu => Get(nameof(CheckForUpdatesMenu));
+    public static string CheckForUpdatesTitle => Get(nameof(CheckForUpdatesTitle));
+    public static string UpdateAvailable => Get(nameof(UpdateAvailable));
+    public static string UpdateDownload => Get(nameof(UpdateDownload));
+    public static string UpdateReleaseNotes => Get(nameof(UpdateReleaseNotes));
+    public static string UpdateSkipVersion => Get(nameof(UpdateSkipVersion));
+    public static string UpdateUpToDate => Get(nameof(UpdateUpToDate));
+    public static string UpdateUnreachable => Get(nameof(UpdateUnreachable));
+    public static string UpdateUnreachableHint => Get(nameof(UpdateUnreachableHint));
+    public static string UpdateChecksOffInSourceBuild => Get(nameof(UpdateChecksOffInSourceBuild));
+    public static string CheckForUpdatesAutomatically => Get(nameof(CheckForUpdatesAutomatically));
+    public static string CheckForUpdatesAutomaticallyHint => Get(nameof(CheckForUpdatesAutomaticallyHint));
 }

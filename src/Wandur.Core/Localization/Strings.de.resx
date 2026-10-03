@@ -1966,4 +1966,16 @@ Stoppe nach einer Inventarliste.</value></data>
   <data name="LinkRefusedLocal" xml:space="preserve"><value>Dieser Link wurde nicht geöffnet: Er zeigt auf diesen Computer oder ein privates Netzwerk, und eine Welt hat keinen Grund, dich dorthin zu schicken.</value></data>
   <data name="LinkClickHint" xml:space="preserve"><value>Strg+Klick öffnet diesen Link.</value></data>
   <data name="LinkClickHintMac" xml:space="preserve"><value>Cmd+Klick oder Control+Klick öffnet diesen Link.</value></data>
+  <data name="CheckForUpdatesMenu" xml:space="preserve"><value>Nach Updates suchen…</value></data>
+  <data name="CheckForUpdatesTitle" xml:space="preserve"><value>Nach Updates suchen</value></data>
+  <data name="UpdateAvailable" xml:space="preserve"><value>Wandur Mud Client {0} ist verfügbar.</value></data>
+  <data name="UpdateDownload" xml:space="preserve"><value>Herunterladen</value></data>
+  <data name="UpdateReleaseNotes" xml:space="preserve"><value>Versionshinweise</value></data>
+  <data name="UpdateSkipVersion" xml:space="preserve"><value>Diese Version überspringen</value></data>
+  <data name="UpdateUpToDate" xml:space="preserve"><value>Sie haben die neueste Version, {0}.</value></data>
+  <data name="UpdateUnreachable" xml:space="preserve"><value>wandur.net ist nicht erreichbar.</value></data>
+  <data name="UpdateUnreachableHint" xml:space="preserve"><value>Prüfen Sie Ihre Internetverbindung und versuchen Sie es später erneut.</value></data>
+  <data name="UpdateChecksOffInSourceBuild" xml:space="preserve"><value>Dies ist ein Build aus dem Quellcode ({0}) und sucht daher nicht nach Updates.</value></data>
+  <data name="CheckForUpdatesAutomatically" xml:space="preserve"><value>Automatisch nach Updates suchen</value></data>
+  <data name="CheckForUpdatesAutomaticallyHint" xml:space="preserve"><value>Einmal am Tag fragt der Client bei wandur.net nach, ob eine neuere Version erschienen ist, und zeigt dann einen Hinweis. Er lädt nie selbst etwas herunter und installiert nichts.</value></data>
 </root>
