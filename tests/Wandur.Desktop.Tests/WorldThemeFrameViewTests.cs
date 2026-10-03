@@ -59,7 +59,7 @@ public sealed class WorldThemeFrameViewTests
             Assert.True(ThemeService.AppliedImages?.ContainsKey("frame-border") == true);
             Assert.Null(bezel.BorderBitmap);
             Assert.Equal(default, bezel.Inset);
-            Assert.Equal(FleetTitleLayout.BandHeight, shell.BandHeight);
+            Assert.Equal(TitleBarMetrics.Fleet.BandHeight, shell.BandHeight);
             Assert.Equal(6, shell.EdgeThickness);
             Assert.Null(ThemeSkinResources.FromApplied());
             Assert.True(handler.BorderRequests >= 1);
@@ -78,7 +78,7 @@ public sealed class WorldThemeFrameViewTests
             Assert.Null(bezel.BorderBitmap);
             Assert.Equal(default, bezel.Inset);
             Assert.Equal(Color.Parse(palette.Colors.Terminal), Assert.IsAssignableFrom<ISolidColorBrush>(Application.Current.Resources["TerminalBrush"]).Color);
-            Assert.Equal(FleetTitleLayout.BandHeight, shell.BandHeight);
+            Assert.Equal(TitleBarMetrics.Fleet.BandHeight, shell.BandHeight);
             Assert.Equal(6, shell.EdgeThickness);
         }
         finally

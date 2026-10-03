@@ -40,12 +40,12 @@ public sealed class ThemeBandWithoutArtTests
         await using var harness = await DockHarness.OpenAsync(theme);
         Dispatcher.UIThread.RunJobs(); harness.Window.UpdateLayout();
         Assert.True(FleetSkin.IsActive);
-        Assert.Equal(FleetTitleLayout.BandHeight, Host(harness.Window).BandHeight);
+        Assert.Equal(TitleBarMetrics.Fleet.BandHeight, Host(harness.Window).BandHeight);
         var plaque = harness.Window.GetVisualDescendants().OfType<ThemePlaque>().Single();
         var origin = plaque.TranslatePoint(default, harness.Window)!.Value;
         // Fleet's plaque projects below the band into the toolbar's reserved ledge.
-        Assert.Equal(FleetTitleLayout.PlaqueTop, origin.Y);
-        Assert.Equal(FleetTitleLayout.PlaqueHeight, plaque.Bounds.Height);
+        Assert.Equal(TitleBarMetrics.Fleet.PlaqueTop, origin.Y);
+        Assert.Equal(TitleBarMetrics.Fleet.PlaqueHeight, plaque.Bounds.Height);
         var text = harness.Window.GetVisualDescendants().OfType<Avalonia.Controls.TextBlock>().Single(t => t.Name == "AppTitle");
         var textOrigin = text.TranslatePoint(default, plaque)!.Value;
         Assert.True(textOrigin.X >= 64, "World plaque text must stay inside the fixed lamp-safe inset.");
@@ -80,10 +80,10 @@ public sealed class ThemeBandWithoutArtTests
         host.ApplyFromTheme();
         Dispatcher.UIThread.RunJobs();
 
-        Assert.Equal(FleetTitleLayout.BandHeight, host.BandHeight);
+        Assert.Equal(TitleBarMetrics.Fleet.BandHeight, host.BandHeight);
         Assert.NotNull(host.BandBrush);
         // Reserved, or the content would start underneath the bar rather than below it.
-        Assert.True(host.Padding.Top >= FleetTitleLayout.BandHeight || host.Child?.Bounds.Top >= FleetTitleLayout.BandHeight,
+        Assert.True(host.Padding.Top >= TitleBarMetrics.Fleet.BandHeight || host.Child?.Bounds.Top >= TitleBarMetrics.Fleet.BandHeight,
             $"the band reserved no room: padding {host.Padding}, child at {host.Child?.Bounds.Top}");
     }
 
@@ -97,8 +97,8 @@ public sealed class ThemeBandWithoutArtTests
         host.ApplyFromTheme();
         Dispatcher.UIThread.RunJobs();
 
-        Assert.Equal(FleetTitleLayout.BandHeight, host.BandHeight);
+        Assert.Equal(TitleBarMetrics.Fleet.BandHeight, host.BandHeight);
         Assert.NotNull(host.BandBrush);
-        Assert.True(host.Child!.Bounds.Top >= FleetTitleLayout.BandHeight);
+        Assert.True(host.Child!.Bounds.Top >= TitleBarMetrics.Fleet.BandHeight);
     }
 }

@@ -82,7 +82,7 @@ public sealed class FleetPaletteTests
         Assert.Same(FleetSkin.Metal, FleetSkin.Wings);
         Assert.Same(FleetSkin.Metal, FleetSkin.Toolbar);
         Assert.Equal("fleet", ThemeService.AppliedSkin!.Layout!.TitleBar!.Plaque!.Shape);
-        Assert.Equal(FleetTitleLayout.BandHeight, ThemeService.AppliedSkin.Layout.TitleBar.Height);
+        Assert.Equal(TitleBarMetrics.Fleet.BandHeight, ThemeService.AppliedSkin.Layout.TitleBar.Height);
         Assert.Null(ThemeSkinResources.FromApplied());
         ThemeService.Apply(new ClientSettings());
     }
@@ -124,7 +124,7 @@ public sealed class FleetPaletteTests
         { [ThemeSkinResources.WindowBorderKey] = bitmap, [ThemeSkinResources.PanelDefaultKey] = bitmap, ["frame-border"] = bitmap });
         var skin = ThemeService.AppliedSkin!;
         Assert.Equal("fleet", skin.Layout!.TitleBar!.Plaque!.Shape);
-        Assert.Equal(FleetTitleLayout.BandHeight, skin.Layout.TitleBar.Height);
+        Assert.Equal(TitleBarMetrics.Fleet.BandHeight, skin.Layout.TitleBar.Height);
         Assert.False(skin.Layout.TitleBar.HostsToolbar);
         Assert.Equal(38, skin.Layout.PanelHeader!.Height);
         Assert.Equal(2, skin.Radii!.Panel);

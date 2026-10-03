@@ -16,7 +16,7 @@ internal static class FleetSkin
         {
             TitleBar = new()
             {
-                Height = FleetTitleLayout.BandHeight, HostsToolbar = false,
+                Height = TitleBarMetrics.Fleet.BandHeight, HostsToolbar = false,
                 TitleAlign = "center", Padding = new(0, 0, 0, 0),
                 Plaque = new()
                 {

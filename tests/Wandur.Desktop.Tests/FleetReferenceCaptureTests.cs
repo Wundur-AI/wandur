@@ -81,7 +81,7 @@ public sealed class FleetReferenceCaptureTests
             var glyph = Assert.IsType<Avalonia.Controls.Shapes.Path>(look.Content);
             var ink = Assert.IsAssignableFrom<Avalonia.Media.ISolidColorBrush>(glyph.Stroke);
             Assert.True(ink.Color.R >= 180, "Composer icons must remain legible against the dark input strip.");
-            Assert.True(title.Bounds.Width <= plaque.Bounds.Width - FleetTitleLayout.TextInset * 2);
+            Assert.True(title.Bounds.Width <= plaque.Bounds.Width - TitleBarMetrics.Fleet.TextInset * 2);
             Assert.Equal(Avalonia.Media.TextTrimming.CharacterEllipsis, title.TextTrimming);
             // The toolbar must actually receive the title's shaped socket. A straight metal rectangle
             // painted over it makes an otherwise correct title merely float in front of the toolbar.
@@ -96,7 +96,7 @@ public sealed class FleetReferenceCaptureTests
                 var centerX = (int)Math.Round(origin.X + plaque.Bounds.Width / 2);
                 var bottomY = (int)Math.Round(origin.Y + plaque.Bounds.Height);
                 var underLip = pixels.GetPixel(centerX, bottomY + 2);
-                var besideShoulder = pixels.GetPixel((int)Math.Round(origin.X - 6), (int)FleetTitleLayout.BandHeight + 3);
+                var besideShoulder = pixels.GetPixel((int)Math.Round(origin.X - 6), (int)TitleBarMetrics.Fleet.BandHeight + 3);
                 var toolbarFace = pixels.GetPixel(centerX, bottomY + 14);
                 Assert.True(underLip.Red < 150, $"Missing dark recessed channel beneath plaque: {underLip}");
                 Assert.True(besideShoulder.Red < 150, $"Missing shoulder socket: {besideShoulder}");

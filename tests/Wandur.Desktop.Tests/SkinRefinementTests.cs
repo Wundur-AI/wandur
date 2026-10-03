@@ -14,8 +14,8 @@ public sealed class SkinRefinementTests
 {
     private sealed class WindowsCaptionFrame : Control
     {
-        public override void Render(DrawingContext context) => ArmoredSkinRenderer.DrawFrame(context, Bounds.Size,
-            ArmoredTitleLayout.Calculate(1040, 88, 276, 9999).Bounds, new Thickness(88, 0, 276, 0),
+        public override void Render(DrawingContext context) => ArmoredSkinRenderer.DrawFrame(context, Bounds.Size, TitleBarMetrics.Armored.BandHeight,
+            TitleBarLayout.Calculate(TitleBarMetrics.Armored, 1040, 88, 276, 9999).Bounds, new Thickness(88, 0, 276, 0),
             Brushes.LightGray, Brushes.DimGray, Brushes.White, Brushes.Cyan);
     }
 

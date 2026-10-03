@@ -15,8 +15,9 @@ public sealed class ArmoredConstructionTests
         public override void Render(DrawingContext context)
         {
             context.FillRectangle(Brushes.Magenta, new Rect(Bounds.Size));
-            ArmoredSkinRenderer.DrawFrame(context, new Size(width, 700), new Rect(width / 2 - 230, 2, 460, 86),
-                new Thickness(88, 0, 276, 0), Brushes.LightGray, Brushes.DimGray, Brushes.White, Brushes.Cyan);
+            var metrics = TitleBarMetrics.Armored;
+            ArmoredSkinRenderer.DrawFrame(context, new Size(width, 700), metrics.BandHeight,
+                new Rect(width / 2 - 230, metrics.PlaqueTop, 460, metrics.PlaqueHeight), new Thickness(88, 0, 276, 0), Brushes.LightGray, Brushes.DimGray, Brushes.White, Brushes.Cyan);
         }
     }
 
@@ -42,7 +43,7 @@ public sealed class ArmoredConstructionTests
                     $"Corner interrupts light at ({x}, {y}).");
             }
             // Corner shoulders must stay in the existing 24/30-DIP frame footprint.
-            for (var y = 81; y < 670; y += 7)
+            for (var y = (int)TitleBarMetrics.Armored.BandHeight + 1; y < 670; y += 7)
             for (var x = 25; x < width - 24; x += 7)
                 Assert.True(SKColors.Magenta == pixels.GetPixel(x, y), $"Frame enters content at ({x}, {y}).");
         }
@@ -54,8 +55,9 @@ public sealed class ArmoredConstructionTests
         public override void Render(DrawingContext context)
         {
             using var offset = context.PushTransform(Matrix.CreateTranslation(-x, -y));
-            var title = new Rect(538, 2, 460, 86);
-            ArmoredSkinRenderer.DrawFrame(context, new Size(1536, 900), title, new Thickness(88, 0, 276, 0),
+            var metrics = TitleBarMetrics.Armored;
+            var title = new Rect(538, metrics.PlaqueTop, 460, metrics.PlaqueHeight);
+            ArmoredSkinRenderer.DrawFrame(context, new Size(1536, 900), metrics.BandHeight, title, new Thickness(88, 0, 276, 0),
                 FleetSkin.Metal, FleetSkin.RimEdge, FleetSkin.RimHighlight, Brush.Parse("#8DDEE5"));
             using var titleOffset = context.PushTransform(Matrix.CreateTranslation(title.X, title.Y));
             ArmoredSkinRenderer.DrawPlaque(context, new Rect(title.Size), FleetSkin.Metal,
