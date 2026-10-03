@@ -14,8 +14,8 @@ internal static class FleetTitleLayout
     public const double PlaqueDrop = 10;
     public const double PlaqueHeight = BandHeight - PlaqueTop + PlaqueDrop;
     // The engraved title and the app icon beside it, sized to the plate inside the plaque.
-    public const double TitleFontSize = 15;
-    public const double TitleLetterSpacing = 1.2;
+    public const double TitleFontSize = 13;
+    public const double TitleLetterSpacing = 1.0;
     public const double LogoSize = 24;
     // The toolbar row under the band: its top padding clears the plaque's projection, and the rest
     // holds the 32 DIP controls with the same 5 DIP foot as before.

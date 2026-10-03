@@ -189,7 +189,7 @@ public sealed class FleetSkinTests
             var title = window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "AppTitle");
             Assert.Equal("WANDUR MUD CLIENT", title.Text);
             Assert.Equal("Wandur Mud Client", window.Title);
-            Assert.Equal(15, title.FontSize);
+            Assert.Equal(FleetTitleLayout.TitleFontSize, title.FontSize);
             Assert.Equal(38, window.GetVisualDescendants().OfType<ThemeWindowSkinHost>().Single().BandHeight);
             Assert.Equal(38, window.ExtendClientAreaTitleBarHeightHint);
             var host = window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "PlaqueTitleHost");

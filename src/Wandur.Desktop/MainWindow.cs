@@ -742,6 +742,10 @@ public sealed partial class MainWindow : Window
         var armored = ThemeService.ActiveWindowSkin.IsArmored;
         _appTitle.FontSize = armored ? 20 : FleetTitleLayout.TitleFontSize;
         _appTitle.MaxWidth = double.PositiveInfinity;
+        // The title fills its column and centers its text there, so rounding the plate to whole pixels
+        // never pushes the text half a pixel off center.
+        _appTitle.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _appTitle.TextAlignment = TextAlignment.Center;
         _appTitle.FontWeight = FontWeight.Normal;
         _appTitle.LetterSpacing = armored ? 1.8 : FleetTitleLayout.TitleLetterSpacing;
         _titleBarLogo.Width = _titleBarLogo.Height = LogoSize;
@@ -758,7 +762,8 @@ public sealed partial class MainWindow : Window
             - LogoSize - TitleLogoGap;
         var full = PlateTitle(_plaqueLabel);
         _appTitle.Text = TitleWidth(full) <= room ? full : PlateTitle(_plaqueShortLabel);
-        var identityWidth = TitleWidth(_appTitle.Text) + LogoSize + TitleLogoGap;
+        // A whole, even width, so the icon and title center on the pixel grid inside the even-width plaque.
+        var identityWidth = Math.Ceiling((TitleWidth(_appTitle.Text) + LogoSize + TitleLogoGap) / 2) * 2;
         var place = armored ? ArmoredTitleLayout.Calculate(width, left, right, identityWidth)
             : FleetTitleLayout.Calculate(width, left, right, identityWidth);
         _windowSkin.TitleModuleBounds = place.Bounds;
