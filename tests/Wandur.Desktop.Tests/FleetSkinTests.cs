@@ -173,6 +173,36 @@ public sealed class FleetSkinTests
     }
 
     [AvaloniaFact]
+    public void ThePlateIsCenteredByLayoutSoItKeepsUpWithAZoomAnimation()
+    {
+        // macOS zoom animates the width faster than the deferred title layout runs, which headless rendering
+        // cannot reproduce. So pin what keeps it centered: the plate is centered by layout, not placed at an
+        // x offset, and the painted rails read the center from the live width, not from the stored bounds.
+        var path = Path.Combine(Path.GetTempPath(), "wandur-fleet-zoom-" + Guid.NewGuid());
+        var store = new SettingsStore(Path.Combine(path, "settings.json"));
+        store.Save(new ClientSettings { Theme = "Slate", UseWorldThemes = false });
+        var window = new MainWindow(new TranscriptDisplayFactory(), store, new MemoryPasswordVault(),
+            new MemoryRoomMapStore(), new RecordingScriptFactory(), new MemoryScriptLibraryStore()) { Width = 1200, Height = 800 };
+        try
+        {
+            window.Show(); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+            var host = window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "PlaqueTitleHost");
+            Assert.Equal(Avalonia.Layout.HorizontalAlignment.Center, host.HorizontalAlignment);
+            Assert.Equal(0, host.Margin.Left);
+            var skin = window.GetVisualDescendants().OfType<ThemeWindowSkinHost>().Single();
+            var stored = skin.TitleModuleBounds;
+            skin.TitleModuleBounds = stored.WithX(stored.X - 250);   // as if the window had just grown 500 wide
+            Assert.Equal(skin.Bounds.Width / 2, skin.CenteredTitleModule.Center.X, 1);
+            Assert.Equal(stored.Width, skin.CenteredTitleModule.Width);
+        }
+        finally
+        {
+            window.Close();
+            if (Directory.Exists(path)) Directory.Delete(path, true);
+        }
+    }
+
+    [AvaloniaFact]
     public async Task TheSlimFleetTitleBarShowsTheAppNameInItsShorterBand()
     {
         // Pinned on purpose: the band was 50 and the plaque 60 before the title bar was slimmed.

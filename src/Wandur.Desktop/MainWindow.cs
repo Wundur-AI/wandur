@@ -768,12 +768,14 @@ public sealed partial class MainWindow : Window
             : FleetTitleLayout.Calculate(width, left, right, identityWidth);
         _windowSkin.TitleModuleBounds = place.Bounds;
         ApplyFleetToolbarSurface();
-        _plaqueTitleHost.HorizontalAlignment = HorizontalAlignment.Left;
+        // Centered by layout rather than placed at an x offset, so the plate stays centered on every frame
+        // of a resize, including the macOS zoom animation, before this method runs again.
+        _plaqueTitleHost.HorizontalAlignment = HorizontalAlignment.Center;
         _plaqueTitleHost.MinWidth = 0;
         _plaqueTitleHost.MaxWidth = double.PositiveInfinity;
         _plaqueTitleHost.Width = place.Bounds.Width;
         _plaqueTitleHost.Height = place.Bounds.Height;
-        _plaqueTitleHost.Margin = new Thickness(place.Bounds.X, place.Bounds.Y, 0, 0);
+        _plaqueTitleHost.Margin = new Thickness(0, place.Bounds.Y, 0, 0);
         _plaque.Padding = new Thickness(place.PlainTitle ? 4 : armored ? ArmoredTitleLayout.TextInset : FleetTitleLayout.TextInset, 0);
         _plaqueIdentity.Width = Math.Min(identityWidth, Math.Max(0, place.Bounds.Width - _plaque.Padding.Left - _plaque.Padding.Right));
         if (place.PlainTitle)
@@ -800,7 +802,7 @@ public sealed partial class MainWindow : Window
         }
         if (!ThemeService.ActiveWindowSkin.CustomChrome || _chrome is null || _windowSkin is null ||
             _toolbar.TranslatePoint(default, _chrome) is not { } origin) return;
-        var title = _windowSkin.TitleModuleBounds.Translate(new Vector(-origin.X, -origin.Y));
+        var title = _windowSkin.CenteredTitleModule.Translate(new Vector(-origin.X, -origin.Y));
         var key = (_toolbar.Bounds.Size, title);
         if (_fleetToolbarSurfaceKey == key) return;
         _toolbarBackground?.Dispose();

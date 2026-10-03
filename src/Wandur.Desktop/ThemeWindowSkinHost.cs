@@ -22,6 +22,12 @@ internal sealed class ThemeWindowSkinHost : Decorator
     public static readonly StyledProperty<Rect> TitleModuleBoundsProperty =
         AvaloniaProperty.Register<ThemeWindowSkinHost, Rect>(nameof(TitleModuleBounds));
     public Rect TitleModuleBounds { get => GetValue(TitleModuleBoundsProperty); set => SetValue(TitleModuleBoundsProperty, value); }
+
+    /// <summary>The title module centered on this host's current width. The module is always centered, and
+    /// while macOS animates a zoom the width changes before the title layout runs again; reading the center
+    /// from the live width keeps the rails and the plate together on every frame of the animation.</summary>
+    public Rect CenteredTitleModule => TitleModuleBounds.Width <= 0 ? TitleModuleBounds
+        : TitleModuleBounds.WithX((Bounds.Width - TitleModuleBounds.Width) / 2);
     public static readonly StyledProperty<Thickness> CaptionExclusionProperty =
         AvaloniaProperty.Register<ThemeWindowSkinHost, Thickness>(nameof(CaptionExclusion));
     public Thickness CaptionExclusion { get => GetValue(CaptionExclusionProperty); set => SetValue(CaptionExclusionProperty, value); }
@@ -162,7 +168,7 @@ internal sealed class ThemeWindowSkinHost : Decorator
         // The band is painted before anything else so the title, the toolbar and any art sit on it.
         if (ThemeService.ActiveWindowSkin.IsArmored && BandHeight > 0)
         {
-            ArmoredSkinRenderer.DrawFrame(context, Bounds.Size, TitleModuleBounds, CaptionExclusion, FleetSkin.Metal,
+            ArmoredSkinRenderer.DrawFrame(context, Bounds.Size, CenteredTitleModule, CaptionExclusion, FleetSkin.Metal,
                 FleetSkin.RimEdge, FleetSkin.RimHighlight, _edgeAccent ?? Brushes.Transparent);
             return;
         }
@@ -187,8 +193,9 @@ internal sealed class ThemeWindowSkinHost : Decorator
                 }
                 // The side rails meet the plaque shoulders instead of boxing a separate badge.
                 var railY = BandHeight - .5;
-                var leftEnd = Math.Clamp(TitleModuleBounds.Left + 6, 6, Bounds.Width - 6);
-                var rightStart = Math.Clamp(TitleModuleBounds.Right - 6, leftEnd, Bounds.Width - 6);
+                var module = CenteredTitleModule;
+                var leftEnd = Math.Clamp(module.Left + 6, 6, Bounds.Width - 6);
+                var rightStart = Math.Clamp(module.Right - 6, leftEnd, Bounds.Width - 6);
                 context.DrawLine(dark, new(6, railY), new(leftEnd, railY));
                 context.DrawLine(dark, new(rightStart, railY), new(Bounds.Width - 6, railY));
                 context.DrawLine(lip, new(6, railY + 1), new(leftEnd, railY + 1));
