@@ -47,7 +47,9 @@ public sealed class FleetReferenceCaptureTests
             window.Controller.FlushOutput();
             Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
             var title = window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "AppTitle");
-            Assert.Equal("WANDUR - " + worldName.ToUpperInvariant(), title.Text);
+            // The full app name when the plate has room for it; a long world name falls back to the short "Wandur".
+            var prefix = worldName.Length > 40 ? "WANDUR - " : "WANDUR MUD CLIENT - ";
+            Assert.Equal(prefix + worldName.ToUpperInvariant(), title.Text);
             var plaque = window.GetVisualDescendants().OfType<ThemePlaque>().Single();
             Assert.Equal(width / 2d, plaque.TranslatePoint(new Point(plaque.Bounds.Width / 2, 0), window)!.Value.X, 1);
             Assert.DoesNotContain(window.GetVisualDescendants().OfType<Border>(), b => b.Name == "FleetDocumentHeader");
@@ -94,7 +96,7 @@ public sealed class FleetReferenceCaptureTests
                 var centerX = (int)Math.Round(origin.X + plaque.Bounds.Width / 2);
                 var bottomY = (int)Math.Round(origin.Y + plaque.Bounds.Height);
                 var underLip = pixels.GetPixel(centerX, bottomY + 2);
-                var besideShoulder = pixels.GetPixel((int)Math.Round(origin.X - 6), 53);
+                var besideShoulder = pixels.GetPixel((int)Math.Round(origin.X - 6), (int)FleetTitleLayout.BandHeight + 3);
                 var toolbarFace = pixels.GetPixel(centerX, bottomY + 14);
                 Assert.True(underLip.Red < 150, $"Missing dark recessed channel beneath plaque: {underLip}");
                 Assert.True(besideShoulder.Red < 150, $"Missing shoulder socket: {besideShoulder}");

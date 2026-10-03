@@ -21,7 +21,7 @@ public sealed class TitleBarTests
         {
             window.Show();
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal("WANDUR", window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "AppTitle").Text);
+            Assert.Equal("WANDUR MUD CLIENT", window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "AppTitle").Text);
             var disconnect = window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "Disconnect");
             var icon = Assert.IsType<Avalonia.Controls.Shapes.Path>(disconnect.Content);
             await window.Controller.StartAsync();
@@ -37,7 +37,7 @@ public sealed class TitleBarTests
             var title = window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "AppTitle");
             // The visible nameplate always identifies the app before the active world.
             // The operating system title retains the more detailed character and session identity.
-            Assert.Equal("WANDUR - " + window.Controller.WorldName.ToUpperInvariant(), title.Text);
+            Assert.Equal("WANDUR MUD CLIENT - " + window.Controller.WorldName.ToUpperInvariant(), title.Text);
             Assert.Contains(window.Controller.WorldName, window.Title);
             Assert.Contains("Wandur", window.Title);
             Assert.Equal(FontWeight.Normal, title.FontWeight);
@@ -60,7 +60,7 @@ public sealed class TitleBarTests
             // title band up, that strip is the band's own drag surface rather than the old header row.
             var bandDrag = window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "MetalHeaderDrag");
             if (OperatingSystem.IsMacOS())
-                Assert.True(header.Bounds.Height >= 50 || (bandDrag.IsVisible && bandDrag.Bounds.Height >= 50),
+                Assert.True(header.Bounds.Height >= FleetTitleLayout.BandHeight || (bandDrag.IsVisible && bandDrag.Bounds.Height >= FleetTitleLayout.BandHeight),
                     $"no draggable title area: header {header.Bounds.Height}, band {bandDrag.Bounds.Height}");
             else Assert.Equal(0, header.MinHeight);
             Assert.False(disconnect.IsEffectivelyVisible);
@@ -104,7 +104,7 @@ public sealed class TitleBarTests
             Dispatcher.UIThread.RunJobs();
 
             Assert.Equal(second.Id, Assert.IsType<ConnectionProfile>(picker.SelectedItem).Id);
-            Assert.Equal("WANDUR - SECOND", window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "AppTitle").Text);
+            Assert.Equal("WANDUR MUD CLIENT - SECOND", window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "AppTitle").Text);
         }
         finally
         {

@@ -40,12 +40,12 @@ public sealed class ThemeBandWithoutArtTests
         await using var harness = await DockHarness.OpenAsync(theme);
         Dispatcher.UIThread.RunJobs(); harness.Window.UpdateLayout();
         Assert.True(FleetSkin.IsActive);
-        Assert.Equal(50, Host(harness.Window).BandHeight);
+        Assert.Equal(FleetTitleLayout.BandHeight, Host(harness.Window).BandHeight);
         var plaque = harness.Window.GetVisualDescendants().OfType<ThemePlaque>().Single();
         var origin = plaque.TranslatePoint(default, harness.Window)!.Value;
-        // Fleet's 60-DIP plaque projects below the 50-DIP band into the toolbar's reserved ledge.
-        Assert.Equal(2, origin.Y);
-        Assert.Equal(60, plaque.Bounds.Height);
+        // Fleet's plaque projects below the band into the toolbar's reserved ledge.
+        Assert.Equal(FleetTitleLayout.PlaqueTop, origin.Y);
+        Assert.Equal(FleetTitleLayout.PlaqueHeight, plaque.Bounds.Height);
         var text = harness.Window.GetVisualDescendants().OfType<Avalonia.Controls.TextBlock>().Single(t => t.Name == "AppTitle");
         var textOrigin = text.TranslatePoint(default, plaque)!.Value;
         Assert.True(textOrigin.X >= 64, "World plaque text must stay inside the fixed lamp-safe inset.");
@@ -80,10 +80,10 @@ public sealed class ThemeBandWithoutArtTests
         host.ApplyFromTheme();
         Dispatcher.UIThread.RunJobs();
 
-        Assert.Equal(50, host.BandHeight);
+        Assert.Equal(FleetTitleLayout.BandHeight, host.BandHeight);
         Assert.NotNull(host.BandBrush);
         // Reserved, or the content would start underneath the bar rather than below it.
-        Assert.True(host.Padding.Top >= 50 || host.Child?.Bounds.Top >= 50,
+        Assert.True(host.Padding.Top >= FleetTitleLayout.BandHeight || host.Child?.Bounds.Top >= FleetTitleLayout.BandHeight,
             $"the band reserved no room: padding {host.Padding}, child at {host.Child?.Bounds.Top}");
     }
 
@@ -97,8 +97,8 @@ public sealed class ThemeBandWithoutArtTests
         host.ApplyFromTheme();
         Dispatcher.UIThread.RunJobs();
 
-        Assert.Equal(50, host.BandHeight);
+        Assert.Equal(FleetTitleLayout.BandHeight, host.BandHeight);
         Assert.NotNull(host.BandBrush);
-        Assert.True(host.Child!.Bounds.Top >= 50);
+        Assert.True(host.Child!.Bounds.Top >= FleetTitleLayout.BandHeight);
     }
 }

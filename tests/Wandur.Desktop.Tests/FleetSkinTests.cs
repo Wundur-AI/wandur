@@ -34,7 +34,7 @@ public sealed class FleetSkinTests
             window.Width += 80;
             Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
             var band = window.GetVisualDescendants().OfType<ThemeWindowSkinHost>().Single().BandHeight;
-            Assert.Equal(50, band);
+            Assert.Equal(FleetTitleLayout.BandHeight, band);
             Assert.Equal(band, window.ExtendClientAreaTitleBarHeightHint);
             Assert.Empty(requestedHeights); // A palette switch must not change native frame geometry.
             preferences.SaveCommand.Execute(null);
@@ -145,13 +145,13 @@ public sealed class FleetSkinTests
         var skin = ThemeService.AppliedSkin!;
         Assert.Null(skin.Window);
         Assert.Equal("fleet", skin.Layout!.TitleBar!.Plaque!.Shape);
-        Assert.Equal(50, skin.Layout.TitleBar.Height);
+        Assert.Equal(FleetTitleLayout.BandHeight, skin.Layout.TitleBar.Height);
         Assert.False(skin.Layout.TitleBar.HostsToolbar);
         var host = new ThemeWindowSkinHost { Child = new Border() };
         host.ApplyFromTheme();
         host.Measure(new Size(1380, 900));
         host.Arrange(new Rect(0, 0, 1380, 900));
-        Assert.Equal(50, host.Child.Bounds.Top);
+        Assert.Equal(FleetTitleLayout.BandHeight, host.Child.Bounds.Top);
         Assert.Equal(6, host.Child.Bounds.Left);
     }
 
@@ -169,7 +169,44 @@ public sealed class FleetSkinTests
         Assert.Equal(expectedWidth, place.Bounds.Width);
         Assert.Equal(width / 2, place.Bounds.Center.X);
         Assert.True(place.Bounds.Left >= Math.Max(left, right));
-        Assert.Equal(60, place.Bounds.Height);
+        Assert.Equal(FleetTitleLayout.PlaqueHeight, place.Bounds.Height);
+    }
+
+    [AvaloniaFact]
+    public async Task TheSlimFleetTitleBarShowsTheAppNameInItsShorterBand()
+    {
+        // Pinned on purpose: the band was 50 and the plaque 60 before the title bar was slimmed.
+        Assert.Equal(38, FleetTitleLayout.BandHeight);
+        Assert.Equal(46, FleetTitleLayout.PlaqueHeight);
+        var path = Path.Combine(Path.GetTempPath(), "wandur-fleet-slim-" + Guid.NewGuid());
+        var store = new SettingsStore(Path.Combine(path, "settings.json"));
+        store.Save(new ClientSettings { Theme = "Slate", UseWorldThemes = false });
+        var window = new MainWindow(new TranscriptDisplayFactory(), store, new MemoryPasswordVault(),
+            new MemoryRoomMapStore(), new RecordingScriptFactory(), new MemoryScriptLibraryStore()) { Width = 1600, Height = 1000 };
+        try
+        {
+            window.Show(); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+            var title = window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "AppTitle");
+            Assert.Equal("WANDUR MUD CLIENT", title.Text);
+            Assert.Equal("Wandur Mud Client", window.Title);
+            Assert.Equal(15, title.FontSize);
+            Assert.Equal(38, window.GetVisualDescendants().OfType<ThemeWindowSkinHost>().Single().BandHeight);
+            Assert.Equal(38, window.ExtendClientAreaTitleBarHeightHint);
+            var host = window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "PlaqueTitleHost");
+            var plaqueBottom = host.TranslatePoint(new Point(0, host.Bounds.Height), window)!.Value.Y;
+            Assert.Equal(48, plaqueBottom, 1);
+            // The toolbar's controls start below the projecting plaque, and the caption actions sit centered in the band.
+            var toolbar = window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "MainToolbar");
+            var toolbarTop = toolbar.TranslatePoint(default, window)!.Value.Y;
+            Assert.Equal(38, toolbarTop, 1);
+            Assert.True(toolbarTop + toolbar.Padding.Top >= plaqueBottom);
+            var actions = window.GetVisualDescendants().OfType<StackPanel>().Single(p => p.Name == "TitleActions");
+            var actionsTop = actions.TranslatePoint(default, window)!.Value.Y;
+            Assert.Equal(19, actionsTop + actions.Bounds.Height / 2, 1);
+            var logo = window.GetVisualDescendants().OfType<Image>().Single(i => i.Name == "TitleBarLogo");
+            Assert.Equal(24, logo.Bounds.Height);
+        }
+        finally { await window.Sessions.DisposeAsync(); window.Close(); Directory.Delete(path, true); }
     }
 
     [Fact]
@@ -207,7 +244,7 @@ public sealed class FleetSkinTests
             Assert.Equal(960, skinHost.TitleModuleBounds.Center.X, 1);
             Assert.Equal(host.Bounds.Width, skinHost.TitleModuleBounds.Width, 1);
             var toolbar = window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "MainToolbar");
-            Assert.True(toolbar.TranslatePoint(default, window)!.Value.Y >= 50);
+            Assert.True(toolbar.TranslatePoint(default, window)!.Value.Y >= FleetTitleLayout.BandHeight);
             var picker = window.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "ToolbarWorlds");
             Assert.Equal(13, picker.FontSize);
         }

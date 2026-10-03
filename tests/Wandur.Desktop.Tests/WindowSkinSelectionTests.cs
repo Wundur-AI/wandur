@@ -47,7 +47,7 @@ public sealed class WindowSkinSelectionTests
     }
 
     [AvaloniaTheory]
-    [InlineData("Fleet", 50)]
+    [InlineData("Fleet", FleetTitleLayout.BandHeight)]
     [InlineData("Armored", 80)]
     [InlineData("System", 0)]
     public void WorldColorsCannotReplaceUserGeometry(string id, double height)

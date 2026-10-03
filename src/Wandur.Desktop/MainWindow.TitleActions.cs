@@ -11,6 +11,8 @@ public sealed partial class MainWindow
 {
     private const double TitleActionsWidth = 120;
     private const double TitleLogoSize = 32;
+    /// <summary>The plaque icon: Armored keeps its 32 DIP icon, Fleet scales it to its shorter plate.</summary>
+    private static double LogoSize => ThemeService.ActiveWindowSkin.IsArmored ? TitleLogoSize : FleetTitleLayout.LogoSize;
     private const double TitleLogoGap = 10;
     private const string FullScreenGlyph = "M 1,6 V 1 H 6 M 10,1 H 15 V 6 M 15,10 V 15 H 10 M 6,15 H 1 V 10";
     private const string ExitFullScreenGlyph = "M 1,6 H 6 V 1 M 10,1 V 6 H 15 M 15,10 H 10 V 15 M 6,15 V 10 H 1";
@@ -78,7 +80,9 @@ public sealed partial class MainWindow
             target.Children.Add(_titleActions);
         }
         _titleActions.VerticalAlignment = custom ? VerticalAlignment.Top : VerticalAlignment.Center;
-        _titleActions.Margin = custom ? new Thickness(0, 10, TitleActionsRightInset, 0) : new Thickness(6, 0, 0, 0);
+        // Centered in the band: Armored keeps its 10 DIP top, Fleet derives it from its band height.
+        var top = ThemeService.ActiveWindowSkin.IsArmored ? 10 : FleetTitleLayout.ActionsTop;
+        _titleActions.Margin = custom ? new Thickness(0, top, TitleActionsRightInset, 0) : new Thickness(6, 0, 0, 0);
     }
 
     internal void ToggleFullScreen()
