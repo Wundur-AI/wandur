@@ -47,7 +47,9 @@ public sealed class FleetReferenceCaptureTests
             window.Controller.FlushOutput();
             Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
             var title = window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "AppTitle");
-            Assert.Equal("WANDUR - " + worldName.ToUpperInvariant(), title.Text);
+            // The full app name when the plate has room for it; a long world name falls back to the short "Wandur".
+            var prefix = worldName.Length > 40 ? "WANDUR - " : "WANDUR MUD CLIENT - ";
+            Assert.Equal(prefix + worldName.ToUpperInvariant(), title.Text);
             var plaque = window.GetVisualDescendants().OfType<ThemePlaque>().Single();
             Assert.Equal(width / 2d, plaque.TranslatePoint(new Point(plaque.Bounds.Width / 2, 0), window)!.Value.X, 1);
             Assert.DoesNotContain(window.GetVisualDescendants().OfType<Border>(), b => b.Name == "FleetDocumentHeader");

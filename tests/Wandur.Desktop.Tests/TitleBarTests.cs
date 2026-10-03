@@ -37,7 +37,7 @@ public sealed class TitleBarTests
             var title = window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "AppTitle");
             // The visible nameplate always identifies the app before the active world.
             // The operating system title retains the more detailed character and session identity.
-            Assert.Equal("WANDUR - " + window.Controller.WorldName.ToUpperInvariant(), title.Text);
+            Assert.Equal("WANDUR MUD CLIENT - " + window.Controller.WorldName.ToUpperInvariant(), title.Text);
             Assert.Contains(window.Controller.WorldName, window.Title);
             Assert.Contains("Wandur", window.Title);
             Assert.Equal(FontWeight.Normal, title.FontWeight);
@@ -104,7 +104,7 @@ public sealed class TitleBarTests
             Dispatcher.UIThread.RunJobs();
 
             Assert.Equal(second.Id, Assert.IsType<ConnectionProfile>(picker.SelectedItem).Id);
-            Assert.Equal("WANDUR - SECOND", window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "AppTitle").Text);
+            Assert.Equal("WANDUR MUD CLIENT - SECOND", window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "AppTitle").Text);
         }
         finally
         {

@@ -30,6 +30,15 @@ internal static class FleetTitleLayout
     // of breathing room inside that inset on each side of the icon and title.
     public const double TextInset = 44 + 40;
 
+    /// <summary>The width left for the icon and title on a plate between the caption controls, given the
+    /// plate's own text inset on each side.</summary>
+    public static double TextRoom(double windowWidth, double leftExclusion, double rightExclusion, double textInset)
+    {
+        static double Safe(double value) => double.IsFinite(value) ? Math.Max(0, value) : 0;
+        var exclusion = Math.Max(Safe(leftExclusion), Safe(rightExclusion)) + 12;
+        return Math.Max(0, Safe(windowWidth) - exclusion * 2 - textInset * 2);
+    }
+
     public static FleetTitlePlacement Calculate(double windowWidth, double leftExclusion,
         double rightExclusion, double measuredTextWidth)
     {
