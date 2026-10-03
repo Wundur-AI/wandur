@@ -79,8 +79,7 @@ public static class Strings
     public static string FullScreen => Get(nameof(FullScreen));
     public static string Help => Get(nameof(Help));
     public static string GettingStarted => Get(nameof(GettingStarted));
-    public static string WandurHelp => Get(nameof(WandurHelp));
-    public static string GettingStarted2 => Get(nameof(GettingStarted2));
+    public static string OtherMudClients => Get(nameof(OtherMudClients));
     public static string EnterAPasswordToSaveForThisServerAnd => Get(nameof(EnterAPasswordToSaveForThisServerAnd));
     public static string WorldWasNotSavedAnUnusedPasswordMayRemain => Get(nameof(WorldWasNotSavedAnUnusedPasswordMayRemain));
     public static string WorldSettingsSavedButTheOldPasswordCouldNot => Get(nameof(WorldSettingsSavedButTheOldPasswordCouldNot));
@@ -340,7 +339,6 @@ public static class Strings
     public static string SourceRating => Get(nameof(SourceRating));
     public static string RoleplayingValue => Get(nameof(RoleplayingValue));
     public static string PlayerKillingValue => Get(nameof(PlayerKillingValue));
-    public static string GettingStartedHelp => Get(nameof(GettingStartedHelp));
     public static string InterfaceLanguage => Get(nameof(InterfaceLanguage));
     public static string LanguageRestart => Get(nameof(LanguageRestart));
     public static string SystemLanguage => Get(nameof(SystemLanguage));
