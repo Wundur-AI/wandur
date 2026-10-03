@@ -82,6 +82,12 @@ public sealed record ClientSettings
     public bool HistoryEnabled { get; init; } = true;
     /// <summary>Hides the informational recording reminder, never history errors or recording itself.</summary>
     public bool HideHistoryRecordingNotice { get; init; }
+    /// <summary>Whether the client asks wandur.net, at most once a day, whether a newer release is out. It never installs anything.</summary>
+    public bool CheckForUpdates { get; init; } = true;
+    /// <summary>When the last update check ran and what it learned, so a restart within the day does not ask again.</summary>
+    public Wandur.Core.Updates.UpdateCheckRecord? LastUpdateCheck { get; init; }
+    /// <summary>A release the reader chose to skip; only a newer one is offered again.</summary>
+    public string? SkippedUpdateVersion { get; init; }
     /// <summary>Days of locally retained interactions; zero keeps history until explicitly deleted.</summary>
     public int HistoryRetentionDays { get; init; } = 30;
     public List<UserTheme> CustomThemes { get; init; } = [];

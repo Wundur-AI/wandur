@@ -89,7 +89,7 @@ public sealed partial class MainWindow : Window
     public ConnectionProfile? SelectedProfile => _worldPicker.SelectedItem as ConnectionProfile;
     public bool ToolbarVisible { get => _toolbar?.IsVisible ?? true; set { _toolbar.IsVisible = value; if (ThemeService.ActiveWindowSkin.CustomChrome) UpdateTitleBarInsets(); RequestTitleChromeUpdate(); _menus.Refresh(); } }
 
-    public MainWindow(Wandur.Desktop.Terminal.ITranscriptDisplayFactory displays, ISettingsStore store, IPasswordVault passwords, IRoomMapStore maps, IScriptRuntimeFactory scriptRuntimes, IWorldScriptLibraryStore scriptLibraryStore, IWorldKnowledgeStore? knowledge = null, WorldCatalog? catalog = null, IProfileAutomationFactory? profileAutomationFactory = null, IAgentClientServices? agents = null, Wandur.Core.Classification.RoomClassificationService? classification = null, IWorldUsageStore? usage = null, Wandur.Core.History.IHistoryStore? history = null)
+    public MainWindow(Wandur.Desktop.Terminal.ITranscriptDisplayFactory displays, ISettingsStore store, IPasswordVault passwords, IRoomMapStore maps, IScriptRuntimeFactory scriptRuntimes, IWorldScriptLibraryStore scriptLibraryStore, IWorldKnowledgeStore? knowledge = null, WorldCatalog? catalog = null, IProfileAutomationFactory? profileAutomationFactory = null, IAgentClientServices? agents = null, Wandur.Core.Classification.RoomClassificationService? classification = null, IWorldUsageStore? usage = null, Wandur.Core.History.IHistoryStore? history = null, Wandur.Core.Updates.UpdateService? updates = null)
     {
         _agents = agents;
         _profileAutomationFactory = profileAutomationFactory ?? new ProfileAutomationFactory(scriptRuntimes, scriptLibraryStore);
@@ -212,7 +212,8 @@ public sealed partial class MainWindow : Window
         _footer.Bind(Border.BorderBrushProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("LineBrush"));
         _footer.Bind(Border.BackgroundProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("FooterBrush"));
         var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto") };
-        root.Children.Add(_windowHeader); Grid.SetRow(_notice, 1); root.Children.Add(_notice); Grid.SetRow(_dock, 2); root.Children.Add(_dock); Grid.SetRow(_footer, 3); root.Children.Add(_footer);
+        var notices = new StackPanel { Name = "Notices", Children = { CreateUpdateNotice(updates), _notice } };
+        root.Children.Add(_windowHeader); Grid.SetRow(notices, 1); root.Children.Add(notices); Grid.SetRow(_dock, 2); root.Children.Add(_dock); Grid.SetRow(_footer, 3); root.Children.Add(_footer);
         // Clip the shell when a bezel sets content_radius; without a frame the radius stays zero.
         var shell = new Border { Name = "ShellContent", Child = root, ClipToBounds = true };
         _bezel = new ThemeBezelHost { Name = "ThemeBezel", Child = shell };
@@ -971,6 +972,7 @@ public sealed partial class MainWindow : Window
         _noticeText.Text = Controller.Notice;
         _hideHistoryNotice.IsVisible = Controller.IsHistoryRecordingNotice;
         _hideHistoryNotice.IsChecked = false;
+        RefreshUpdateNotice();
         _menus.Refresh();
     }
 

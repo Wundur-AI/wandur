@@ -1980,4 +1980,16 @@ Arrêtez après réception d’une liste d’inventaire.</value></data>
   <data name="LinkRefusedLocal" xml:space="preserve"><value>Ce lien n'a pas été ouvert : il pointe vers cet ordinateur ou un réseau privé, et un monde n'a aucune raison de vous y envoyer.</value></data>
   <data name="LinkClickHint" xml:space="preserve"><value>Ctrl+clic pour ouvrir ce lien.</value></data>
   <data name="LinkClickHintMac" xml:space="preserve"><value>Cmd+clic ou Control+clic pour ouvrir ce lien.</value></data>
+  <data name="CheckForUpdatesMenu" xml:space="preserve"><value>Rechercher des mises à jour…</value></data>
+  <data name="CheckForUpdatesTitle" xml:space="preserve"><value>Rechercher des mises à jour</value></data>
+  <data name="UpdateAvailable" xml:space="preserve"><value>Wandur Mud Client {0} est disponible.</value></data>
+  <data name="UpdateDownload" xml:space="preserve"><value>Télécharger</value></data>
+  <data name="UpdateReleaseNotes" xml:space="preserve"><value>Notes de version</value></data>
+  <data name="UpdateSkipVersion" xml:space="preserve"><value>Ignorer cette version</value></data>
+  <data name="UpdateUpToDate" xml:space="preserve"><value>Vous avez la dernière version, {0}.</value></data>
+  <data name="UpdateUnreachable" xml:space="preserve"><value>Impossible de joindre wandur.net.</value></data>
+  <data name="UpdateUnreachableHint" xml:space="preserve"><value>Vérifiez votre connexion internet et réessayez plus tard.</value></data>
+  <data name="UpdateChecksOffInSourceBuild" xml:space="preserve"><value>Ceci est une version compilée depuis les sources ({0}) : elle ne recherche pas de mises à jour.</value></data>
+  <data name="CheckForUpdatesAutomatically" xml:space="preserve"><value>Rechercher automatiquement les mises à jour</value></data>
+  <data name="CheckForUpdatesAutomaticallyHint" xml:space="preserve"><value>Une fois par jour, le client demande à wandur.net si une version plus récente est sortie et, le cas échéant, affiche un avis. Il ne télécharge et n'installe jamais rien de lui-même.</value></data>
 </root>

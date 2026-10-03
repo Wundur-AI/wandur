@@ -45,6 +45,7 @@ public sealed partial class PreferencesViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _showChannelsPanel;
     [ObservableProperty] private bool _composerSuggestions;
     [ObservableProperty] private bool _historyEnabled;
+    [ObservableProperty] private bool _checkForUpdates;
     [ObservableProperty] private int _historyRetentionDays;
     public IReadOnlyList<HistoryRetentionChoice> HistoryRetentionChoices =>
         [new(30, L.HistoryDays30), new(90, L.HistoryDays90), new(365, L.HistoryDays365), new(0, L.HistoryForever)];
@@ -74,6 +75,7 @@ public sealed partial class PreferencesViewModel : ObservableObject, IDisposable
         _showChannelsPanel = _original.ShowChannelsPanel;
         _composerSuggestions = _original.ComposerSuggestions;
         _historyEnabled = _original.HistoryEnabled;
+        _checkForUpdates = _original.CheckForUpdates;
         _historyRetentionDays = _original.HistoryRetentionDays;
         _scrollTailPercent = (decimal)Math.Round(_original.ScrollTailShare * 100);
         _language = Languages.First(l => l.Code == _original.Language);
@@ -85,7 +87,7 @@ public sealed partial class PreferencesViewModel : ObservableObject, IDisposable
     {
         Theme = Theme, Skin = Skin, FontSize = PreviewFontSize, Foreground = string.IsNullOrWhiteSpace(Foreground) ? null : Foreground.Trim(),
         Background = string.IsNullOrWhiteSpace(Background) ? null : Background.Trim(), LocalEcho = LocalEcho, Language = Language.Code,
-        HistoryEnabled = HistoryEnabled, HistoryRetentionDays = HistoryRetentionDays,
+        HistoryEnabled = HistoryEnabled, HistoryRetentionDays = HistoryRetentionDays, CheckForUpdates = CheckForUpdates,
         AllowBlinkingText = AllowBlinkingText, UseWorldThemes = UseWorldThemes, ShowChannelsPanel = ShowChannelsPanel, ComposerSuggestions = ComposerSuggestions, ScrollTailShare = TailShare, CustomThemes = _drafts.Select(t => t with { Colors = new(t.Colors), AnsiColors = new(t.AnsiColors) }).ToList()
     };
     private void LoadPalette()
