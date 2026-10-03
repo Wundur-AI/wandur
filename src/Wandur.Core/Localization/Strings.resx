@@ -218,11 +218,8 @@ Version 0.1</value>
   <data name="GettingStarted" xml:space="preserve">
     <value>Getting Started</value>
   </data>
-  <data name="WandurHelp" xml:space="preserve">
-    <value>Wandur Help</value>
-  </data>
-  <data name="GettingStarted2" xml:space="preserve">
-    <value>Getting started</value>
+  <data name="OtherMudClients" xml:space="preserve">
+    <value>Other MUD Clients</value>
   </data>
   <data name="EnterAPasswordToSaveForThisServerAnd" xml:space="preserve">
     <value>Enter a password to save for this server and username.</value>
@@ -1006,17 +1003,6 @@ Exits: north · east
   </data>
   <data name="PlayerKillingValue" xml:space="preserve">
     <value>PK: {0}</value>
-  </data>
-  <data name="GettingStartedHelp" xml:space="preserve">
-    <value>Add a world in File → Add World, then select it and connect.
-Open sessions and saved worlds are listed separately in Workspace.
-Connect again to open another session, even for the same saved world.
-Right-click an open session to rename it.
-Use Play and Diagnostics at the bottom of each session.
-Edit scripts and macros in world configuration; use Automation for live controls.
-Ctrl+Tab switches workspace views; {0} closes the selected item.
-Drag panel headers to arrange them; restore panels from View.
-The offline demo is available from File.</value>
   </data>
   <data name="InterfaceLanguage" xml:space="preserve">
     <value>Interface language</value>

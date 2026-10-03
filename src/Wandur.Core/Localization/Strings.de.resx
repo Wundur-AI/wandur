@@ -218,11 +218,8 @@ Version 0.1</value>
   <data name="GettingStarted" xml:space="preserve">
     <value>Erste Schritte</value>
   </data>
-  <data name="WandurHelp" xml:space="preserve">
-    <value>Wandur-Hilfe</value>
-  </data>
-  <data name="GettingStarted2" xml:space="preserve">
-    <value>Erste Schritte</value>
+  <data name="OtherMudClients" xml:space="preserve">
+    <value>Andere MUD-Clients</value>
   </data>
   <data name="EnterAPasswordToSaveForThisServerAnd" xml:space="preserve">
     <value>Gib ein Passwort ein, das für diesen Server und Benutzernamen gespeichert werden soll.</value>
@@ -1006,17 +1003,6 @@ Ausgänge: Norden · Osten
   </data>
   <data name="PlayerKillingValue" xml:space="preserve">
     <value>PK: {0}</value>
-  </data>
-  <data name="GettingStartedHelp" xml:space="preserve">
-    <value>Füge über Datei → Welt hinzufügen eine Welt hinzu und verbinde dich.
-Offene Sitzungen und gespeicherte Welten stehen getrennt im Arbeitsbereich.
-Erneutes Verbinden öffnet eine weitere Sitzung derselben Welt.
-Benenne eine Sitzung mit einem Rechtsklick um.
-Unten findest du Spielen und Diagnose.
-Bearbeite Skripte und Makros in der Weltkonfiguration; steuere sie über Automatisierung.
-Strg+Tab wechselt die Ansicht; {0} schließt den ausgewählten Eintrag.
-Ziehe Fensterleisten zum Anordnen; stelle Fenster über Ansicht wieder her.
-Die Offline-Demo findest du unter Datei.</value>
   </data>
   <data name="InterfaceLanguage" xml:space="preserve">
     <value>Sprache der Benutzeroberfläche</value>

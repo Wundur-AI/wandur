@@ -218,11 +218,8 @@ Versão 0.1</value>
   <data name="GettingStarted" xml:space="preserve">
     <value>Primeiros passos</value>
   </data>
-  <data name="WandurHelp" xml:space="preserve">
-    <value>Ajuda do Wandur</value>
-  </data>
-  <data name="GettingStarted2" xml:space="preserve">
-    <value>Primeiros passos</value>
+  <data name="OtherMudClients" xml:space="preserve">
+    <value>Outros clientes de MUD</value>
   </data>
   <data name="EnterAPasswordToSaveForThisServerAnd" xml:space="preserve">
     <value>Digite uma senha para salvar para este servidor e nome de usuário.</value>
@@ -1006,17 +1003,6 @@ Saídas: norte · leste
   </data>
   <data name="PlayerKillingValue" xml:space="preserve">
     <value>PK: {0}</value>
-  </data>
-  <data name="GettingStartedHelp" xml:space="preserve">
-    <value>Adicione um mundo em Arquivo → Adicionar mundo e conecte-se.
-Sessões abertas e mundos salvos aparecem em listas separadas.
-Conecte-se novamente ao mesmo mundo para abrir outra sessão.
-Clique com o botão direito em uma sessão para renomeá-la.
-Cada sessão tem Jogar e Diagnóstico na parte inferior.
-Edite scripts e macros na configuração do mundo; controle-os em Automação.
-Ctrl+Tab alterna as vistas; {0} fecha o item selecionado.
-Arraste os cabeçalhos para organizar e restaure os painéis em Exibir.
-A demonstração offline está disponível em Arquivo.</value>
   </data>
   <data name="InterfaceLanguage" xml:space="preserve">
     <value>Idioma da interface</value>

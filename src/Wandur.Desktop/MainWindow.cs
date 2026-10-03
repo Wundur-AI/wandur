@@ -909,6 +909,9 @@ public sealed partial class MainWindow : Window
         try { await _dialog.ShowDialog(this); }
         finally { _dialog = null; }
     }
+    /// <summary>Replaces the system browser for the Help menu's pages; tests set it so no real browser opens.</summary>
+    internal Func<Uri, Task<bool>>? LaunchLink { get; set; }
+
     internal Task ShowInformationAsync(string title, string heading, string message) => ShowDialogAsync(() =>
     {
         var dialog = new Window { Title = title, Width = 480, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };

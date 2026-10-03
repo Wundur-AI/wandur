@@ -100,14 +100,28 @@ internal sealed class DesktopMenus
             Action(nameof(L.PreviousWorkspaceItem), () => { window.Workspace.SelectNextDocument(-1); return Task.CompletedTask; }, Key.Tab, modifiers: KeyModifiers.Control | KeyModifiers.Shift, enabled: () => window.Workspace.Navigation.Entries.Count > 1), null,
             Action(nameof(L.Minimize), () => { window.WindowState = WindowState.Minimized; return Task.CompletedTask; }, OperatingSystem.IsMacOS() ? Key.M : null),
             Action(nameof(L.FullScreen), () => { window.ToggleFullScreen(); return Task.CompletedTask; }, OperatingSystem.IsMacOS() ? Key.F : Key.F11, modifiers: OperatingSystem.IsMacOS() ? KeyModifiers.Meta | KeyModifiers.Control : KeyModifiers.None));
-        var gettingStarted = Action(nameof(L.GettingStarted), () => window.ShowInformationAsync(L.WandurHelp, L.GettingStarted2, L.Format(L.GettingStartedHelp, OperatingSystem.IsMacOS() ? "⌘W" : "Ctrl+W")));
-        // On macOS Check for Updates sits in the app menu beside About (App.axaml); elsewhere it is under Help.
-        if (OperatingSystem.IsMacOS()) Group(nameof(L.Help), gettingStarted, about);
-        else Group(nameof(L.Help), gettingStarted, null, Action(nameof(L.CheckForUpdatesMenu), window.CheckForUpdatesFromMenuAsync), about);
+        // Help points at wandur.net: the online help, and the page about other MUD clients. On macOS Check for
+        // Updates sits in the app menu beside About (App.axaml); elsewhere it is under Help.
+        var gettingStarted = Action(nameof(L.GettingStarted), () => OpenPageAsync(Wandur.Core.Discovery.WandurSite.Help));
+        var otherClients = Action(nameof(L.OtherMudClients), () => OpenPageAsync(Wandur.Core.Discovery.WandurSite.OtherClients));
+        if (OperatingSystem.IsMacOS()) Group(nameof(L.Help), gettingStarted, otherClients, null, about);
+        else Group(nameof(L.Help), gettingStarted, otherClients, null, Action(nameof(L.CheckForUpdatesMenu), window.CheckForUpdatesFromMenuAsync), about);
         NativeMenu.SetMenu(window, Native);
         Native.NeedsUpdate += (_, _) => Refresh();
         Fallback.Opened += (_, _) => Refresh();
         Refresh();
+    }
+
+    /// <summary>Opens a wandur.net page in the system browser, through the window's launcher (or the test's
+    /// <see cref="MainWindow.LaunchLink"/>). A launcher failure is a notice, as for a link in the transcript.</summary>
+    private async Task OpenPageAsync(Uri page)
+    {
+        try
+        {
+            var opened = _window.LaunchLink is { } launch ? await launch(page) : await _window.Launcher.LaunchUriAsync(page);
+            if (!opened) _window.Controller.ShowNotice(L.LinkNotOpened);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { _window.Controller.ShowNotice(L.LinkNotOpened); }
     }
 
     private Control? EditTarget => _editTarget?.IsEffectivelyVisible == true && _editTarget.IsEffectivelyEnabled && TopLevel.GetTopLevel(_editTarget) == _window ? _editTarget : null;
