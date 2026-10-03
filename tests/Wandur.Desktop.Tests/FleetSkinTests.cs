@@ -231,8 +231,7 @@ public sealed class FleetSkinTests
             Assert.Equal(38, toolbarTop, 1);
             Assert.True(toolbarTop + toolbar.Padding.Top >= plaqueBottom);
             var actions = window.GetVisualDescendants().OfType<StackPanel>().Single(p => p.Name == "TitleActions");
-            var actionsTop = actions.TranslatePoint(default, window)!.Value.Y;
-            Assert.Equal(19, actionsTop + actions.Bounds.Height / 2, 1);
+            Assert.Equal(19, actions.TranslatePoint(new Point(0, actions.Bounds.Height / 2), window)!.Value.Y, 1);
             var logo = window.GetVisualDescendants().OfType<Image>().Single(i => i.Name == "TitleBarLogo");
             Assert.Equal(24, logo.Bounds.Height);
         }

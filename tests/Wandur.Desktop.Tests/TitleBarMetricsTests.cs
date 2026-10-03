@@ -63,7 +63,10 @@ public sealed class TitleBarMetricsTests
             var toolbar = Named<Border>(window, "MainToolbar");
             Assert.Equal(metrics.ToolbarTopPadding, toolbar.Padding.Top);
             Assert.Equal(metrics.ToolbarMinHeight, toolbar.MinHeight);
-            Assert.Equal(metrics.ActionsTop, Named<StackPanel>(window, "TitleActions").TranslatePoint(default, window)!.Value.Y, 1);
+            var actions = Named<StackPanel>(window, "TitleActions");
+            Assert.Equal(metrics.ActionsCenter, actions.TranslatePoint(new Point(0, actions.Bounds.Height / 2), window)!.Value.Y, 1);
+            Assert.Equal(actions.Bounds.Height * metrics.ActionScale,
+                actions.TranslatePoint(new Point(0, actions.Bounds.Height), window)!.Value.Y - actions.TranslatePoint(default, window)!.Value.Y, 1);
         }
         finally
         {

@@ -71,9 +71,12 @@ public sealed class TitleActionsTests
                 var titleRight = plaque.TranslatePoint(new Point(plaque.Bounds.Width, 0), window)!.Value.X;
                 var themeOrigin = theme.TranslatePoint(default, window)!.Value;
                 var fullOrigin = full.TranslatePoint(default, window)!.Value;
+                // Measured where the buttons are drawn: the skin scales the group down about its right edge.
+                var themeRight = theme.TranslatePoint(new Point(theme.Bounds.Width, 0), window)!.Value.X;
+                var fullRight = full.TranslatePoint(new Point(full.Bounds.Width, 0), window)!.Value.X;
                 Assert.True(themeOrigin.X >= titleRight + 8);
-                Assert.True(fullOrigin.X >= themeOrigin.X + theme.Bounds.Width);
-                Assert.True(fullOrigin.X + full.Bounds.Width <= window.Bounds.Width - (OperatingSystem.IsWindows() ? 144 : 8));
+                Assert.True(fullOrigin.X >= themeRight);
+                Assert.True(fullRight <= window.Bounds.Width - (OperatingSystem.IsWindows() ? 144 : 8));
                 Assert.InRange(fullOrigin.Y, 0, 50 - full.Bounds.Height);
                 Capture(window, $"title-actions-{width}");
                 Click(window, "TitleThemeButton"); Settle(window);

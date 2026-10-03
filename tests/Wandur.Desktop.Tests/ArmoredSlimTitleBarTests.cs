@@ -31,7 +31,8 @@ public sealed class ArmoredSlimTitleBarTests
         Assert.Equal(13, metrics.ToolbarTopPadding);
         Assert.Equal(54, metrics.ToolbarMinHeight);
         Assert.Equal(14, metrics.HiddenToolbarClearance);
-        Assert.Equal(15, metrics.ActionsTop);
+        Assert.Equal(0.75, metrics.ActionScale);
+        Assert.Equal(23, metrics.ActionsCenter);   // The middle of the upper plate, above the joint at band - 18.
         Assert.Equal(new Thickness(24, 0, 24, 30), WindowSkinDefinition.Resolve("Armored").FrameInset);
     }
 
@@ -61,9 +62,11 @@ public sealed class ArmoredSlimTitleBarTests
             var toolbarTop = toolbar.TranslatePoint(default, window)!.Value.Y;
             Assert.Equal(60, toolbarTop, 1);
             Assert.True(toolbarTop + toolbar.Padding.Top >= plaqueBottom);
-            // The caption actions sit centered in the band.
+            // The caption actions sit centered on the band's upper plate, drawn at three quarters size.
             var actions = Named<StackPanel>(window, "TitleActions");
-            Assert.Equal(30, actions.TranslatePoint(default, window)!.Value.Y + actions.Bounds.Height / 2, 1);
+            Assert.Equal(23, actions.TranslatePoint(new Point(0, actions.Bounds.Height / 2), window)!.Value.Y, 1);
+            Assert.Equal(actions.Bounds.Height * 0.75, actions.TranslatePoint(new Point(0, actions.Bounds.Height), window)!.Value.Y
+                - actions.TranslatePoint(default, window)!.Value.Y, 1);
             Assert.Equal(24, Named<Image>(window, "TitleBarLogo").Bounds.Height);
             // The icon and title sit centered inside the plate.
             var identity = Named<Grid>(window, "PlaqueIdentity");

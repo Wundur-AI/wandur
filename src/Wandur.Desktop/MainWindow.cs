@@ -752,7 +752,8 @@ public sealed partial class MainWindow : Window
         _plaque.WingFill = ThemeService.AppliedWorldTheme?.Skin?.Layout?.TitleBar?.Plaque?.Wings?.Fill is { } wingColor
             ? FleetSkin.Shade(Color.Parse(wingColor)) : FleetSkin.Wings;
         var left = Math.Max(WindowDecorationMargin.Left, OperatingSystem.IsMacOS() ? 88 : 0);
-        var right = TitleActionsRightInset + TitleActionsWidth;
+        // The buttons are drawn at the skin's scale, so the plate only has to clear what they actually cover.
+        var right = TitleActionsRightInset + TitleActionsWidth * (ThemeService.ActiveWindowSkin.TitleBar?.ActionScale ?? 1);
         _windowSkin.CaptionExclusion = new Thickness(left, 0, right, 0);
         PositionTitleActions();
         // "Wandur Mud Client" when the plate has room for it, otherwise the short "Wandur"; a world name

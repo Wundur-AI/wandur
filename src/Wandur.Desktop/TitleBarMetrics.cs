@@ -29,11 +29,17 @@ internal sealed record TitleBarMetrics
     /// <summary>With the toolbar hidden, the content below still has to clear the projecting plaque.</summary>
     public required double HiddenToolbarClearance { get; init; }
 
-    /// <summary>The skin, palette and full screen buttons beside the plate.</summary>
+    /// <summary>The skin, palette and full screen buttons beside the plate, at their full size.</summary>
     public required double ActionButtonSize { get; init; }
-    private readonly double? _actionsTop;
-    /// <summary>The top of the caption action buttons: centered in the band unless a skin sets it.</summary>
-    public double ActionsTop { get => _actionsTop ?? (BandHeight - ActionButtonSize) / 2; init => _actionsTop = value; }
+    /// <summary>How large the buttons are drawn in the title bar: 1 is full size. They scale about their right edge
+    /// and vertical center, so the group stays against the window edge.</summary>
+    public double ActionScale { get; init; } = 1;
+    private readonly double? _actionsCenter;
+    /// <summary>The height the buttons are centered on: the middle of the band unless a skin's band has a part the
+    /// buttons should sit in, such as Armored's upper plate.</summary>
+    public double ActionsCenter { get => _actionsCenter ?? BandHeight / 2; init => _actionsCenter = value; }
+    /// <summary>The top of the buttons' full-size layout box, which centers them on <see cref="ActionsCenter"/>.</summary>
+    public double ActionsTop => ActionsCenter - ActionButtonSize / 2;
 
     /// <summary>Fleet: a 38 DIP band with a plaque projecting 10 DIP below it. The toolbar row holds the 32 DIP
     /// controls with a 5 DIP foot below and 1 DIP of air above, under the plaque.</summary>
@@ -45,7 +51,7 @@ internal sealed record TitleBarMetrics
         // inset on each side of the icon and title.
         TextInset = 44 + 40,
         ToolbarTopPadding = 10 + 1, ToolbarMinHeight = 10 + 1 + 36 + 5, HiddenToolbarClearance = 10 + 2,
-        ActionButtonSize = 30,
+        ActionButtonSize = 30, ActionScale = 0.75,
     };
 
     /// <summary>Armored: a 60 DIP band (80 before it was slimmed like Fleet) with a deeper plaque projecting 8 DIP
@@ -57,6 +63,9 @@ internal sealed record TitleBarMetrics
         TitleFontSize = 13, TitleLetterSpacing = 1.0, LogoSize = 24,
         TextInset = 100,
         ToolbarTopPadding = 8 + 5, ToolbarMinHeight = 8 + 5 + 36 + 5, HiddenToolbarClearance = 8 + 6,
-        ActionButtonSize = 30,
+        ActionButtonSize = 30, ActionScale = 0.75,
+        // The band is an upper plate over a lower stiffener, split by the recessed joint ArmoredSkinRenderer draws
+        // at band - 18. The buttons sit on the plate: from its top edge at 4 down to that joint.
+        ActionsCenter = (4 + (60 - 18)) / 2d,
     };
 }

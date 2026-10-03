@@ -83,6 +83,10 @@ public sealed partial class MainWindow
         // Where the skin's title bar metrics put them, centered in the band unless the skin says otherwise.
         var top = ThemeService.ActiveWindowSkin.TitleBar?.ActionsTop ?? 0;
         _titleActions.Margin = custom ? new Thickness(0, top, TitleActionsRightInset, 0) : new Thickness(6, 0, 0, 0);
+        // Drawn smaller in a skin's title bar, about the group's right edge and middle so it keeps its place.
+        var scale = custom ? ThemeService.ActiveWindowSkin.TitleBar?.ActionScale ?? 1 : 1;
+        _titleActions.RenderTransformOrigin = new RelativePoint(1, 0.5, RelativeUnit.Relative);
+        _titleActions.RenderTransform = scale == 1 ? null : new Avalonia.Media.ScaleTransform(scale, scale);
     }
 
     internal void ToggleFullScreen()
