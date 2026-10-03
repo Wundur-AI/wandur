@@ -742,6 +742,10 @@ public sealed partial class MainWindow : Window
         var armored = ThemeService.ActiveWindowSkin.IsArmored;
         _appTitle.FontSize = armored ? 20 : FleetTitleLayout.TitleFontSize;
         _appTitle.MaxWidth = double.PositiveInfinity;
+        // The title fills its column and centers its text there, so rounding the plate to whole pixels
+        // never pushes the text half a pixel off center.
+        _appTitle.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _appTitle.TextAlignment = TextAlignment.Center;
         _appTitle.FontWeight = FontWeight.Normal;
         _appTitle.LetterSpacing = armored ? 1.8 : FleetTitleLayout.TitleLetterSpacing;
         _titleBarLogo.Width = _titleBarLogo.Height = LogoSize;
@@ -758,17 +762,20 @@ public sealed partial class MainWindow : Window
             - LogoSize - TitleLogoGap;
         var full = PlateTitle(_plaqueLabel);
         _appTitle.Text = TitleWidth(full) <= room ? full : PlateTitle(_plaqueShortLabel);
-        var identityWidth = TitleWidth(_appTitle.Text) + LogoSize + TitleLogoGap;
+        // A whole, even width, so the icon and title center on the pixel grid inside the even-width plaque.
+        var identityWidth = Math.Ceiling((TitleWidth(_appTitle.Text) + LogoSize + TitleLogoGap) / 2) * 2;
         var place = armored ? ArmoredTitleLayout.Calculate(width, left, right, identityWidth)
             : FleetTitleLayout.Calculate(width, left, right, identityWidth);
         _windowSkin.TitleModuleBounds = place.Bounds;
         ApplyFleetToolbarSurface();
-        _plaqueTitleHost.HorizontalAlignment = HorizontalAlignment.Left;
+        // Centered by layout rather than placed at an x offset, so the plate stays centered on every frame
+        // of a resize, including the macOS zoom animation, before this method runs again.
+        _plaqueTitleHost.HorizontalAlignment = HorizontalAlignment.Center;
         _plaqueTitleHost.MinWidth = 0;
         _plaqueTitleHost.MaxWidth = double.PositiveInfinity;
         _plaqueTitleHost.Width = place.Bounds.Width;
         _plaqueTitleHost.Height = place.Bounds.Height;
-        _plaqueTitleHost.Margin = new Thickness(place.Bounds.X, place.Bounds.Y, 0, 0);
+        _plaqueTitleHost.Margin = new Thickness(0, place.Bounds.Y, 0, 0);
         _plaque.Padding = new Thickness(place.PlainTitle ? 4 : armored ? ArmoredTitleLayout.TextInset : FleetTitleLayout.TextInset, 0);
         _plaqueIdentity.Width = Math.Min(identityWidth, Math.Max(0, place.Bounds.Width - _plaque.Padding.Left - _plaque.Padding.Right));
         if (place.PlainTitle)
@@ -795,7 +802,7 @@ public sealed partial class MainWindow : Window
         }
         if (!ThemeService.ActiveWindowSkin.CustomChrome || _chrome is null || _windowSkin is null ||
             _toolbar.TranslatePoint(default, _chrome) is not { } origin) return;
-        var title = _windowSkin.TitleModuleBounds.Translate(new Vector(-origin.X, -origin.Y));
+        var title = _windowSkin.CenteredTitleModule.Translate(new Vector(-origin.X, -origin.Y));
         var key = (_toolbar.Bounds.Size, title);
         if (_fleetToolbarSurfaceKey == key) return;
         _toolbarBackground?.Dispose();
