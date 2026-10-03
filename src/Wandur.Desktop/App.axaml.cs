@@ -35,6 +35,12 @@ public partial class App : Application
             await window.ShowInformationAsync(L.AboutWandur, Wandur.Core.Protocol.ClientIdentity.DisplayName, L.ADoorwayToOtherWorldsAnOpenSourceMUD);
     }
 
+    private async void CheckForUpdatesClicked(object? sender, EventArgs args)
+    {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: MainWindow window })
+            await window.CheckForUpdatesFromMenuAsync();
+    }
+
     private async void PreferencesClicked(object? sender, EventArgs args)
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: MainWindow window })

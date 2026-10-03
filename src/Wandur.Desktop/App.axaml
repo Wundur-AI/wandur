@@ -9,6 +9,7 @@
   <NativeMenu.Menu>
     <NativeMenu>
       <NativeMenuItem Header="{ReflectionBinding [AboutWandur], Source={x:Static loc:LocalizedText.Instance}}" Click="AboutClicked" />
+      <NativeMenuItem Header="{ReflectionBinding [CheckForUpdatesMenu], Source={x:Static loc:LocalizedText.Instance}}" Click="CheckForUpdatesClicked" />
       <NativeMenuItemSeparator />
       <NativeMenuItem Header="{ReflectionBinding [Preferences], Source={x:Static loc:LocalizedText.Instance}}" Gesture="Meta+OemComma" Click="PreferencesClicked" />
     </NativeMenu>

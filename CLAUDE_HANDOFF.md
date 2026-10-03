@@ -86,6 +86,24 @@ and `tests/Wandur.Core.Tests/FakeServerStream.cs` plays the server in memory.
 Not done: MCCP, CHARSET and code pages, MXP, feeding prompts to history and
 the agent's reply wait, a per-world "don't ask again" for links.
 
+Update checks (branch `feature/update-check`): `Wandur.Core.Updates.UpdateService` asks
+`{WANDUR_DIRECTORY_URL or https://api.wandur.net}/client/latest` (the site's endpoint, same
+base as the directory, client User-Agent) about 20 seconds after the window opens and then at
+most once a day (an hourly timer checks `IsDue`); the result and time are kept in
+`ClientSettings.LastUpdateCheck`, so a restart within the day shows the remembered result
+without asking. Versions compare by semantic version rules (`ReleaseVersion`). A build from
+source (0.0.0-dev) never checks and is never offered anything unless
+`WANDUR_UPDATE_CHECK_VERSION` names the release version it should check as. A newer release
+shows `MainWindow.Updates.cs`'s strip above the session notice, in its style: "Wandur Mud
+Client 0.1.6 is available." with Download (the downloads page in the browser), Release notes,
+Skip this version (`ClientSettings.SkippedUpdateVersion`; a newer one shows again) and a cross
+that hides it until the next start. It hides while the active session's input is private
+(including a password prompt) and its buttons never take focus. Check for Updates... is in the
+macOS app menu (`App.axaml`) and under Help elsewhere (`DesktopMenus`); it says "You have the
+latest version", shows the notice, or says wandur.net could not be reached. Settings > General
+has "Check for updates automatically" (`CheckForUpdates`, on by default). Automatic checks fail
+silently and never retry before the next day. Nothing is ever downloaded or installed.
+
 ## Operating rules (keep)
 
 - Git identity for every commit in this repository and in the private site

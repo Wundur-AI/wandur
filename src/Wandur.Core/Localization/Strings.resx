@@ -1980,4 +1980,16 @@ Stop after receiving one inventory listing.</value></data>
   <data name="LinkRefusedLocal" xml:space="preserve"><value>That link was not opened: it points to this computer or a private network, which a world has no reason to send you to.</value></data>
   <data name="LinkClickHint" xml:space="preserve"><value>Ctrl+click to open this link.</value></data>
   <data name="LinkClickHintMac" xml:space="preserve"><value>Cmd+click or Control+click to open this link.</value></data>
+  <data name="CheckForUpdatesMenu" xml:space="preserve"><value>Check for Updates…</value></data>
+  <data name="CheckForUpdatesTitle" xml:space="preserve"><value>Check for Updates</value></data>
+  <data name="UpdateAvailable" xml:space="preserve"><value>Wandur Mud Client {0} is available.</value></data>
+  <data name="UpdateDownload" xml:space="preserve"><value>Download</value></data>
+  <data name="UpdateReleaseNotes" xml:space="preserve"><value>Release notes</value></data>
+  <data name="UpdateSkipVersion" xml:space="preserve"><value>Skip this version</value></data>
+  <data name="UpdateUpToDate" xml:space="preserve"><value>You have the latest version, {0}.</value></data>
+  <data name="UpdateUnreachable" xml:space="preserve"><value>Could not reach wandur.net.</value></data>
+  <data name="UpdateUnreachableHint" xml:space="preserve"><value>Check your internet connection and try again later.</value></data>
+  <data name="UpdateChecksOffInSourceBuild" xml:space="preserve"><value>This is a build from source ({0}), so it does not check for updates.</value></data>
+  <data name="CheckForUpdatesAutomatically" xml:space="preserve"><value>Check for updates automatically</value></data>
+  <data name="CheckForUpdatesAutomaticallyHint" xml:space="preserve"><value>Once a day the client asks wandur.net whether a newer version is out and, if so, shows a notice. It never downloads or installs anything by itself.</value></data>
 </root>
