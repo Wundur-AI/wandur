@@ -21,7 +21,7 @@ public sealed class TitleBarTests
         {
             window.Show();
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal("WANDUR", window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "AppTitle").Text);
+            Assert.Equal("WANDUR MUD CLIENT", window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "AppTitle").Text);
             var disconnect = window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "Disconnect");
             var icon = Assert.IsType<Avalonia.Controls.Shapes.Path>(disconnect.Content);
             await window.Controller.StartAsync();
@@ -60,7 +60,7 @@ public sealed class TitleBarTests
             // title band up, that strip is the band's own drag surface rather than the old header row.
             var bandDrag = window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "MetalHeaderDrag");
             if (OperatingSystem.IsMacOS())
-                Assert.True(header.Bounds.Height >= 50 || (bandDrag.IsVisible && bandDrag.Bounds.Height >= 50),
+                Assert.True(header.Bounds.Height >= FleetTitleLayout.BandHeight || (bandDrag.IsVisible && bandDrag.Bounds.Height >= FleetTitleLayout.BandHeight),
                     $"no draggable title area: header {header.Bounds.Height}, band {bandDrag.Bounds.Height}");
             else Assert.Equal(0, header.MinHeight);
             Assert.False(disconnect.IsEffectivelyVisible);

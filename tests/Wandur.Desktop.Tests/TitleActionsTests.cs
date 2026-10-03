@@ -61,7 +61,7 @@ public sealed class TitleActionsTests
                 var logoOrigin = logo.TranslatePoint(default, window)!.Value;
                 var title = Named<TextBlock>(window, "AppTitle");
                 var titleOrigin = title.TranslatePoint(default, window)!.Value;
-                Assert.InRange(logo.Bounds.Width, 30, 34);
+                Assert.InRange(logo.Bounds.Width, FleetTitleLayout.LogoSize - 2, FleetTitleLayout.LogoSize + 2);
                 Assert.True(logoOrigin.X > plaque.TranslatePoint(default, window)!.Value.X);
                 Assert.InRange(titleOrigin.X - logoOrigin.X - logo.Bounds.Width, 8, 12);
                 Assert.Equal(width / 2d, (logoOrigin.X + titleOrigin.X + title.Bounds.Width) / 2, 1);

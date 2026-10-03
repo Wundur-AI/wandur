@@ -26,7 +26,8 @@ namespace Wandur.Desktop;
 public sealed partial class MainWindow : Window
 {
     /// <summary>The name the app goes by on the system: the window title, the Dock and the taskbar. The skin's title
-    /// plaque keeps the short "Wandur" as its wordmark; About and the protocol identity say "Wandur Mud Client (WMC)".</summary>
+    /// plaque shows it too while no world is open, and the short "Wandur - world" once one is; About and the protocol
+    /// identity say "Wandur Mud Client (WMC)".</summary>
     internal const string AppName = "Wandur Mud Client";
 
     public SessionWorkspace Sessions { get; }
@@ -50,7 +51,7 @@ public sealed partial class MainWindow : Window
     private readonly Border _plaqueTitleHost;
     /// <summary>The drawn nameplate behind the title. Renders before its child, so the title sits on it.</summary>
     private readonly ThemePlaque _plaque = new() { Name = "ThemePlaqueShape" };
-    private string _plaqueLabel = "Wandur";
+    private string _plaqueLabel = AppName;
     private Grid _chrome = null!;
     private StackPanel _headerStack = null!;
     private bool _toolbarInBand;
@@ -641,7 +642,7 @@ public sealed partial class MainWindow : Window
         }
 
         // Resolve the native height once. macOS reports changed decoration margins synchronously,
-        // which re-enters this method; competing Fleet (50) and legacy (52) writes recurse forever.
+        // which re-enters this method; competing Fleet (band height) and legacy (52) writes recurse forever.
         if (ThemeService.ActiveWindowSkin.CustomChrome)
             ExtendClientAreaTitleBarHeightHint = ThemeService.ActiveWindowSkin.TitleHeight;
         else if (OperatingSystem.IsMacOS())
@@ -679,10 +680,13 @@ public sealed partial class MainWindow : Window
         }
         if (ThemeService.ActiveWindowSkin.CustomChrome)
         {
-            _toolbar.Padding = new Thickness(12, 13, 12, 5);
-            _toolbar.MinHeight = 54;
+            // The top padding and the hidden-toolbar margin clear the plaque where it projects below the band.
+            var armored = ThemeService.ActiveWindowSkin.IsArmored;
+            _toolbar.Padding = new Thickness(12, armored ? 13 : FleetTitleLayout.ToolbarTopPadding, 12, 5);
+            _toolbar.MinHeight = armored ? 54 : FleetTitleLayout.ToolbarMinHeight;
             _windowHeader.MinHeight = 0;
-            _headerStack.Margin = _toolbar.IsVisible ? default : new Thickness(0, 14, 0, 0);
+            _headerStack.Margin = _toolbar.IsVisible ? default
+                : new Thickness(0, armored ? 14 : FleetTitleLayout.HiddenToolbarClearance, 0, 0);
             return;
         }
         if (!ThemeService.ActiveWindowSkin.CustomChrome)
@@ -720,22 +724,23 @@ public sealed partial class MainWindow : Window
         Classes.Set("fleet-compact", width < 1100);
         // Run on every platform, not just the macOS native-decoration callback.
         UpdateTitleBarInsets();
-        _appTitle.FontSize = 20;
+        var armored = ThemeService.ActiveWindowSkin.IsArmored;
+        _appTitle.FontSize = armored ? 20 : FleetTitleLayout.TitleFontSize;
         _appTitle.MaxWidth = double.PositiveInfinity;
         _appTitle.FontWeight = FontWeight.Normal;
-        _appTitle.LetterSpacing = 1.8;
+        _appTitle.LetterSpacing = armored ? 1.8 : FleetTitleLayout.TitleLetterSpacing;
+        _titleBarLogo.Width = _titleBarLogo.Height = LogoSize;
         _plaque.Fill = FleetSkin.Plaque;
         _plaque.WingFill = ThemeService.AppliedWorldTheme?.Skin?.Layout?.TitleBar?.Plaque?.Wings?.Fill is { } wingColor
             ? FleetSkin.Shade(Color.Parse(wingColor)) : FleetSkin.Wings;
         var measure = new TextBlock { Text = _appTitle.Text, FontFamily = _appTitle.FontFamily,
             FontSize = _appTitle.FontSize, LetterSpacing = _appTitle.LetterSpacing, FontWeight = _appTitle.FontWeight };
-        measure.Measure(new Size(double.PositiveInfinity, FleetTitleLayout.PlaqueHeight));
+        measure.Measure(new Size(double.PositiveInfinity, armored ? ArmoredTitleLayout.PlaqueHeight : FleetTitleLayout.PlaqueHeight));
         var left = Math.Max(WindowDecorationMargin.Left, OperatingSystem.IsMacOS() ? 88 : 0);
         var right = TitleActionsRightInset + TitleActionsWidth;
         _windowSkin.CaptionExclusion = new Thickness(left, 0, right, 0);
         PositionTitleActions();
-        var identityWidth = measure.DesiredSize.Width + TitleLogoSize + TitleLogoGap;
-        var armored = ThemeService.ActiveWindowSkin.IsArmored;
+        var identityWidth = measure.DesiredSize.Width + LogoSize + TitleLogoGap;
         var place = armored ? ArmoredTitleLayout.Calculate(width, left, right, identityWidth)
             : FleetTitleLayout.Calculate(width, left, right, identityWidth);
         _windowSkin.TitleModuleBounds = place.Bounds;
@@ -926,7 +931,7 @@ public sealed partial class MainWindow : Window
         // Keep the app identity visible before the world, including when a long world name is trimmed.
         // The full "character · world · Wandur Mud Client" stays on the OS title, where there is room.
         var oldPlaqueLabel = _plaqueLabel;
-        _plaqueLabel = !Controller.HasSession || Controller.WorldName.Length == 0 ? "Wandur" : $"Wandur - {Controller.WorldName}";
+        _plaqueLabel = !Controller.HasSession || Controller.WorldName.Length == 0 ? AppName : $"Wandur - {Controller.WorldName}";
         _appTitle.Text = _skinTitleActive ? PlateTitle() : Title;
         if (ThemeService.ActiveWindowSkin.CustomChrome && oldPlaqueLabel != _plaqueLabel) ApplyTitleChrome();
         var connected = Sessions.Tabs.Count(t => t.Controller.IsConnected);

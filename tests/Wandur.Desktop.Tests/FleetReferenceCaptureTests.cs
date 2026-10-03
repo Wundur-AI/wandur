@@ -94,7 +94,7 @@ public sealed class FleetReferenceCaptureTests
                 var centerX = (int)Math.Round(origin.X + plaque.Bounds.Width / 2);
                 var bottomY = (int)Math.Round(origin.Y + plaque.Bounds.Height);
                 var underLip = pixels.GetPixel(centerX, bottomY + 2);
-                var besideShoulder = pixels.GetPixel((int)Math.Round(origin.X - 6), 53);
+                var besideShoulder = pixels.GetPixel((int)Math.Round(origin.X - 6), (int)FleetTitleLayout.BandHeight + 3);
                 var toolbarFace = pixels.GetPixel(centerX, bottomY + 14);
                 Assert.True(underLip.Red < 150, $"Missing dark recessed channel beneath plaque: {underLip}");
                 Assert.True(besideShoulder.Red < 150, $"Missing shoulder socket: {besideShoulder}");
