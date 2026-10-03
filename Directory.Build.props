@@ -11,6 +11,9 @@
     <PathMap>$(MSBuildThisFileDirectory)=/_/</PathMap>
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
     <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
+    <!-- A build from source says so: release packaging passes the tag's version with -p:Version, and anything
+         else (dotnet run, tests) reports 0.0.0-dev, so wandur.net never counts it as an installed release. -->
+    <Version Condition="'$(Version)' == ''">0.0.0-dev</Version>
     <DefaultItemExcludes>$(DefaultItemExcludes);**/._*;**/.local/**</DefaultItemExcludes>
   </PropertyGroup>
 </Project>
