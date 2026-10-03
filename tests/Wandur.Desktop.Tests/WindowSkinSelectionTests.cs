@@ -48,7 +48,7 @@ public sealed class WindowSkinSelectionTests
 
     [AvaloniaTheory]
     [InlineData("Fleet", 38)]
-    [InlineData("Armored", 80)]
+    [InlineData("Armored", 60)]
     [InlineData("System", 0)]
     public void WorldColorsCannotReplaceUserGeometry(string id, double height)
     {
@@ -78,7 +78,7 @@ public sealed class WindowSkinSelectionTests
         {
             var armored = JsonSerializer.Deserialize<ClientSettings>("{\"Skin\":\"Armored\",\"Theme\":\"Slate\"}")!;
             ThemeService.Apply(armored);
-            Assert.Equal(80, ThemeService.AppliedSkin!.Layout!.TitleBar!.Height);
+            Assert.Equal(60, ThemeService.AppliedSkin!.Layout!.TitleBar!.Height);
             Assert.Equal(terminal, Avalonia.Application.Current.Resources["TerminalBrush"]!.ToString());
             ThemeService.Apply(armored);
             Assert.Equal(1, paints);

@@ -190,9 +190,9 @@ public sealed class SkinRefinementTests
                 Assert.True(host.Bounds.Height - host.Child!.Bounds.Bottom >= 30);
                 Assert.True(host.Child.Bounds.Left >= 24);
                 Assert.True(host.Bounds.Width - host.Child.Bounds.Right >= 24);
-                Assert.True(host.Child.Bounds.Top >= 80);
+                Assert.True(host.Child.Bounds.Top >= TitleBarMetrics.Armored.BandHeight);
                 var title = WindowSkinTransitionTests.Named<Border>(window, "PlaqueTitleHost");
-                Assert.InRange(title.Bounds.Height, 84, 90);
+                Assert.Equal(TitleBarMetrics.Armored.PlaqueHeight, title.Bounds.Height);
                 var toolbar = WindowSkinTransitionTests.Named<Border>(window, "MainToolbar");
                 Assert.True(toolbar.Bounds.Height >= 40);
                 var failures = ContrastProbe.Scan(window);

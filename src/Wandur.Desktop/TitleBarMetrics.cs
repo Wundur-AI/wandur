@@ -22,8 +22,6 @@ internal sealed record TitleBarMetrics
     public required double LogoSize { get; init; }
     /// <summary>The room kept clear on each side of the icon and title inside the plaque, for its shoulders.</summary>
     public required double TextInset { get; init; }
-    /// <summary>Whether the plaque width is rounded up to a whole, even number so it centers on the pixel grid.</summary>
-    public required bool EvenPlaqueWidth { get; init; }
 
     /// <summary>The toolbar row's top padding, which clears the plaque's projection.</summary>
     public required double ToolbarTopPadding { get; init; }
@@ -45,19 +43,20 @@ internal sealed record TitleBarMetrics
         TitleFontSize = 13, TitleLetterSpacing = 1.0, LogoSize = 24,
         // The dark inset starts 44 DIP inside the outer shoulders. Leave 40 DIP of breathing room inside that
         // inset on each side of the icon and title.
-        TextInset = 44 + 40, EvenPlaqueWidth = true,
+        TextInset = 44 + 40,
         ToolbarTopPadding = 10 + 1, ToolbarMinHeight = 10 + 1 + 36 + 5, HiddenToolbarClearance = 10 + 2,
         ActionButtonSize = 30,
     };
 
-    /// <summary>Armored: an 80 DIP band with a deeper plaque whose shoulders and side lights sit outside a 100 DIP
-    /// text inset.</summary>
+    /// <summary>Armored: a 60 DIP band (80 before it was slimmed like Fleet) with a deeper plaque projecting 8 DIP
+    /// below it, whose shoulders and side lights sit outside a 100 DIP text inset. The toolbar row keeps 5 DIP of
+    /// air under the plaque.</summary>
     public static readonly TitleBarMetrics Armored = new()
     {
-        BandHeight = 80, PlaqueTop = 2, PlaqueDrop = 8,
-        TitleFontSize = 20, TitleLetterSpacing = 1.8, LogoSize = 32,
-        TextInset = 100, EvenPlaqueWidth = false,
-        ToolbarTopPadding = 13, ToolbarMinHeight = 13 + 36 + 5, HiddenToolbarClearance = 14,
-        ActionButtonSize = 30, ActionsTop = 10,
+        BandHeight = 60, PlaqueTop = 2, PlaqueDrop = 8,
+        TitleFontSize = 13, TitleLetterSpacing = 1.0, LogoSize = 24,
+        TextInset = 100,
+        ToolbarTopPadding = 8 + 5, ToolbarMinHeight = 8 + 5 + 36 + 5, HiddenToolbarClearance = 8 + 6,
+        ActionButtonSize = 30,
     };
 }

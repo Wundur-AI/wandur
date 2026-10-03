@@ -25,10 +25,8 @@ internal static class TitleBarLayout
         var w = Safe(windowWidth);
         var exclusion = Math.Max(Safe(leftExclusion), Safe(rightExclusion)) + 12;
         var available = Math.Max(0, w - exclusion * 2);
-        var text = Safe(measuredTextWidth);
         // Whole, even widths keep the plaque centered on the pixel grid.
-        if (metrics.EvenPlaqueWidth) text = Math.Ceiling(text / 2) * 2;
-        var width = Math.Min(text + metrics.TextInset * 2, available);
+        var width = Math.Min(Math.Ceiling(Safe(measuredTextWidth) / 2) * 2 + metrics.TextInset * 2, available);
         return new(new Rect((w - width) / 2, metrics.PlaqueTop, width, metrics.PlaqueHeight),
             width < metrics.TextInset * 2 + 48);
     }
