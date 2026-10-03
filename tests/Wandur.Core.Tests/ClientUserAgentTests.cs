@@ -53,6 +53,13 @@ public sealed class ClientUserAgentTests : IDisposable
         Assert.Contains($"User-Agent: {ClientUserAgent.Value}\r\n", request);
     }
 
+    [Fact]
+    public void TestsNeverReachTheRealDirectory()
+    {
+        using var catalog = new WorldCatalog(Path.Combine(_dir, "directory.json"));
+        Assert.Equal(new Uri(OfflineDirectory.Address), catalog.BaseUri);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_dir)) Directory.Delete(_dir, recursive: true);
