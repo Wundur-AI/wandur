@@ -32,6 +32,9 @@ public sealed class JavaScriptEngine
     public static IReadOnlyList<string> PanelWidgetKinds { get; } =
         ["gauge", "label", "text", "list", "table", "button", "toggle", "input", "separator", "group"];
 
+    /// <summary>How long one dispatch, and any one regex match inside it, may run.</summary>
+    internal static readonly TimeSpan ScriptTimeout = TimeSpan.FromMilliseconds(300);
+
     public ScriptResult Load(string source, bool restrictedSend = false)
     {
         IsRunning = false;
@@ -43,8 +46,11 @@ public sealed class JavaScriptEngine
             _engine = new Engine(options =>
             {
                 options.LimitMemory(64 * 1024 * 1024).MaxStatements(100000)
-                    .TimeoutInterval(TimeSpan.FromMilliseconds(300)).LimitRecursion(64);
-                options.Constraints.RegexTimeout = TimeSpan.FromMilliseconds(100);
+                    .TimeoutInterval(ScriptTimeout).LimitRecursion(64);
+                // The script timeout cannot stop a .NET regex mid-match, so regexes get their own limit, the same
+                // length. Both are wall clock: at 100 ms a trivial match on a busy machine (a full test run, a
+                // laptop under load) could be preempted past the limit and fail a script that did nothing wrong.
+                options.Constraints.RegexTimeout = ScriptTimeout;
                 options.Constraints.MaxArraySize = 1000000;
                 options.Host.StringCompilationAllowed = false;
             });
