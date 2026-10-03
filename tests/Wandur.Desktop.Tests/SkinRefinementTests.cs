@@ -14,8 +14,8 @@ public sealed class SkinRefinementTests
 {
     private sealed class WindowsCaptionFrame : Control
     {
-        public override void Render(DrawingContext context) => ArmoredSkinRenderer.DrawFrame(context, Bounds.Size,
-            ArmoredTitleLayout.Calculate(1040, 88, 276, 9999).Bounds, new Thickness(88, 0, 276, 0),
+        public override void Render(DrawingContext context) => ArmoredSkinRenderer.DrawFrame(context, Bounds.Size, TitleBarMetrics.Armored.BandHeight,
+            TitleBarLayout.Calculate(TitleBarMetrics.Armored, 1040, 88, 276, 9999).Bounds, new Thickness(88, 0, 276, 0),
             Brushes.LightGray, Brushes.DimGray, Brushes.White, Brushes.Cyan);
     }
 
@@ -190,9 +190,9 @@ public sealed class SkinRefinementTests
                 Assert.True(host.Bounds.Height - host.Child!.Bounds.Bottom >= 30);
                 Assert.True(host.Child.Bounds.Left >= 24);
                 Assert.True(host.Bounds.Width - host.Child.Bounds.Right >= 24);
-                Assert.True(host.Child.Bounds.Top >= 80);
+                Assert.True(host.Child.Bounds.Top >= TitleBarMetrics.Armored.BandHeight);
                 var title = WindowSkinTransitionTests.Named<Border>(window, "PlaqueTitleHost");
-                Assert.InRange(title.Bounds.Height, 84, 90);
+                Assert.Equal(TitleBarMetrics.Armored.PlaqueHeight, title.Bounds.Height);
                 var toolbar = WindowSkinTransitionTests.Named<Border>(window, "MainToolbar");
                 Assert.True(toolbar.Bounds.Height >= 40);
                 var failures = ContrastProbe.Scan(window);

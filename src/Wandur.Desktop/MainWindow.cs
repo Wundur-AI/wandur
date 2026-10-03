@@ -387,7 +387,7 @@ public sealed partial class MainWindow : Window
         // Without the wing term a long title runs out over the bracket.
         var reach = plaque.Shape == "fleet" ? 0 : wings?.Extend ?? 0;
         var pad = plaque.Padding;
-        var intrinsic = plaque.Shape == "fleet" ? FleetTitleLayout.TextInset : 0;
+        var intrinsic = plaque.Shape == "fleet" ? TitleBarMetrics.Fleet.TextInset : 0;
         _plaque.Padding = new Thickness(Math.Max(intrinsic, reach + pad.Left), pad.Top,
             Math.Max(intrinsic, reach + pad.Right), pad.Bottom);
         _plaque.InvalidateVisual();
@@ -684,15 +684,13 @@ public sealed partial class MainWindow : Window
             _headerStack.Margin = default;
             return;
         }
-        if (ThemeService.ActiveWindowSkin.CustomChrome)
+        if (ThemeService.ActiveWindowSkin.TitleBar is { } metrics)
         {
             // The top padding and the hidden-toolbar margin clear the plaque where it projects below the band.
-            var armored = ThemeService.ActiveWindowSkin.IsArmored;
-            _toolbar.Padding = new Thickness(12, armored ? 13 : FleetTitleLayout.ToolbarTopPadding, 12, 5);
-            _toolbar.MinHeight = armored ? 54 : FleetTitleLayout.ToolbarMinHeight;
+            _toolbar.Padding = new Thickness(12, metrics.ToolbarTopPadding, 12, 5);
+            _toolbar.MinHeight = metrics.ToolbarMinHeight;
             _windowHeader.MinHeight = 0;
-            _headerStack.Margin = _toolbar.IsVisible ? default
-                : new Thickness(0, armored ? 14 : FleetTitleLayout.HiddenToolbarClearance, 0, 0);
+            _headerStack.Margin = _toolbar.IsVisible ? default : new Thickness(0, metrics.HiddenToolbarClearance, 0, 0);
             return;
         }
         if (!ThemeService.ActiveWindowSkin.CustomChrome)
@@ -739,33 +737,33 @@ public sealed partial class MainWindow : Window
         Classes.Set("fleet-compact", width < 1100);
         // Run on every platform, not just the macOS native-decoration callback.
         UpdateTitleBarInsets();
-        var armored = ThemeService.ActiveWindowSkin.IsArmored;
-        _appTitle.FontSize = armored ? 20 : FleetTitleLayout.TitleFontSize;
+        // Only custom-chrome skins have a plate, and each has its own metrics.
+        var metrics = ThemeService.ActiveWindowSkin.TitleBar ?? TitleBarMetrics.Fleet;
+        _appTitle.FontSize = metrics.TitleFontSize;
         _appTitle.MaxWidth = double.PositiveInfinity;
         // The title fills its column and centers its text there, so rounding the plate to whole pixels
         // never pushes the text half a pixel off center.
         _appTitle.HorizontalAlignment = HorizontalAlignment.Stretch;
         _appTitle.TextAlignment = TextAlignment.Center;
         _appTitle.FontWeight = FontWeight.Normal;
-        _appTitle.LetterSpacing = armored ? 1.8 : FleetTitleLayout.TitleLetterSpacing;
+        _appTitle.LetterSpacing = metrics.TitleLetterSpacing;
         _titleBarLogo.Width = _titleBarLogo.Height = LogoSize;
         _plaque.Fill = FleetSkin.Plaque;
         _plaque.WingFill = ThemeService.AppliedWorldTheme?.Skin?.Layout?.TitleBar?.Plaque?.Wings?.Fill is { } wingColor
             ? FleetSkin.Shade(Color.Parse(wingColor)) : FleetSkin.Wings;
         var left = Math.Max(WindowDecorationMargin.Left, OperatingSystem.IsMacOS() ? 88 : 0);
-        var right = TitleActionsRightInset + TitleActionsWidth;
+        // The buttons are drawn at the skin's scale, so the plate only has to clear what they actually cover.
+        var right = TitleActionsRightInset + TitleActionsWidth * (ThemeService.ActiveWindowSkin.TitleBar?.ActionScale ?? 1);
         _windowSkin.CaptionExclusion = new Thickness(left, 0, right, 0);
         PositionTitleActions();
         // "Wandur Mud Client" when the plate has room for it, otherwise the short "Wandur"; a world name
         // that still does not fit is trimmed at its end.
-        var room = FleetTitleLayout.TextRoom(width, left, right, armored ? ArmoredTitleLayout.TextInset : FleetTitleLayout.TextInset)
-            - LogoSize - TitleLogoGap;
+        var room = TitleBarLayout.TextRoom(width, left, right, metrics.TextInset) - LogoSize - TitleLogoGap;
         var full = PlateTitle(_plaqueLabel);
         _appTitle.Text = TitleWidth(full) <= room ? full : PlateTitle(_plaqueShortLabel);
         // A whole, even width, so the icon and title center on the pixel grid inside the even-width plaque.
         var identityWidth = Math.Ceiling((TitleWidth(_appTitle.Text) + LogoSize + TitleLogoGap) / 2) * 2;
-        var place = armored ? ArmoredTitleLayout.Calculate(width, left, right, identityWidth)
-            : FleetTitleLayout.Calculate(width, left, right, identityWidth);
+        var place = TitleBarLayout.Calculate(metrics, width, left, right, identityWidth);
         _windowSkin.TitleModuleBounds = place.Bounds;
         ApplyFleetToolbarSurface();
         // Centered by layout rather than placed at an x offset, so the plate stays centered on every frame
@@ -776,7 +774,7 @@ public sealed partial class MainWindow : Window
         _plaqueTitleHost.Width = place.Bounds.Width;
         _plaqueTitleHost.Height = place.Bounds.Height;
         _plaqueTitleHost.Margin = new Thickness(0, place.Bounds.Y, 0, 0);
-        _plaque.Padding = new Thickness(place.PlainTitle ? 4 : armored ? ArmoredTitleLayout.TextInset : FleetTitleLayout.TextInset, 0);
+        _plaque.Padding = new Thickness(place.PlainTitle ? 4 : metrics.TextInset, 0);
         _plaqueIdentity.Width = Math.Min(identityWidth, Math.Max(0, place.Bounds.Width - _plaque.Padding.Left - _plaque.Padding.Right));
         if (place.PlainTitle)
         {

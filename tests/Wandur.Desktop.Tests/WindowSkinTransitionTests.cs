@@ -36,7 +36,7 @@ public sealed class WindowSkinTransitionTests
                 Assert.Equal(second != "System", Named<Border>(window, "PlaqueTitleHost").IsEffectivelyVisible);
                 Assert.True(Named<StackPanel>(window, "TitleActions").IsEffectivelyVisible);
                 var frame = window.GetVisualDescendants().OfType<ThemeWindowSkinHost>().Single();
-                Assert.Equal(second == "System" ? 0 : second == "Fleet" ? FleetTitleLayout.BandHeight : 80, frame.BandHeight);
+                Assert.Equal(second == "System" ? 0 : second == "Fleet" ? TitleBarMetrics.Fleet.BandHeight : TitleBarMetrics.Armored.BandHeight, frame.BandHeight);
                 if (second == "System")
                 {
                     Assert.Equal(0, frame.EdgeThickness);
@@ -80,7 +80,7 @@ public sealed class WindowSkinTransitionTests
                 if (target == "System") Assert.IsAssignableFrom<Avalonia.Media.ISolidColorBrush>(Named<Border>(window, "MainToolbar").Background);
                 window.ToggleFullScreen(); Settle(window);
                 Assert.True(window.ExtendClientAreaToDecorationsHint);
-                Assert.Equal(target == "System" ? 0 : target == "Fleet" ? FleetTitleLayout.BandHeight : 80, frame.BandHeight);
+                Assert.Equal(target == "System" ? 0 : target == "Fleet" ? TitleBarMetrics.Fleet.BandHeight : TitleBarMetrics.Armored.BandHeight, frame.BandHeight);
                 window.ToolbarVisible = true; Settle(window);
             }
         }

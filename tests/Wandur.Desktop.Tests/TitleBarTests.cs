@@ -60,7 +60,7 @@ public sealed class TitleBarTests
             // title band up, that strip is the band's own drag surface rather than the old header row.
             var bandDrag = window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "MetalHeaderDrag");
             if (OperatingSystem.IsMacOS())
-                Assert.True(header.Bounds.Height >= FleetTitleLayout.BandHeight || (bandDrag.IsVisible && bandDrag.Bounds.Height >= FleetTitleLayout.BandHeight),
+                Assert.True(header.Bounds.Height >= TitleBarMetrics.Fleet.BandHeight || (bandDrag.IsVisible && bandDrag.Bounds.Height >= TitleBarMetrics.Fleet.BandHeight),
                     $"no draggable title area: header {header.Bounds.Height}, band {bandDrag.Bounds.Height}");
             else Assert.Equal(0, header.MinHeight);
             Assert.False(disconnect.IsEffectivelyVisible);

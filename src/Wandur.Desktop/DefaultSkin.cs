@@ -42,7 +42,7 @@ internal static class DefaultSkin
                 {
                     // The controls keep their own row beneath the band, as on the design: the band holds the
                     // traffic lights and the nameplate and nothing else.
-                    HostsToolbar = false, ToolbarAlign = "right", TitleAlign = "center", Height = FleetTitleLayout.BandHeight,
+                    HostsToolbar = false, ToolbarAlign = "right", TitleAlign = "center", Height = TitleBarMetrics.Fleet.BandHeight,
                     Padding = default,
                     Plaque = new WorldThemeSkinPlaque
                     {

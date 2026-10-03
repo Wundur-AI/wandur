@@ -43,7 +43,7 @@ public sealed class DefaultSkinTests
         try
         {
             var host = window.GetVisualDescendants().OfType<ThemeWindowSkinHost>().First();
-            Assert.Equal(FleetTitleLayout.BandHeight, host.BandHeight);
+            Assert.Equal(TitleBarMetrics.Fleet.BandHeight, host.BandHeight);
             Assert.Equal(6, host.EdgeThickness);
             Assert.NotNull(host.EdgeOutline);
             Assert.True(host.Child!.Bounds.Top >= host.BandHeight, "content sits under the band instead of below it");
@@ -105,7 +105,7 @@ public sealed class DefaultSkinTests
         Assert.Equal(2, merged.Radii!.Panel);
         Assert.Equal(3, merged.Radii.Control);
         var bar = merged.Layout!.TitleBar!;
-        Assert.Equal(FleetTitleLayout.BandHeight, bar.Height);
+        Assert.Equal(TitleBarMetrics.Fleet.BandHeight, bar.Height);
         Assert.False(bar.HostsToolbar);
         Assert.Equal(default, bar.Padding);
         Assert.Equal(38, merged.Layout.PanelHeader!.Height);

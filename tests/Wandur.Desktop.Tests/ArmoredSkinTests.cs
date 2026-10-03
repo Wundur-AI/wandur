@@ -17,7 +17,7 @@ public sealed class ArmoredSkinTests
     [InlineData(double.NaN, double.PositiveInfinity, -1, double.NaN)]
     public void LayoutIsFiniteCenteredAndKeepsFixedCaps(double width, double left, double right, double text)
     {
-        var place = ArmoredTitleLayout.Calculate(width, left, right, text);
+        var place = TitleBarLayout.Calculate(TitleBarMetrics.Armored, width, left, right, text);
         Assert.True(double.IsFinite(place.Bounds.Width));
         Assert.True(place.Bounds.Width >= 0);
         var available = double.IsFinite(width) ? width : 0;

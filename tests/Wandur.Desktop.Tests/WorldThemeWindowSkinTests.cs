@@ -52,13 +52,13 @@ public sealed class WorldThemeWindowSkinTests
         Assert.Null(windowSkin.BorderBitmap);
         Assert.Null(windowSkin.BorderMeta);
         Assert.Equal(default, windowSkin.Inset);
-        Assert.Equal(FleetTitleLayout.BandHeight, windowSkin.BandHeight);
+        Assert.Equal(TitleBarMetrics.Fleet.BandHeight, windowSkin.BandHeight);
         Assert.Equal(6, windowSkin.EdgeThickness);
         Assert.NotNull(windowSkin.BandBrush);
         harness.Window.UpdateLayout();
-        Assert.Equal(new Point(6, FleetTitleLayout.BandHeight), windowSkin.Child!.Bounds.Position);
+        Assert.Equal(new Point(6, TitleBarMetrics.Fleet.BandHeight), windowSkin.Child!.Bounds.Position);
         if (OperatingSystem.IsMacOS())
-            Assert.Equal(FleetTitleLayout.BandHeight, harness.Window.ExtendClientAreaTitleBarHeightHint);
+            Assert.Equal(TitleBarMetrics.Fleet.BandHeight, harness.Window.ExtendClientAreaTitleBarHeightHint);
         Assert.Null(bezel.BorderBitmap);
         Assert.Equal(default, bezel.Inset);
         Assert.False(ornaments.IsHitTestVisible);

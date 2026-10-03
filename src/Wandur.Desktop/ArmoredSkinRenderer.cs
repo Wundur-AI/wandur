@@ -10,11 +10,11 @@ internal static class ArmoredSkinRenderer
     private static readonly IBrush Recess = Brush.Parse("#E00B141A");
     private static readonly IBrush Reflection = Brush.Parse("#65FFFFFF");
 
-    internal static void DrawFrame(DrawingContext context, Size size, Rect title, Thickness captionExclusion,
+    /// <summary>The band, the side rails and the foot. The band height comes from the skin's title bar metrics.</summary>
+    internal static void DrawFrame(DrawingContext context, Size size, double band, Rect title, Thickness captionExclusion,
         IBrush metal, IBrush edge, IBrush highlight, IBrush accent)
     {
         var w = size.Width; var h = size.Height;
-        const double band = WindowSkinDefinition.ArmoredBandHeight;
         const double rail = WindowSkinDefinition.ArmoredRailWidth;
         const double foot = WindowSkinDefinition.ArmoredFootHeight;
         if (w < 32 || h < band + foot + 54) return;

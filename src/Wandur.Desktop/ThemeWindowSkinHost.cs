@@ -168,7 +168,7 @@ internal sealed class ThemeWindowSkinHost : Decorator
         // The band is painted before anything else so the title, the toolbar and any art sit on it.
         if (ThemeService.ActiveWindowSkin.IsArmored && BandHeight > 0)
         {
-            ArmoredSkinRenderer.DrawFrame(context, Bounds.Size, CenteredTitleModule, CaptionExclusion, FleetSkin.Metal,
+            ArmoredSkinRenderer.DrawFrame(context, Bounds.Size, BandHeight, CenteredTitleModule, CaptionExclusion, FleetSkin.Metal,
                 FleetSkin.RimEdge, FleetSkin.RimHighlight, _edgeAccent ?? Brushes.Transparent);
             return;
         }
