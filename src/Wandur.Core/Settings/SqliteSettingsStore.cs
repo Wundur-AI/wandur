@@ -13,17 +13,41 @@ public sealed class SqliteSettingsStore(ClientDatabase database, string legacySe
 
     public SettingsLoadResult Load()
     {
+        ClientSettings settings;
         try
         {
-            return database.Write((connection, transaction) =>
+            settings = database.Write((connection, transaction) =>
             {
                 EnsureImported(connection, transaction);
-                return new SettingsLoadResult(ReadSettings(connection, transaction));
+                return ReadSettings(connection, transaction);
             });
         }
         catch (Exception error) when (error is JsonException or ArgumentException or IOException or UnauthorizedAccessException or FormatException)
         {
             return new(new(), L.Format(L.SettingsCouldNotBeReadDefaultsAreInUse, error.Message));
+        }
+        return new SettingsLoadResult(settings.InstallId is { } id && id != Guid.Empty ? settings : WithInstallId(settings));
+    }
+
+    /// <summary>Makes the install id on the first load. It is its own transaction, after the read, so a database that
+    /// cannot be written (full, read only, an I/O error) still loads its settings, just with no install id to send.
+    /// It reads again inside the write, so two loads at once keep the same id.</summary>
+    private ClientSettings WithInstallId(ClientSettings settings)
+    {
+        try
+        {
+            return database.Write((connection, transaction) =>
+            {
+                var current = ReadSettings(connection, transaction);
+                if (current.InstallId is { } stored && stored != Guid.Empty) return settings with { InstallId = stored };
+                var created = current with { InstallId = Guid.NewGuid() };
+                SaveSettingsRow(connection, transaction, created);
+                return settings with { InstallId = created.InstallId };
+            });
+        }
+        catch (Exception error) when (error is SqliteException or IOException or UnauthorizedAccessException or JsonException or ArgumentException or FormatException)
+        {
+            return settings;
         }
     }
 
@@ -36,8 +60,9 @@ public sealed class SqliteSettingsStore(ClientDatabase database, string legacySe
             {
                 EnsureImported(connection, transaction);
                 // A failed load must not silently replace corrupt database settings.
-                ReadSettings(connection, transaction);
-                WriteSettings(connection, transaction, settings);
+                var stored = ReadSettings(connection, transaction);
+                // The stored install id wins, so a copy of the settings read before the id existed never replaces it.
+                WriteSettings(connection, transaction, Wandur.Core.Discovery.InstallIdentity.Keep(settings, stored.InstallId));
                 return true;
             });
         }
@@ -115,6 +140,11 @@ public sealed class SqliteSettingsStore(ClientDatabase database, string legacySe
                 ("$payload", JsonSerializer.Serialize(profile)), ("$position", index));
             insert.ExecuteNonQuery();
         }
+        SaveSettingsRow(connection, transaction, settings);
+    }
+
+    private static void SaveSettingsRow(SqliteConnection connection, SqliteTransaction transaction, ClientSettings settings)
+    {
         using var save = Command(connection, transaction,
             "INSERT INTO client_settings(id, payload) VALUES (1, $payload) ON CONFLICT(id) DO UPDATE SET payload = excluded.payload",
             ("$payload", JsonSerializer.Serialize(settings with { Profiles = [] })));

@@ -74,7 +74,9 @@ public sealed class SqliteSettingsScriptTests : IDisposable
         Settings.Save(original);
         var restored = Settings.Load();
         Assert.Null(restored.Warning);
-        Assert.Equal(JsonSerializer.Serialize(original), JsonSerializer.Serialize(restored.Settings));
+        // The store adds the install id on the first save; everything else round-trips as given.
+        Assert.NotNull(restored.Settings.InstallId);
+        Assert.Equal(JsonSerializer.Serialize(original with { InstallId = restored.Settings.InstallId }), JsonSerializer.Serialize(restored.Settings));
         var invalid = theme with { Colors = new(theme.Colors) { ["Chrome"] = "broken" } };
         Assert.Throws<ArgumentException>(() => Settings.Save(original with { CustomThemes = [invalid] }));
         Assert.Equal("#445566", Settings.Load().Settings.CustomThemes[0].Colors["Chrome"]);
@@ -98,7 +100,8 @@ public sealed class SqliteSettingsScriptTests : IDisposable
         var bytes = File.ReadAllBytes(LegacySettings);
         var store = Settings; var loaded = store.Load();
         Assert.Null(loaded.Warning); Assert.Equal(DatabasePath, store.FilePath);
-        Assert.Equal(JsonSerializer.Serialize(original), JsonSerializer.Serialize(loaded.Settings));
+        Assert.NotNull(loaded.Settings.InstallId);
+        Assert.Equal(JsonSerializer.Serialize(original with { InstallId = loaded.Settings.InstallId }), JsonSerializer.Serialize(loaded.Settings));
         Assert.Equal(bytes, File.ReadAllBytes(LegacySettings));
         store.Save(loaded.Settings with { Theme = "Forest", Profiles = [second, first] });
         File.WriteAllText(LegacySettings, "broken backup must never be reread");
@@ -155,7 +158,8 @@ public sealed class SqliteSettingsScriptTests : IDisposable
         {
             Theme = "Paper", Profiles = [first with { Host = "unused.example" }, second with { Host = "first.example" }]
         }));
-        Assert.Equal(JsonSerializer.Serialize(settings), JsonSerializer.Serialize(Settings.Load().Settings));
+        var kept = Settings.Load().Settings;
+        Assert.Equal(JsonSerializer.Serialize(settings with { InstallId = kept.InstallId }), JsonSerializer.Serialize(kept));
         Assert.Equal(2, Count("endpoints")); Assert.Equal(2, Count("worlds"));
     }
 

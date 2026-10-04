@@ -24,6 +24,8 @@
             <TextBlock Text="{ReflectionBinding [ShowChannelsPanelHint], Source={x:Static loc:LocalizedText.Instance}}" Classes="muted" TextWrapping="Wrap" />
             <CheckBox Name="CheckForUpdates" Content="{ReflectionBinding [CheckForUpdatesAutomatically], Source={x:Static loc:LocalizedText.Instance}}" IsChecked="{Binding CheckForUpdates}" />
             <TextBlock Text="{ReflectionBinding [CheckForUpdatesAutomaticallyHint], Source={x:Static loc:LocalizedText.Instance}}" Classes="muted" TextWrapping="Wrap" />
+            <CheckBox Name="SendInstallId" Content="{ReflectionBinding [SendInstallId], Source={x:Static loc:LocalizedText.Instance}}" IsChecked="{Binding SendInstallId}" />
+            <TextBlock Text="{ReflectionBinding [SendInstallIdHint], Source={x:Static loc:LocalizedText.Instance}}" Classes="muted" TextWrapping="Wrap" />
             <TextBlock Text="{ReflectionBinding [SessionHistory], Source={x:Static loc:LocalizedText.Instance}}" FontSize="16" FontWeight="SemiBold" Margin="0,12,0,0" />
             <CheckBox Name="HistoryEnabled" Content="{ReflectionBinding [HistoryEnabled], Source={x:Static loc:LocalizedText.Instance}}" IsChecked="{Binding HistoryEnabled}" />
             <TextBlock Text="{ReflectionBinding [HistoryPrivacyHint], Source={x:Static loc:LocalizedText.Instance}}" Classes="muted" TextWrapping="Wrap" />

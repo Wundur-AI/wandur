@@ -7,7 +7,8 @@ namespace Wandur.Core.Discovery;
 /// How the client names itself to wandur.net, for example <c>WandurMudClient/0.1.3 (macOS; arm64)</c>: the product,
 /// its version, the operating system family and the processor architecture. The site counts requests by it, so the
 /// owner can see how many clients fetch the directory each day and which versions they run. Nothing in it identifies
-/// a person or an install: no machine name, no user name, no install id, no OS build.
+/// a person or an install: no machine name, no user name, no install id, no OS build. The anonymous install id, when it
+/// is on, travels in its own header (<see cref="InstallIdentity"/>).
 /// </summary>
 public static class ClientUserAgent
 {

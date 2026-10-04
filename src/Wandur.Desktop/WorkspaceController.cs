@@ -126,6 +126,8 @@ public sealed partial class WorkspaceController : IAsyncDisposable
 
     public void SaveSettings(ClientSettings settings)
     {
+        // A copy made before the install id existed must not drop it; the store keeps the stored one either way.
+        if (settings.InstallId is null && Settings.InstallId is { } installId) settings = settings with { InstallId = installId };
         _store.Save(settings);
         ApplySettings(settings);
         ApplyHistorySettings();

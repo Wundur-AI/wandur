@@ -152,6 +152,18 @@ Read a listing, add it to your saved worlds, or open a new connection. TLS is
 available when the listing provides a TLS port. Browser-only games link to their
 websites instead of offering a Telnet connection.
 
+Requests to wandur.net (the directory, its artwork and theme images, and the daily
+update check) name the client in the User-Agent, for example
+`WandurMudClient/0.1.6 (macOS; arm64)`. The world list and update check requests also
+carry an anonymous install id in a separate `X-Wandur-Install` header so the site can
+count installs; artwork and theme image requests do not. The id is a random GUID made
+the first time the settings are loaded and kept with them in the application data
+folder, so updating or reinstalling the app keeps it; deleting the settings makes a new
+one. It goes only to wandur.net and to the directory set by `WANDUR_DIRECTORY_URL`,
+never to banner hosts, MUD servers, agent model servers or The Mud Connector, and it is
+decided again on every redirect. Turn it off in **Settings > General > Send an
+anonymous install id so wandur.net can count installs**; the client then sends no id.
+
 The directory is downloaded on launch when its local snapshot is older than 24 hours.
 If the service is unavailable, cached listings and saved worlds continue working.
 Pasting a host and port into Add World now looks for an exact match in this catalog.

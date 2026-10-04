@@ -32,7 +32,7 @@ public interface IUpdateSource
 
 /// <summary>
 /// Asks <c>{directory}/client/latest</c>, the same base address the directory uses (<c>WANDUR_DIRECTORY_URL</c>, so
-/// tests stay on loopback), with the client's User-Agent. It only reads: nothing is downloaded or installed.
+/// tests stay on loopback), with the client's User-Agent and, when it is on, the install id header. It only reads: nothing is downloaded or installed.
 /// </summary>
 public sealed class HttpUpdateSource : IUpdateSource, IDisposable
 {
@@ -40,13 +40,15 @@ public sealed class HttpUpdateSource : IUpdateSource, IDisposable
     private readonly bool _ownsHttp;
     public Uri Address { get; }
 
-    public HttpUpdateSource(Uri directoryBase, HttpClient? http = null)
+    /// <param name="install">The install id header to send with the check; null sends none. Ignored when
+    /// <paramref name="http"/> is given.</param>
+    public HttpUpdateSource(Uri directoryBase, HttpClient? http = null, InstallHeader? install = null)
     {
         Address = new Uri(new Uri(directoryBase.AbsoluteUri.TrimEnd('/') + "/"), "client/latest");
         _ownsHttp = http is null;
         if (http is null)
         {
-            http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            http = new HttpClient(InstallIdentity.CreateHandler(directoryBase, install ?? new InstallHeader())) { Timeout = TimeSpan.FromSeconds(15) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd(ClientUserAgent.Value);
         }
         _http = http;

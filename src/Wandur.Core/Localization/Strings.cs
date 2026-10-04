@@ -1023,4 +1023,6 @@ public static class Strings
     public static string UpdateChecksOffInSourceBuild => Get(nameof(UpdateChecksOffInSourceBuild));
     public static string CheckForUpdatesAutomatically => Get(nameof(CheckForUpdatesAutomatically));
     public static string CheckForUpdatesAutomaticallyHint => Get(nameof(CheckForUpdatesAutomaticallyHint));
+    public static string SendInstallId => Get(nameof(SendInstallId));
+    public static string SendInstallIdHint => Get(nameof(SendInstallIdHint));
 }

@@ -35,19 +35,25 @@ public sealed partial class WorldCatalog : IWorldDirectory, IDisposable
     public Uri BaseUri { get; }
     public event Action? Changed;
 
-    public WorldCatalog(string cachePath, Uri? baseUri = null, HttpClient? http = null, TimeProvider? timeProvider = null)
-        : this(new FileWorldCatalogCache(cachePath), baseUri, http, timeProvider) { }
+    /// <summary>The install id header this catalog's own HttpClient sends to wandur.net; the window applies the settings
+    /// to it. A catalog given an HttpClient by its caller sends nothing extra.</summary>
+    public InstallHeader Install { get; }
 
-    public WorldCatalog(IWorldCatalogCache cache, Uri? baseUri = null, HttpClient? http = null, TimeProvider? timeProvider = null)
+    public WorldCatalog(string cachePath, Uri? baseUri = null, HttpClient? http = null, TimeProvider? timeProvider = null, InstallHeader? install = null)
+        : this(new FileWorldCatalogCache(cachePath), baseUri, http, timeProvider, install) { }
+
+    public WorldCatalog(IWorldCatalogCache cache, Uri? baseUri = null, HttpClient? http = null, TimeProvider? timeProvider = null, InstallHeader? install = null)
     {
         _cache = cache;
+        Install = install ?? new InstallHeader();
         _time = timeProvider ?? TimeProvider.System;
         BaseUri = baseUri ?? new Uri((Environment.GetEnvironmentVariable("WANDUR_DIRECTORY_URL") ?? "https://api.wandur.net").TrimEnd('/') + "/");
         _ownsHttp = http is null;
         if (http is null)
         {
-            // The catalog's own client: every directory, art and theme request carries the client's name and version.
-            http = new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
+            // The catalog's own client: every directory, art and theme request carries the client's name and version,
+            // and requests to wandur.net (not supplied banners on other hosts) carry the install id when it is on.
+            http = new HttpClient(InstallIdentity.CreateHandler(BaseUri, Install)) { Timeout = TimeSpan.FromMinutes(15) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd(ClientUserAgent.Value);
         }
         _http = http;

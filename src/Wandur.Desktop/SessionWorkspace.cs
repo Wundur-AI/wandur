@@ -88,6 +88,8 @@ public sealed partial class SessionWorkspace : IAsyncDisposable
         _scriptLibraryStore = scriptLibraryStore;
         Active = CreateTab();
         Tabs.Add(Active);
+        // The directory's install id header follows the settings: the loaded ones now, saved ones below.
+        _catalog?.Install.Apply(Active.Controller.Settings);
         ApplyAppearance();
         if (_catalog is not null) _catalog.Changed += CatalogAppearanceChanged;
     }
@@ -102,6 +104,7 @@ public sealed partial class SessionWorkspace : IAsyncDisposable
         {
             foreach (var other in Tabs.Where(t => t != tab))
             { other.Controller.ApplySettings(settings); other.Controller.ApplyHistorySettings(); }
+            _catalog?.Install.Apply(settings);
             ApplyAppearance();
         };
         return tab;

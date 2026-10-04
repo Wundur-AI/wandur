@@ -40,7 +40,7 @@ public sealed partial class MainWindow
     {
         if (updates is null)
         {
-            var source = new HttpUpdateSource(Catalog.BaseUri);
+            var source = new HttpUpdateSource(Catalog.BaseUri, install: Catalog.Install);
             _updateSource = source;
             updates = UpdateService.ForThisBuild(source);
         }

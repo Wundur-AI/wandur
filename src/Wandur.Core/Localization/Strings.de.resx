@@ -1978,4 +1978,6 @@ Stoppe nach einer Inventarliste.</value></data>
   <data name="UpdateChecksOffInSourceBuild" xml:space="preserve"><value>Dies ist ein Build aus dem Quellcode ({0}) und sucht daher nicht nach Updates.</value></data>
   <data name="CheckForUpdatesAutomatically" xml:space="preserve"><value>Automatisch nach Updates suchen</value></data>
   <data name="CheckForUpdatesAutomaticallyHint" xml:space="preserve"><value>Einmal am Tag fragt der Client bei wandur.net nach, ob eine neuere Version erschienen ist, und zeigt dann einen Hinweis. Er lädt nie selbst etwas herunter und installiert nichts.</value></data>
+  <data name="SendInstallId" xml:space="preserve"><value>Eine anonyme Installations-ID senden, damit wandur.net Installationen zählen kann</value></data>
+  <data name="SendInstallIdHint" xml:space="preserve"><value>Eine Zufallszahl, die einmal für diese Installation erzeugt wird. Der Client sendet sie mit seinen Anfragen an wandur.net (Verzeichnis, Bilder und Update-Prüfung) und nirgendwohin sonst. Sie verrät nichts über dich oder diesen Computer. Ist die Option aus, sendet der Client keine ID.</value></data>
 </root>

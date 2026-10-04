@@ -84,6 +84,12 @@ public sealed record ClientSettings
     public bool HideHistoryRecordingNotice { get; init; }
     /// <summary>Whether the client asks wandur.net, at most once a day, whether a newer release is out. It never installs anything.</summary>
     public bool CheckForUpdates { get; init; } = true;
+    /// <summary>A random id for this installation, created the first time the settings are loaded and kept with them in
+    /// the application data folder, so updating or reinstalling the app keeps it. Deleting the settings makes a new one.
+    /// It says nothing about the person or the machine; see <see cref="Wandur.Core.Discovery.InstallIdentity"/>.</summary>
+    public Guid? InstallId { get; init; }
+    /// <summary>Whether requests to wandur.net carry <see cref="InstallId"/>, so the site can count installs. On by default.</summary>
+    public bool SendInstallId { get; init; } = true;
     /// <summary>When the last update check ran and what it learned, so a restart within the day does not ask again.</summary>
     public Wandur.Core.Updates.UpdateCheckRecord? LastUpdateCheck { get; init; }
     /// <summary>A release the reader chose to skip; only a newer one is offered again.</summary>
@@ -154,6 +160,7 @@ public sealed class SettingsStore(string path) : ISettingsStore
     public void Save(ClientSettings settings)
     {
         settings.Validate();
+        settings = Wandur.Core.Discovery.InstallIdentity.Keep(settings, StoredInstallId());
         var directory = Path.GetDirectoryName(Path.GetFullPath(FilePath))!;
         var temporary = Path.Combine(directory, $".settings-{Guid.NewGuid():N}.tmp");
         try
@@ -169,5 +176,18 @@ public sealed class SettingsStore(string path) : ISettingsStore
         // error; callers handle a failed save as IOException either way, as the database store reports it.
         catch (UnauthorizedAccessException error) { throw new IOException(error.Message, error); }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
+    }
+
+    /// <summary>The install id already in the file, or null when there is none or the file cannot be read.</summary>
+    private Guid? StoredInstallId()
+    {
+        try
+        {
+            if (!File.Exists(FilePath) || new FileInfo(FilePath).Length > 1_048_576) return null;
+            using var document = JsonDocument.Parse(File.ReadAllText(FilePath));
+            return document.RootElement.ValueKind == JsonValueKind.Object && document.RootElement.TryGetProperty(nameof(ClientSettings.InstallId), out var value)
+                && value.ValueKind == JsonValueKind.String && value.TryGetGuid(out var id) && id != Guid.Empty ? id : null;
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException) { return null; }
     }
 }

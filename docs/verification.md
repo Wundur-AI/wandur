@@ -1,5 +1,29 @@
 # Client foundation verification
 
+## Anonymous install id (2026-10-04, branch feature/install-id)
+
+- `InstallIdentityTests` (Core): the database store makes the id on the first
+  load and returns the same one after reopening the database; saving changed
+  settings, a copy without the id or a copy with another id keeps the stored
+  id; a separate settings database gets its own; the id moves with the old
+  settings file into the database.
+- Loopback servers: the catalog's directory request carries
+  `X-Wandur-Install: <id>` beside the unchanged User-Agent, which never
+  contains it; with the setting off the next request has no header; a request
+  to another loopback port (a banner host) has none, including when the
+  directory answers with a 302 to that host; the update check sends it when
+  on and not when off or when no header source is given; an artwork request
+  to the directory host has none.
+- Path rule: only `/directory` and `/client/latest` (under any base path)
+  carry the id; artwork, theme images, world pages and downloads do not.
+- Address rule: https wandur.net and subdomains on the default port, or the
+  configured directory's scheme, host and port; http, other ports, user
+  info, look-alike hosts, The Mud Connector and model servers are refused.
+- `InstallIdSettingTests` (Desktop): the General page shows the checkbox
+  right after the update check's hint, on by default; unchecking and saving
+  stops the header on the next directory load and is stored with the same id.
+- Core 932 passed, Desktop 740 passed. After the review fixes: Core 943, Desktop 740.
+
 ## Telnet protocol cheap wins (2026-09-27, branch feature/protocol-cheap-wins)
 
 - SDK submodule bumped to 3d22f67 (MTTS cycle, NAWS updates, GA and EOR

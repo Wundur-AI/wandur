@@ -104,6 +104,18 @@ latest version", shows the notice, or says wandur.net could not be reached. Sett
 has "Check for updates automatically" (`CheckForUpdates`, on by default). Automatic checks fail
 silently and never retry before the next day. Nothing is ever downloaded or installed.
 
+Anonymous install id (branch `feature/install-id`): `ClientSettings.InstallId` is a random GUID that
+`SqliteSettingsStore.Load` makes the first time (in its own write after the read, so a database that cannot be
+written still loads) and both stores keep on every save (the
+stored id wins over the one a settings copy carries). `Wandur.Core.Discovery.InstallIdentity` sends it as
+`X-Wandur-Install` through a handler on the catalog's own HttpClient and `HttpUpdateSource`, only to https wandur.net
+hosts and the configured directory origin, and only on the world list (`/directory`) and update check
+(`/client/latest`), not on artwork or theme images (`InstallIdentity.IsCounted`), following redirects itself so the header never rides one to another host;
+never in the User-Agent. `WorldCatalog.Install` (an `InstallHeader`) holds the value in use; `SessionWorkspace`
+applies the loaded and saved settings to it. Settings > General has "Send an anonymous install id so wandur.net can
+count installs" (`SendInstallId`, on by default) under the update check. Site side (keyed hash, counts) is in
+`wandur-site`, not here.
+
 ## Operating rules (keep)
 
 - Git identity for every commit in this repository and in the private site
