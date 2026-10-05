@@ -341,7 +341,7 @@ count installs" (`SendInstallId`, on by default) under the update check. Site si
   `wandur-sdk/`, `wandur-discovery/`, `wandur-site/`, `room-classifier/`, with
   a top-level `CLAUDE.md` pointing at the handoffs. `wandur-sdk` and
   `wandur-discovery` have no remote history yet; the owner pushes them first,
-  after which the submodule URL `https://github.com/Wundur-AI/wandur-sdk.git`
+  after which the submodule URL `https://github.com/Last-Mile-Studio/wandur-sdk.git`
   in `.gitmodules` resolves for anyone cloning.
 - Follow-up from the session-open work: with the terrain classifier
   installed, `RoomsNeedingInference` hashes every room on the UI thread after

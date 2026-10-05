@@ -7,10 +7,10 @@ two Mac disk images, and publishes a GitHub Release as the `github-actions` bot.
 ## Before the first release
 
 - The SDK submodule must be fetchable. `external/wandur-sdk` points at
-  `https://github.com/Wundur-AI/wandur-sdk.git`; that repository has to contain the commit
+  `https://github.com/Last-Mile-Studio/wandur-sdk.git`; that repository has to contain the commit
   the client pins (`git -C external/wandur-sdk rev-parse HEAD`). If it does not, every CI checkout
   fails before anything builds. Push `wandur-sdk` first.
-- The Mac signing secrets. These are Wundur-AI organization secrets, shared with this repository
+- The Mac signing secrets. These are Last-Mile-Studio organization secrets, shared with this repository
   (organization Settings, Secrets and variables, Actions, each secret's Repository access):
 
   | Secret | Value |

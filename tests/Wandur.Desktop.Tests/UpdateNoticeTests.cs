@@ -272,7 +272,7 @@ public sealed class UpdateNoticeTests
         {
             Calls++;
             if (Fail) throw new HttpRequestException("offline");
-            return Task.FromResult(new UpdateInfo(Version, UpdateService.DownloadsPage, new Uri($"https://github.com/Wundur-AI/wandur/releases/tag/v{Version}")));
+            return Task.FromResult(new UpdateInfo(Version, UpdateService.DownloadsPage, new Uri($"https://github.com/Last-Mile-Studio/wandur/releases/tag/v{Version}")));
         }
     }
 }

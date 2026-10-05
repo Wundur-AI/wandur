@@ -6,7 +6,7 @@ public sealed record RoomClassificationStatus(RoomClassificationState State, dou
 /// <summary>Owns the installed room-classifier package and its lazily created classifier.</summary>
 public sealed class RoomClassificationService : IDisposable
 {
-    public static readonly Uri DefaultPackageUrl = new("https://github.com/Wundur-AI/room-classifier/releases/download/v0.1.1/wundur-room-classifier-0.1.1.zip");
+    public static readonly Uri DefaultPackageUrl = new("https://github.com/Last-Mile-Studio/room-classifier/releases/download/v0.1.1/wundur-room-classifier-0.1.1.zip");
     private readonly ModelPackageInstaller? _installer;
     private readonly Uri _packageUrl;
     private readonly Func<ModelPackage, IRoomEnvironmentClassifier> _factory;

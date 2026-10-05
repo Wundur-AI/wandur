@@ -177,9 +177,9 @@ public sealed class UpdateServiceTests
         var info = HttpUpdateSource.Parse("""{"version":"0.1.6","page":"https://evil.example/download","notes":"http://github.com/x"}""");
         Assert.Equal(UpdateService.DownloadsPage, info.Page);
         Assert.Null(info.Notes);
-        info = HttpUpdateSource.Parse("""{"version":"0.1.6","page":"https://www.wandur.net/client/downloads","notes":"https://github.com/Wundur-AI/wandur/releases/tag/v0.1.6"}""");
+        info = HttpUpdateSource.Parse("""{"version":"0.1.6","page":"https://www.wandur.net/client/downloads","notes":"https://github.com/Last-Mile-Studio/wandur/releases/tag/v0.1.6"}""");
         Assert.Equal("https://www.wandur.net/client/downloads", info.Page.AbsoluteUri);
-        Assert.Equal("https://github.com/Wundur-AI/wandur/releases/tag/v0.1.6", info.Notes!.AbsoluteUri);
+        Assert.Equal("https://github.com/Last-Mile-Studio/wandur/releases/tag/v0.1.6", info.Notes!.AbsoluteUri);
         Assert.Null(UpdateService.TrustedPage("https://user@www.wandur.net/"));
         Assert.Null(UpdateService.TrustedPage("https://wandur.net.evil.example/"));
         Assert.Throws<FormatException>(() => HttpUpdateSource.Parse("""{"version":"0.0.0-dev"}"""));
@@ -194,7 +194,7 @@ public sealed class UpdateServiceTests
         var body = """
             { "version": "0.1.6", "published_at": "2026-10-03T12:48:44Z",
               "page": "https://www.wandur.net/client/downloads",
-              "notes": "https://github.com/Wundur-AI/wandur/releases/tag/v0.1.6",
+              "notes": "https://github.com/Last-Mile-Studio/wandur/releases/tag/v0.1.6",
               "files": [ { "platform": "macos-arm64", "name": "Wandur-0.1.6-macos-arm64.dmg", "url": "https://github.com/x.dmg", "size": 1, "sha256": null } ] }
             """;
         var serve = Serve(listener, "200 OK", body);
@@ -209,7 +209,7 @@ public sealed class UpdateServiceTests
         Assert.Contains("Accept: application/json\r\n", request);
         Assert.Equal(UpdateCheckStatus.Available, result.Status);
         Assert.Equal("0.1.6", result.Latest!.Version);
-        Assert.Equal("https://github.com/Wundur-AI/wandur/releases/tag/v0.1.6", result.Record!.Notes);
+        Assert.Equal("https://github.com/Last-Mile-Studio/wandur/releases/tag/v0.1.6", result.Record!.Notes);
 
         // The site has no list yet: a 503, reported as a failure.
         var unavailable = Serve(listener, "503 Service Unavailable", """{"error":"later"}""");
@@ -260,7 +260,7 @@ public sealed class UpdateServiceTests
         {
             Calls++;
             if (Fail) throw new HttpRequestException("offline");
-            return Task.FromResult(new UpdateInfo(version, UpdateService.DownloadsPage, new Uri($"https://github.com/Wundur-AI/wandur/releases/tag/v{version}")));
+            return Task.FromResult(new UpdateInfo(version, UpdateService.DownloadsPage, new Uri($"https://github.com/Last-Mile-Studio/wandur/releases/tag/v{version}")));
         }
     }
 }

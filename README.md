@@ -10,7 +10,7 @@ Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), th
 clone with submodules and run:
 
 ```sh
-git clone --recurse-submodules https://github.com/Wundur-AI/wandur.git
+git clone --recurse-submodules https://github.com/Last-Mile-Studio/wandur.git
 cd wandur
 dotnet restore Wandur.sln
 dotnet run --project src/Wandur.Desktop/Wandur.Desktop.csproj
@@ -104,7 +104,7 @@ On macOS external drives, keep the NuGet package cache on the internal disk. The
 | `tests/Wandur.Desktop.Tests` | Input, privacy, docking, themes, lifecycle and render checks |
 
 `Wandur.Models` and `Wandur.Protocol` live in the separate
-[wandur-sdk](https://github.com/Wundur-AI/wandur-sdk) repository and are
+[wandur-sdk](https://github.com/Last-Mile-Studio/wandur-sdk) repository and are
 checked out here as a git submodule at `external/wandur-sdk`. The solution
 builds them from that path, so the two projects are edited and built exactly as
 before; commits to them belong in the SDK repository. The daily protocol
@@ -129,7 +129,7 @@ The dedicated display handles terminal cursor addressing and screen updates; MUD
 
 `Wandur.Models` (contracts and validation) and `Wandur.Protocol` (telnet parsing and
 protocol decoding) are no longer packed from this repository. NuGet publishing lives in
-the [wandur-sdk](https://github.com/Wundur-AI/wandur-sdk) repository and is not
+the [wandur-sdk](https://github.com/Last-Mile-Studio/wandur-sdk) repository and is not
 active yet: nothing is on NuGet.org, so consumers take the SDK as a submodule and
 reference the projects directly, as this repository does.
 

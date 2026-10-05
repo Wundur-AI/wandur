@@ -12,7 +12,7 @@
 #   WANDUR_RELEASE_UPLOAD  1 uploads the disk images and a refreshed SHA256SUMS.txt to release
 #                          v<version> with gh, replacing the ad-hoc signed ones, and rewrites the
 #                          release notes' macOS first-run paragraph. Anything else only builds.
-#   WANDUR_RELEASE_REPO    GitHub repository (default Wundur-AI/wandur).
+#   WANDUR_RELEASE_REPO    GitHub repository (default Last-Mile-Studio/wandur).
 #
 #   WANDUR_ALLOW_NON_DEVELOPER_ID
 #                          1 lets WANDUR_SIGN_IDENTITY name a non-Developer ID identity, for
@@ -31,7 +31,7 @@ set -euo pipefail
 export AVALONIA_TELEMETRY_OPTOUT=1 DOTNET_CLI_TELEMETRY_OPTOUT=1
 
 release_account="YouCantGoThatWay"
-repo="${WANDUR_RELEASE_REPO:-Wundur-AI/wandur}"
+repo="${WANDUR_RELEASE_REPO:-Last-Mile-Studio/wandur}"
 profile="${WANDUR_NOTARY_PROFILE:-wandur-notary}"
 upload="${WANDUR_RELEASE_UPLOAD:-0}"
 

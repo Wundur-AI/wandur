@@ -2,7 +2,7 @@ name: Release
 
 # A v* tag builds self-contained downloads for Windows, Linux and both Mac architectures, then
 # publishes a GitHub Release as github-actions[bot] with GITHUB_TOKEN. The tag is the version.
-# On a tag the Mac downloads are Developer ID signed, notarized and stapled, with the Wundur-AI
+# On a tag the Mac downloads are Developer ID signed, notarized and stapled, with the Last-Mile-Studio
 # organization secrets MACOS_CERT_P12, MACOS_CERT_PASSWORD, ASC_KEY_P8, ASC_KEY_ID and
 # ASC_ISSUER_ID. Run it by hand (workflow_dispatch) for a dry run: same builds, ad-hoc signed,
 # uploaded as workflow artifacts, no release and no secrets. See docs/releasing.md.
@@ -121,7 +121,7 @@ jobs:
             value="${!name}"
             echo "$name: ${#value} characters"
             if [[ -z "$value" ]]; then
-              echo "::error title=Signing secret missing::$name is empty. Check the Wundur-AI organization secret exists and is shared with this repository."
+              echo "::error title=Signing secret missing::$name is empty. Check the Last-Mile-Studio organization secret exists and is shared with this repository."
               bad=1
             fi
           done
