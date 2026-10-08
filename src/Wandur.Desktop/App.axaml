@@ -264,11 +264,11 @@
     </Style>
     <!-- The centre document is squared off and butts straight against the splitters on either side. -->
     <Style Selector="dc|DocumentControl /template/ Border#PART_Border">
-      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="BorderThickness" Value="{DynamicResource DocumentFrameThickness}" />
       <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
       <Setter Property="CornerRadius" Value="0" />
       <Setter Property="ClipToBounds" Value="True" />
-      <Setter Property="Margin" Value="0,4,0,4" />
+      <Setter Property="Margin" Value="{DynamicResource DocumentFrameMargin}" />
     </Style>
     <!-- Labelled toolbar pills: same density as the titlebar icon buttons, without chrome wells. -->
     <Style Selector="Button.app-button.toolbar-button">

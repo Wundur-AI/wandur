@@ -178,11 +178,15 @@ public static class ThemeService
         var skin = DefaultSkin.Merge(worldTheme?.Skin, fallback,
             keepSurfaces: textured);
         skin = ActiveWindowSkin.ApplyGeometry(skin);
-        // The System skin has no metal frame, so the gaps between the docks (the 4 px around the transcript)
-        // take the theme's border colour, like the panel edges beside them, rather than the dark chassis the
-        // drawn skins rest on. A world that paints its own ground keeps it.
-        if (ActiveWindowSkin.Id == WindowSkinId.System && worldTheme?.Skin?.Surfaces?.Ground is null && skin.Surfaces is { } surfaces)
-            skin = skin with { Surfaces = surfaces with { Ground = new() { From = line, To = line } } };
+        // The System skin has no metal frame, so the centre document blends into the docked panels: the gaps
+        // between the docks take the panels' own colour rather than the dark chassis the drawn skins rest on,
+        // and the document drops its hairline and the 4 px above and below it. A world that paints its own
+        // ground keeps it.
+        var blend = ActiveWindowSkin.Id == WindowSkinId.System;
+        if (blend && worldTheme?.Skin?.Surfaces?.Ground is null && skin.Surfaces is { } surfaces)
+            skin = skin with { Surfaces = surfaces with { Ground = new() { From = panel, To = panel } } };
+        resources.Value("DocumentFrameThickness", blend ? new Thickness(0) : new Thickness(1));
+        resources.Value("DocumentFrameMargin", blend ? new Thickness(0) : new Thickness(0, 4, 0, 4));
         skin = skin with { Radii = new WorldThemeSkinRadii { Panel = panelRadius, Control = controlRadius } };
         AppliedSkin = skin;
         // Dimming by opacity costs far more contrast over a light surface than a dark one: the same 0.35
