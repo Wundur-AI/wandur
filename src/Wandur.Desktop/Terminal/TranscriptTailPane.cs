@@ -20,7 +20,7 @@ namespace Wandur.Desktop.Terminal;
 internal sealed class TranscriptTailPane : Border
 {
     /// <summary>A ceiling on the rows built for one frame, so an absurd window cannot turn into an absurd visual tree.</summary>
-    private const int MaximumLines = 400;
+    internal const int MaximumLines = 400;
     private readonly AnsiTerminal _source;
     private readonly StackPanel _rows = new() { VerticalAlignment = VerticalAlignment.Bottom };
     private readonly List<IDisposable> _bindings = [];

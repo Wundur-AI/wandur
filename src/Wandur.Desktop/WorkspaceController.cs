@@ -68,7 +68,14 @@ public sealed partial class WorkspaceController : IAsyncDisposable
     public ViewModels.SessionPagesViewModel Pages => _pages ??= new(ScriptLibrary);
     public ClientSettings Settings { get; private set; }
     public Wandur.Core.Classification.RoomClassificationService? Classification { get; }
-    public AnsiTerminal Terminal { get; } = new();
+    /// <summary>
+    /// The session's parsed transcript model. The display keeps its own 2,000 line scrollback (the xterm buffer behind
+    /// <see cref="Display"/>, which also serves export); this copy only feeds the live tail pane (at most
+    /// <see cref="Wandur.Desktop.Terminal.TranscriptTailPane.MaximumLines"/> rows) and the channel rule preview (200
+    /// lines), so it keeps 500 lines rather than a second full scrollback.
+    /// </summary>
+    public AnsiTerminal Terminal { get; } = new(TranscriptModelLines);
+    internal const int TranscriptModelLines = 500;
     public Wandur.Desktop.Terminal.ITranscriptDisplay Display { get; }
     public CommandHistory History { get; private set; } = new();
     /// <summary>Words this session has shown or sent, for inline completion. One per world: reset with the history.</summary>

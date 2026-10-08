@@ -42,6 +42,15 @@ public sealed class TranscriptTailTests
         Dispatcher.UIThread.RunJobs();
     }
 
+    /// <summary>The controller's transcript model is bounded below the display's scrollback; it must still hold everything
+    /// its two readers can ask for.</summary>
+    [Fact]
+    public void TheTranscriptModelHoldsEveryLineTheTailAndThePreviewShow()
+    {
+        Assert.True(WorkspaceController.TranscriptModelLines > Terminal.TranscriptTailPane.MaximumLines);
+        Assert.True(WorkspaceController.TranscriptModelLines > ViewModels.MarkChannelViewModel.PreviewLines);
+    }
+
     [AvaloniaFact]
     public async Task ScrollingBackSplitsTheOutputAndReturningToTheBottomCollapsesIt()
     {

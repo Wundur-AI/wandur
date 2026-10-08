@@ -155,8 +155,12 @@ internal sealed class ChannelMessageList : Border
     private void ModelChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName is not (nameof(ChannelsViewModel.SelectedIndex) or nameof(ChannelsViewModel.IsEmpty))) return;
+        // IsEmpty is announced on every refresh of the model (each output flush). The rows already follow the shown
+        // tab's messages through Arrived, so only another tab, or rows that no longer match, need a rebuild.
+        var watched = _watched;
         Watch();
-        Rebuild();
+        if (e.PropertyName == nameof(ChannelsViewModel.SelectedIndex) || !ReferenceEquals(watched, _watched)
+            || _rows.Children.Count != _model.Selected.Messages.Count) Rebuild();
     }
 
     private void Watch()
@@ -169,7 +173,34 @@ internal sealed class ChannelMessageList : Border
         _follow = true;
     }
 
-    private void Arrived(object? sender, NotifyCollectionChangedEventArgs e) => Rebuild();
+    /// <summary>
+    /// A message is appended, the oldest is trimmed, or a wrapped tail replaces the last one: each touches one row, so a
+    /// full panel (500 messages) is not refilled for every line. Anything else, or rows out of step, rebuilds.
+    /// </summary>
+    private void Arrived(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        var messages = _model.Selected.Messages;
+        if (!ReferenceEquals(sender, messages)) { Rebuild(); return; }
+        var rows = _rows.Children;
+        switch (e.Action)
+        {
+            case NotifyCollectionChangedAction.Add when e.NewItems is { Count: 1 } && e.NewStartingIndex == rows.Count && rows.Count + 1 == messages.Count:
+                var row = NewRow();
+                Fill(row, messages[e.NewStartingIndex]);
+                rows.Add(row);
+                break;
+            case NotifyCollectionChangedAction.Remove when e.OldItems is { Count: 1 } && e.OldStartingIndex >= 0 && e.OldStartingIndex < rows.Count && rows.Count == messages.Count + 1:
+                rows.RemoveAt(e.OldStartingIndex);
+                break;
+            case NotifyCollectionChangedAction.Replace when e.NewItems is { Count: 1 } && e.NewStartingIndex >= 0 && e.NewStartingIndex < rows.Count && rows.Count == messages.Count:
+                Fill((TextBlock)rows[e.NewStartingIndex], messages[e.NewStartingIndex]);
+                break;
+            default:
+                Rebuild();
+                return;
+        }
+        FollowIfAtEnd();
+    }
 
     private void Rebuild()
     {
@@ -177,6 +208,11 @@ internal sealed class ChannelMessageList : Border
         while (_rows.Children.Count > messages.Count) _rows.Children.RemoveAt(_rows.Children.Count - 1);
         while (_rows.Children.Count < messages.Count) _rows.Children.Add(NewRow());
         for (var i = 0; i < messages.Count; i++) Fill((TextBlock)_rows.Children[i], messages[i]);
+        FollowIfAtEnd();
+    }
+
+    private void FollowIfAtEnd()
+    {
         if (_follow) Avalonia.Threading.Dispatcher.UIThread.Post(_viewer.ScrollToEnd, Avalonia.Threading.DispatcherPriority.Background);
     }
 

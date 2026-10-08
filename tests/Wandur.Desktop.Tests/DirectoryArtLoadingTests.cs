@@ -79,6 +79,43 @@ public sealed class DirectoryArtLoadingTests
         finally { window.Close(); }
     }
 
+    /// <summary>Hundreds of listings: only the rows on screen exist, only they ask for artwork, and a row scrolled away
+    /// lets go of its picture.</summary>
+    [AvaloniaFact]
+    public async Task OnlyTheRowsOnScreenAreBuiltAndAskForArtwork()
+    {
+        var worlds = Enumerable.Range(0, 300).Select(i => new WorldListing
+        {
+            Id = $"world-{i}", Name = $"World {i:D3}", Host = $"w{i}.example.org", Port = 4000, GeneratedArtworkPath = $"worlds/world-{i}/art",
+            Community = new() { Rank = i + 1 }
+        }).ToArray();
+        await using var fixture = new Fixture(worlds, _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(TestPng.Rgba(40, 16)) });
+        var window = new Window { Content = new WorldBrowserView(fixture.Model, fixture.Catalog), Width = 1280, Height = 900 };
+        try
+        {
+            window.Show();
+            for (var i = 0; i < 50; i++) { await Task.Delay(10); Layout(window); }
+            int Realized() => window.GetVisualDescendants().OfType<DirectoryWorldCard>().Count();
+            int Requested() { lock (fixture.Requests) return fixture.Requests.Count; }
+            var first = Realized();
+            Assert.InRange(first, 1, 12);
+            Assert.InRange(Requested(), 1, first);
+            // The selected row (the first) may stay realized for keyboard focus; the second must not.
+            var secondRow = window.GetVisualDescendants().OfType<ListBoxItem>().Single(r => r.DataContext is WorldListing { Id: "world-1" });
+            var scroll = window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "DirectoryResults")
+                .GetVisualDescendants().OfType<ScrollViewer>().First();
+            scroll.Offset = new Vector(0, scroll.Extent.Height);
+            for (var i = 0; i < 50; i++) { await Task.Delay(10); Layout(window); }
+            Assert.InRange(Realized(), 1, 12);
+            Assert.Contains(fixture.Requests, r => r.Contains("world-299", StringComparison.Ordinal));
+            // Far fewer pictures than listings were ever asked for: the rows in between were never built.
+            Assert.InRange(Requested(), 2, 30);
+            Assert.DoesNotContain(window.GetVisualDescendants().OfType<ListBoxItem>(), r => r.IsVisible && r.DataContext is WorldListing { Id: "world-1" });
+            Assert.False(secondRow.IsVisible && secondRow.DataContext is WorldListing { Id: "world-1" });
+        }
+        finally { window.Close(); }
+    }
+
     private static void Layout(Window window)
     { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(2); }
 

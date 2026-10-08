@@ -30,6 +30,42 @@ public sealed class ChannelPanelTests
     private static void Show(ChannelsViewModel model, ChannelTabViewModel tab)
     { model.SelectedIndex = model.Tabs.IndexOf(tab); Dispatcher.UIThread.RunJobs(); }
 
+    /// <summary>The rows follow the messages one at a time (append, trim, a wrapped tail replacing the last), and must end
+    /// up exactly as a panel built from scratch over the same messages.</summary>
+    [AvaloniaFact]
+    public async Task AFullPanelUpdatesRowByRowAndMatchesAFreshOne()
+    {
+        await using var world = await World.Open();
+        var model = new ChannelsViewModel(world.Controller);
+        var window = new Window { Width = 380, Height = 520, Content = new ChannelsView(model) };
+        try
+        {
+            window.Show(); Dispatcher.UIThread.RunJobs();
+            var at = DateTimeOffset.Parse("2026-10-07T12:00:00Z");
+            for (var i = 0; i < ChannelTabViewModel.MaximumMessages + 20; i++)
+                model.Received(new Wandur.Core.Channels.ChannelMessage(i % 3 == 0 ? "ooc" : "gossip", "Talek", $"message {i}", at, $"message {i}", false), false);
+            model.Received(new Wandur.Core.Channels.ChannelMessage("gossip", "Talek", "message 519 and its tail", at, "message 519 and its tail", false), true);
+            Dispatcher.UIThread.RunJobs();
+            var rows = Messages(window).Rows;
+            Assert.Equal(ChannelTabViewModel.MaximumMessages, rows.Count);
+            Assert.Contains("Talek: message 20", rows[0]);
+            Assert.Contains("Talek: message 519 and its tail", rows[^1]);
+            var fresh = new Window { Width = 380, Height = 520, Content = new ChannelsView(model) };
+            try
+            {
+                fresh.Show(); Dispatcher.UIThread.RunJobs();
+                Assert.Equal(Messages(fresh).Rows, rows);
+            }
+            finally { fresh.Close(); }
+            // Another tab and back rebuilds from that tab's messages.
+            Show(model, model.Tabs.Single(t => t.Channel == "ooc"));
+            Assert.Equal(model.Tabs.Single(t => t.Channel == "ooc").Messages.Count, Messages(window).Rows.Count);
+            Show(model, model.Tabs[0]);
+            Assert.Equal(rows, Messages(window).Rows);
+        }
+        finally { window.Close(); }
+    }
+
     [AvaloniaFact]
     public async Task ChannelLinesAppearOnTheirOwnTabsAndStayInTheTranscript()
     {

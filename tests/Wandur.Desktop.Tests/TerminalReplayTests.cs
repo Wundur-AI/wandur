@@ -16,6 +16,26 @@ namespace Wandur.Desktop.Tests;
 
 public sealed class TerminalReplayTests
 {
+    /// <summary>The menus ask whether there is a transcript on every refresh; the cheap answer must match the full text.</summary>
+    [AvaloniaFact]
+    public void HasTextMatchesThePlainTextWithoutRebuildingIt()
+    {
+        var source = new AnsiTerminal();
+        using var display = new TranscriptDisplayFactory().Create(source);
+        Assert.False(display.HasText);
+        Assert.Equal("", display.PlainText);
+        source.Append("\r\n\r\n   \r\n");
+        Assert.Equal(display.PlainText.Length > 0, display.HasText);
+        source.Append("\u001b[31mA red line\u001b[0m\r\n");
+        Assert.True(display.HasText);
+        Assert.Equal(display.PlainText.Length > 0, display.HasText);
+        source.AppendLocalText("look\n");
+        Assert.True(display.HasText);
+        source.Clear();
+        Assert.Equal(display.PlainText.Length > 0, display.HasText);
+        Assert.False(display.HasText);
+    }
+
     // A repeatable local observation, not a timing threshold or a general FPS benchmark.
     [AvaloniaFact]
     public void BusyTranscriptReplayRendersAndRetainsTheNewestOutput()

@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Media.Imaging;
+using SkiaSharp;
 using Wandur.Core.Discovery;
 using Wandur.Core.Settings;
 
@@ -107,18 +108,36 @@ public sealed class WorldThumbnails : IDisposable
     }
 
     /// <summary>The whole picture inside the tile's pixel box (or covering it, for a plate that crops), never upscaled
-    /// and never stretched out of shape.</summary>
-    private Bitmap? Shrink(byte[] bytes)
+    /// and never stretched out of shape. The codec reads the size from the header and decodes straight to the nearest
+    /// size it supports at or above the target (JPEG and WebP scale while decoding), so a 4000 by 3000 JPEG never becomes
+    /// a 48 MB bitmap on its way to an 800 pixel plate. PNG cannot: Skia's PNG codec neither scales nor reads row by
+    /// row here, so a PNG is still decoded whole, as before. Every intermediate is disposed here.</summary>
+    internal Bitmap? Shrink(byte[] bytes)
     {
-        using var stream = new MemoryStream(bytes);
-        using var full = new Bitmap(stream);
-        var size = full.PixelSize;
+        using var data = SKData.CreateCopy(bytes);
+        using var codec = SKCodec.Create(data);
+        if (codec is null) return null;
+        var size = codec.Info.Size;
         if (size.Width <= 0 || size.Height <= 0) return null;
         var (across, down) = ((double)_pixelWidth / size.Width, (double)_pixelHeight / size.Height);
         var scale = Math.Min(1.0, _cover ? Math.Max(across, down) : Math.Min(across, down));
-        var target = new PixelSize(Math.Max(1, (int)Math.Round(size.Width * scale)), Math.Max(1, (int)Math.Round(size.Height * scale)));
-        return scale >= 1 ? full.CreateScaledBitmap(size) : full.CreateScaledBitmap(target, BitmapInterpolationMode.HighQuality);
+        var target = new SKSizeI(Math.Max(1, (int)Math.Round(size.Width * scale)), Math.Max(1, (int)Math.Round(size.Height * scale)));
+        // Never below the target in either direction: the codec rounds its scale up, and the resize below finishes the job.
+        var sampled = scale >= 1 ? size : codec.GetScaledDimensions((float)Math.Max((double)target.Width / size.Width, (double)target.Height / size.Height));
+        if (sampled.Width < target.Width || sampled.Height < target.Height) sampled = size;
+        var info = new SKImageInfo(sampled.Width, sampled.Height, SKImageInfo.PlatformColorType, SKAlphaType.Premul);
+        using var decoded = new SKBitmap(info);
+        var result = codec.GetPixels(info, decoded.GetPixels());
+        if (result is not (SKCodecResult.Success or SKCodecResult.IncompleteInput)) return null;
+        if (sampled == target) return Wrap(decoded);
+        using var resized = decoded.Resize(new SKImageInfo(target.Width, target.Height, info.ColorType, info.AlphaType), new SKSamplingOptions(SKCubicResampler.Mitchell));
+        return resized is null ? null : Wrap(resized);
     }
+
+    /// <summary>Copies the pixels into an Avalonia bitmap, which owns its own memory; the Skia bitmap stays the caller's to dispose.</summary>
+    private static Bitmap Wrap(SKBitmap bitmap) => new(
+        bitmap.ColorType == SKColorType.Rgba8888 ? Avalonia.Platform.PixelFormat.Rgba8888 : Avalonia.Platform.PixelFormat.Bgra8888,
+        Avalonia.Platform.AlphaFormat.Premul, bitmap.GetPixels(), new PixelSize(bitmap.Width, bitmap.Height), new Vector(96, 96), bitmap.RowBytes);
 
     private void ForgetMisses()
     {

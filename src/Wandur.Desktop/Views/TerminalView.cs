@@ -533,8 +533,8 @@ public sealed class TerminalView : UserControl
         _input.IsEnabled = _controller.IsConnected;
         if (_focusWanted && _input.IsEnabled) PostFocus();
         _input.PasswordChar = _controller.IsPrivate ? '●' : '\0';
-        _welcome.IsVisible = _controller.Terminal.PlainText.Length == 0 && !_controller.IsConnected && !_controller.IsConnecting;
-        _connecting.IsVisible = _controller.IsConnecting && _controller.Terminal.PlainText.Length == 0;
+        _welcome.IsVisible = !_controller.Terminal.HasText && !_controller.IsConnected && !_controller.IsConnecting;
+        _connecting.IsVisible = _controller.IsConnecting && !_controller.Terminal.HasText;
         _resources.Update(_controller.GameState, _controller.IsConnected);
         _syncingPrivate = true;
         _privateToggle.IsChecked = _controller.ManualPrivate;

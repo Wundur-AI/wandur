@@ -81,6 +81,19 @@ internal sealed class TranscriptDisplay : ITranscriptDisplay
             return result.ToString();
         }
     }
+    /// <summary>Same answer as <c>PlainText.Length &gt; 0</c> (some line is not blank), searched from the newest line, so a
+    /// transcript with output answers after a row or two instead of rebuilding every line.</summary>
+    public bool HasText
+    {
+        get
+        {
+            if (_disposed) return false;
+            var buffer = _surface.Terminal.Buffer;
+            for (var i = buffer.Lines.Length - 1; i >= 0; i--)
+                if (!string.IsNullOrWhiteSpace(buffer.GetLine(i)?.TranslateToString(true))) return true;
+            return false;
+        }
+    }
     public bool IsFollowingTail => _surface.Terminal.Buffer.IsAtBottom;
     public bool HasSelection => !_disposed && _surface.Terminal.Selection.HasSelection;
     public int ViewportTop

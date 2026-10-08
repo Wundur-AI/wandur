@@ -55,7 +55,10 @@ public partial class App : Application
             var directory = DataDirectory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Wandur");
             var provider = _services ??= BuildServices(directory);
             desktop.Exit += (_, _) => provider.Dispose();
-            desktop.MainWindow = provider.GetRequiredService<MainWindow>();
+            var window = provider.GetRequiredService<MainWindow>();
+            desktop.MainWindow = window;
+            // Off unless WANDUR_PERF_PROBE is set: the performance harness's startup and scenario probe.
+            PerfProbe.Attach(window, desktop);
         }
         base.OnFrameworkInitializationCompleted();
     }

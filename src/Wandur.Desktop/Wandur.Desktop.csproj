@@ -8,6 +8,10 @@
     <Description>Wandur Mud Client (WMC)</Description>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationIcon>Assets/Wandur.ico</ApplicationIcon>
+    <!-- Precompiled code in every publish that names a runtime (the release packages), so the first start does not
+         wait for the JIT: 1,016 to 704 ms to a usable window on an M3 Pro (docs/perf.md). Builds, tests and
+         dotnet run are unaffected. -->
+    <PublishReadyToRun Condition="'$(RuntimeIdentifier)' != ''">true</PublishReadyToRun>
   </PropertyGroup>
   <ItemGroup>
     <AvaloniaResource Include="Assets/icon-256.png" />

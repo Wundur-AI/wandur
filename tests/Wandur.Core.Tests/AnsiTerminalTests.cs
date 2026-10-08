@@ -105,4 +105,27 @@ public class AnsiTerminalTests
         terminal.Append(new string('x', 100_000));
         Assert.True(terminal.Lines.Last().Text.Length <= 4096);
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("\n")]
+    [InlineData("x")]
+    [InlineData("hello\r\nworld")]
+    [InlineData("abc\u001b[2K")]
+    [InlineData("abc\r\u001b[K")]
+    [InlineData("line\n\u001b[2J")]
+    [InlineData("\u001b[31m")]
+    [InlineData("\u001b]0;title\u0007")]
+    [InlineData("\t")]
+    public void HasTextAgreesWithPlainTextWithoutBuildingIt(string input)
+    {
+        var terminal = new AnsiTerminal(4);
+        terminal.Append(input);
+        Assert.Equal(terminal.PlainText.Length > 0, terminal.HasText);
+        terminal.AppendLocalText("look\n");
+        Assert.Equal(terminal.PlainText.Length > 0, terminal.HasText);
+        terminal.Clear();
+        Assert.False(terminal.HasText);
+        Assert.Equal("", terminal.PlainText);
+    }
 }

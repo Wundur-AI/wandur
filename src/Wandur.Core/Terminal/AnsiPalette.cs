@@ -9,11 +9,15 @@ public static class AnsiPalette
         "#808080", "#F14C4C", "#23D18B", "#F5F543", "#82AAFF", "#D670D6", "#29B8DB", "#FFFFFF"
     });
 
+    // The table is fixed, so each entry is formatted once rather than on every escape sequence that names it.
+    private static readonly string[] Table = [.. Enumerable.Range(0, 256).Select(Format)];
+
     /// <summary>The hex color for an xterm index 0 to 255: the sixteen defaults, the 6x6x6 cube, then the grey ramp.
     /// The transcript and the panel color code parser both resolve indexes here, so they agree.</summary>
-    public static string Indexed(int n)
+    public static string Indexed(int n) => Table[Math.Clamp(n, 0, 255)];
+
+    private static string Format(int n)
     {
-        n = Math.Clamp(n, 0, 255);
         if (n < 16) return Defaults[n];
         if (n >= 232) { var c = 8 + (n - 232) * 10; return $"#{c:X2}{c:X2}{c:X2}"; }
         n -= 16;

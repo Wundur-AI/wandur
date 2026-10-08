@@ -166,7 +166,7 @@ public sealed partial class SessionWorkspace : IAsyncDisposable
             SelectionChanged?.Invoke();
         }
         tab.HadSession = tab.Controller.HasSession;
-        if ((tab != Active || IsBrowsing) && tab.Controller.OutputVersion != tab.LastVersion && tab.Controller.Terminal.PlainText.Length > 0)
+        if ((tab != Active || IsBrowsing) && tab.Controller.OutputVersion != tab.LastVersion && tab.Controller.Terminal.HasText)
             tab.HasActivity = true;
         tab.LastVersion = tab.Controller.OutputVersion;
         tab.Refresh();

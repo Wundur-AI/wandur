@@ -7,7 +7,10 @@ namespace Wandur.Desktop.Terminal;
 public interface ITranscriptDisplay : IDisposable
 {
     Control View { get; }
+    /// <summary>The whole transcript as text, built on request (export). Not for routine checks: see <see cref="HasText"/>.</summary>
     string PlainText { get; }
+    /// <summary>Whether <see cref="PlainText"/> would be non-empty, found without building it.</summary>
+    bool HasText { get; }
     void ApplySettings(ClientSettings settings);
     void FollowTail();
     bool IsFollowingTail { get; }

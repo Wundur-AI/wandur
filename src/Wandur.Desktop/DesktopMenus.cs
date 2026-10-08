@@ -31,7 +31,7 @@ internal sealed class DesktopMenus
         var add = Action(nameof(L.AddWorld2), () => window.EditWorldAsync(), Key.N);
         var newTab = Action(nameof(L.FindAMUD), () => { window.Workspace.ShowSearch(); return Task.CompletedTask; }, Key.T);
         var demo = Action(nameof(L.OpenOfflineDemo), () => window.Sessions.OpenAsync());
-        var save = Action(nameof(L.SaveTranscript), window.ExportAsync, Key.S, enabled: () => window.Controller.Display.PlainText.Length > 0);
+        var save = Action(nameof(L.SaveTranscript), window.ExportAsync, Key.S, enabled: () => window.Controller.Display.HasText);
         var close = Action(nameof(L.CloseWorkspaceItem), () => window.Workspace.CloseSelectedAsync(), Key.W);
         var preferences = Action(nameof(L.Preferences), window.PreferencesAsync, Key.OemComma);
         var about = Action(nameof(L.AboutWandur), () => window.ShowInformationAsync(L.AboutWandur, Wandur.Core.Protocol.ClientIdentity.DisplayName, L.ADoorwayToOtherWorldsAnOpenSourceMUD));
@@ -91,7 +91,7 @@ internal sealed class DesktopMenus
         Disconnect = Action(nameof(L.Disconnect2), () => window.Controller.DisconnectAsync(), Key.D, enabled: () => window.Controller.IsConnected || window.Controller.IsConnecting);
         var session = Group(nameof(L.Session), Connect, Disconnect, null,
             Action(nameof(L.PrivateInput), () => { window.Controller.SetManualPrivate(!window.Controller.ManualPrivate); return Task.CompletedTask; }, enabled: () => window.Controller.IsConnected),
-            Action(nameof(L.ClearTranscript), () => { window.Controller.ClearTranscript(); return Task.CompletedTask; }, enabled: () => window.Controller.Display.PlainText.Length > 0));
+            Action(nameof(L.ClearTranscript), () => { window.Controller.ClearTranscript(); return Task.CompletedTask; }, enabled: () => window.Controller.Display.HasText));
         AddItems(session.Native, session.Fallback, [null,
             Action(nameof(L.ScriptsMenu), window.ShowScriptsAsync, enabled: () => window.Sessions.Active.Profile is not null)]);
         Check(session, 3, () => window.Controller.ManualPrivate);
