@@ -171,6 +171,41 @@ public sealed class MapDockingTests : IDisposable
         AssertAt(reloaded.Rooms.Single(r => r.Id == "s:10"), 3, 1);
     }
 
+    private static RoomMapTracker ParkedIslandWithSeveralLinks(bool conflicting)
+    {
+        MapRoom Saved(string id, double x, double y) => new("s:" + id, "Room " + id, "", Area, x, y, 0, false, id) { Revision = 5 };
+        // The cluster 1 (0,0) east 2 (1,0) east 3 (2,0), and an island 9 (200,0) east 10 (201,0) parked far east but
+        // joined to it by three long links, as in the owner's map. All three fit once the island moves by (-198, 1).
+        List<MapLink> links = [new("s:1", "s:2", "east", true) { Revision = 5 }, new("s:2", "s:3", "east", true) { Revision = 5 },
+            new("s:9", "s:10", "east", true) { Revision = 5 }, new("s:2", "s:9", "northeast", true) { Revision = 5 },
+            new("s:3", "s:9", "north", true) { Revision = 5 }, new("s:9", "s:3", "south", true) { Revision = 5 }];
+        // A link that cannot fit after the same move: the island is real, non-grid geometry.
+        if (conflicting) links.Add(new("s:1", "s:10", "north", true) { Revision = 5 });
+        return new RoomMapTracker(new MapSnapshot([Saved("1", 0, 0), Saved("2", 1, 0), Saved("3", 2, 0), Saved("9", 200, 0), Saved("10", 201, 0)],
+            links, [], null, MapTrackingState.Unknown, RoomDataSource.Gmcp, 0));
+    }
+
+    [Fact]
+    public void AParkedIslandJoinedBySeveralLongLinksDocksWhenTheyAllFitAfterOneMove()
+    {
+        var tracker = ParkedIslandWithSeveralLinks(conflicting: false);
+        tracker.Observe(At("2"));
+        tracker.Observe(At("9"), "northeast");
+        AssertAt(Get(tracker, "s:9"), 2, 1);
+        AssertAt(Get(tracker, "s:10"), 3, 1);
+        AssertAt(Get(tracker, "s:3"), 2, 0);
+    }
+
+    [Fact]
+    public void AParkedIslandStaysWhenAnotherLinkWouldStillNotFit()
+    {
+        var tracker = ParkedIslandWithSeveralLinks(conflicting: true);
+        tracker.Observe(At("2"));
+        tracker.Observe(At("9"), "northeast");
+        AssertAt(Get(tracker, "s:9"), 200, 0);
+        AssertAt(Get(tracker, "s:10"), 201, 0);
+    }
+
     [Fact]
     public void ASavedFarParkedTextRoomRepairsWhenTheExistingLinkIsWalked()
     {

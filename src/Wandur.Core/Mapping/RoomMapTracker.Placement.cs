@@ -45,9 +45,11 @@ public sealed partial class RoomMapTracker
 
     /// <summary>
     /// Evidence that <paramref name="fromId"/> leads <paramref name="direction"/> to <paramref name="toId"/> pulls a
-    /// floating part of the map into place. Only when the two sides were not already connected some other way
-    /// (that is real, non-grid geometry and stays as drawn) and only the side without manual edits, locks, drawn
-    /// exit lines or server coordinates moves, the smaller one when both could. Not an undoable edit.
+    /// misplaced part of the map into place. A part is the rooms joined to one end by links that already fit the grid.
+    /// It moves only when the other end is not inside it, when every compass link leaving it fits once it has moved
+    /// (several long links from one parked island all fit after the same shift; links that would still not fit are
+    /// real, non-grid geometry and stay as drawn), and when it holds no manual edit, lock, drawn exit line or server
+    /// coordinates. If both ends could move, the smaller part does. Not an undoable edit.
     /// </summary>
     private void Dock(string fromId, string toId, string direction)
     {
@@ -59,45 +61,48 @@ public sealed partial class RoomMapTracker
         var dy = from.Y + offset.Y - to.Y;
         var dz = from.Z + offset.Z - to.Z;
         if (Math.Abs(dx) <= 1 && Math.Abs(dy) <= 1 && Math.Abs(dz) < 0.5) return;
-        var adjacency = Adjacency(fromId, toId);
-        if (Component(adjacency, toId, fromId) is not { } toSide) return;
-        var fromSide = Component(adjacency, fromId, toId)!;
-        var toFree = !Anchored(toSide);
-        var fromFree = !Anchored(fromSide);
-        if (toFree && (!fromFree || toSide.Count <= fromSide.Count)) Translate(toSide, toId, dx, dy, dz);
-        else if (fromFree) Translate(fromSide, fromId, -dx, -dy, -dz);
+        var toSide = Movable(toId, fromId, dx, dy, dz);
+        var fromSide = Movable(fromId, toId, -dx, -dy, -dz);
+        if (toSide is not null && (fromSide is null || toSide.Count <= fromSide.Count)) Translate(toSide, toId, dx, dy, dz);
+        else if (fromSide is not null) Translate(fromSide, fromId, -dx, -dy, -dz);
     }
 
-    /// <summary>Undirected neighbours, ignoring every link between the two rooms being joined.</summary>
-    private Dictionary<string, List<string>> Adjacency(string first, string second)
+    /// <summary>The part around <paramref name="start"/> that can shift by (dx, dy, dz) to meet <paramref name="other"/>,
+    /// or null when it contains <paramref name="other"/>, is anchored, or would leave a compass link that still does not fit.</summary>
+    private HashSet<string>? Movable(string start, string other, double dx, double dy, double dz)
     {
-        var adjacency = new Dictionary<string, List<string>>();
-        foreach (var link in _links)
-        {
-            if ((link.FromId == first && link.ToId == second) || (link.FromId == second && link.ToId == first) ||
-                link.FromId == link.ToId || !_rooms.ContainsKey(link.FromId) || !_rooms.ContainsKey(link.ToId)) continue;
-            Add(link.FromId, link.ToId); Add(link.ToId, link.FromId);
-        }
-        return adjacency;
-        void Add(string a, string b)
-        {
-            if (!adjacency.TryGetValue(a, out var list)) adjacency[a] = list = [];
-            list.Add(b);
-        }
-    }
-
-    /// <summary>The rooms reachable from <paramref name="start"/>, or null when that includes <paramref name="other"/>.</summary>
-    private static HashSet<string>? Component(Dictionary<string, List<string>> adjacency, string start, string other)
-    {
-        var seen = new HashSet<string> { start };
+        var part = new HashSet<string> { start };
         var queue = new Queue<string>([start]);
         while (queue.TryDequeue(out var id))
-            foreach (var next in adjacency.GetValueOrDefault(id) ?? [])
+            foreach (var link in _links)
             {
+                var next = link.FromId == id ? link.ToId : link.ToId == id ? link.FromId : null;
+                if (next is null || !_rooms.ContainsKey(next) || !Compass(link.Direction) || !Fits(link, 0, 0, 0, null)) continue;
                 if (next == other) return null;
-                if (seen.Add(next)) queue.Enqueue(next);
+                if (part.Add(next)) queue.Enqueue(next);
             }
-        return seen;
+        if (Anchored(part)) return null;
+        foreach (var link in _links)
+        {
+            if (!Compass(link.Direction) || !_rooms.ContainsKey(link.FromId) || !_rooms.ContainsKey(link.ToId) ||
+                part.Contains(link.FromId) == part.Contains(link.ToId)) continue;
+            if (!Fits(link, dx, dy, dz, part)) return null;
+        }
+        return part;
+    }
+
+    private static bool Compass(string direction) => direction is "north" or "south" or "east" or "west" or
+        "northeast" or "northwest" or "southeast" or "southwest" or "up" or "down";
+
+    /// <summary>Whether a link matches its direction on the grid, with the rooms in <paramref name="moved"/> shifted.</summary>
+    private bool Fits(MapLink link, double dx, double dy, double dz, HashSet<string>? moved)
+    {
+        var a = _rooms[link.FromId];
+        var b = _rooms[link.ToId];
+        var (ax, ay, az) = moved?.Contains(a.Id) == true ? (a.X + dx, a.Y + dy, a.Z + dz) : (a.X, a.Y, a.Z);
+        var (bx, by, bz) = moved?.Contains(b.Id) == true ? (b.X + dx, b.Y + dy, b.Z + dz) : (b.X, b.Y, b.Z);
+        var offset = Offset(link.Direction);
+        return Math.Abs(ax + offset.X - bx) <= 1 && Math.Abs(ay + offset.Y - by) <= 1 && Math.Abs(az + offset.Z - bz) < 0.5;
     }
 
     private bool Anchored(HashSet<string> rooms) =>
