@@ -1028,4 +1028,10 @@ public static class Strings
     public static string DockClosePanel => Get(nameof(DockClosePanel));
     public static string HistoryAnyDate => Get(nameof(HistoryAnyDate));
     public static string QuickCommandSendTip => Get(nameof(QuickCommandSendTip));
+    public static string SavedWorldsFind => Get(nameof(SavedWorldsFind));
+    public static string SavedWorldsFilterPlaceholder => Get(nameof(SavedWorldsFilterPlaceholder));
+    public static string SavedWorldsNoMatch => Get(nameof(SavedWorldsNoMatch));
+    public static string ConnectSavedWorld => Get(nameof(ConnectSavedWorld));
+    public static string ConnectInNewTab => Get(nameof(ConnectInNewTab));
+    public static string ExploreInDirectory => Get(nameof(ExploreInDirectory));
 }

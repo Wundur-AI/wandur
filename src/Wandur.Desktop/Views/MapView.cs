@@ -58,24 +58,17 @@ public sealed partial class MapView : UserControl
         var searchDropdown = CreateRoomSearchOtherFloorDropdown();
         var map = new Grid { Children = { canvas, empty, searchDropdown } };
         map.Bind(BackgroundProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("MapCanvasBrush"));
-        var autoCenter = Ui.ToolbarIconKey(new ToggleButton { Name = "MapAutoCenterToggle" },
-            "M 8,2 V 5 M 8,11 V 14 M 2,8 H 5 M 11,8 H 14 M 8,6 A 2,2 0 1 0 8,10 A 2,2 0 1 0 8,6", nameof(L.MapAutoCenter));
-        autoCenter.Bind(ToggleButton.IsCheckedProperty, new Binding(nameof(model.AutoCenter)) { Mode = BindingMode.TwoWay });
         var exercise = Action("", "ToggleMapExercise", model.ToggleExerciseCommand);
         exercise.Bind(ContentControl.ContentProperty, new Binding(nameof(model.ExerciseButtonLabel)));
         var recheck = Action(nameof(L.MapRecheckPosition), "RecheckMapPosition", model.RecheckPositionCommand);
         recheck.Bind(IsVisibleProperty, new Binding(nameof(model.IsLive)));
         recheck.Bind(ToolTip.TipProperty, LocalizedText.Binding(nameof(L.MapRecheckHint))); recheck.Margin = new Thickness(0, 0, 6, 4);
-        var fit = Ui.ToolbarIconKey(new Button { Name = "FitMapFloor", Command = model.FitFloorCommand },
-            "M 1,6 V 1 H 6 M 10,1 H 15 V 6 M 15,10 V 15 H 10 M 6,15 H 1 V 10", nameof(L.MapFitFloor));
-        var stop = Ui.ToolbarIconKey(new Button { Name = "MapStopWalkingToolbar", Command = model.StopWalkingCommand }, "M 3,3 H 13 V 13 H 3 Z", nameof(L.MapStopWalk));
-        stop.Bind(IsVisibleProperty, new Binding(nameof(model.IsWalking)));
         header.Children.Add(new StackPanel
         {
             Orientation = Orientation.Horizontal, Spacing = 2,
             Children = { floorDown, floorLabel, floorUp }
         });
-        var actions = new WrapPanel { Children = { recheck, exercise } };
+        var exerciseActions = new WrapPanel { Children = { recheck, exercise } };
         var next = Action(nameof(L.MapNextObservation), "NextMapObservation", model.NextExerciseCommand);
         var exercisePanel = new StackPanel { Spacing = 5, Children = { Label(nameof(model.ExerciseProgress), 10), Label(nameof(model.ExerciseInstruction), 11, null), next } };
         exercisePanel.Bind(IsVisibleProperty, new Binding(nameof(model.IsExercise)));
@@ -85,11 +78,10 @@ public sealed partial class MapView : UserControl
         var evidence = Label(nameof(model.Evidence), 10); evidence.Bind(IsVisibleProperty, new Binding(nameof(model.IsLive)));
         var legend = Label(nameof(model.Legend), 10);
         var gestures = Label(nameof(model.Gestures), 10);
-        var toggle = Ui.ToolbarIconKey(new ToggleButton { Name = "MapToolsToggle" }, "M 2,4 H 14 M 2,8 H 14 M 2,12 H 14", nameof(L.MapToolsToggle));
         var footer = new StackPanel { Margin = new Thickness(12), Spacing = 8, Children =
         {
             header, selected, description,
-            legend, Ui.TextKey(nameof(L.MapLinksLegend), 10, "muted"), gestures, actions, exercisePanel,
+            legend, Ui.TextKey(nameof(L.MapLinksLegend), 10, "muted"), gestures, exerciseActions, exercisePanel,
             evidence, Label(nameof(model.ProtocolStatus), 10), Label(nameof(model.RoomFieldsStatus), 10)
         } };
         if (editingWorkspace)
@@ -105,7 +97,7 @@ public sealed partial class MapView : UserControl
         else if (editMap is not null)
         {
             var open = EditorAction(nameof(L.MapOpenEditor), "OpenMapEditor",
-                new CommunityToolkit.Mvvm.Input.RelayCommand(() => { toggle.IsChecked = false; editMap(model); }));
+                new CommunityToolkit.Mvvm.Input.RelayCommand(() => { model.IsToolsOpen = false; editMap(model); }));
             open.Bind(IsEnabledProperty, new Binding(nameof(model.CanOpenEditor)));
             footer.Children.Insert(0, open);
         }
@@ -144,11 +136,20 @@ public sealed partial class MapView : UserControl
         tools.Bind(Border.CornerRadiusProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("SmallCornerRadius"));
         tools.Bind(Border.BackgroundProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("PanelBrush"));
         tools.Bind(Border.BorderBrushProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("LineBrush"));
-        var searchToggle = Ui.ToolbarIconKey(new ToggleButton { Name = "MapSearchToggle" },
-            "M 6,2.5 A 3.5,3.5 0 1 0 6,9.5 A 3.5,3.5 0 1 0 6,2.5 M 8.5,8.5 L 13,13", nameof(L.MapRoomSearchToggle));
-        searchToggle.Bind(ToggleButton.IsCheckedProperty, new Binding(nameof(model.IsRoomSearchVisible)) { Mode = BindingMode.TwoWay });
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2,
-            Children = { searchToggle, autoCenter, fit } };
+        // Search, auto-centre, fit, the tools and Stop are the panel's own actions: in the Map panel's title bar
+        // (PanelHeader), or in the toolbar row when the view has no header (the map editor, or a view on its own).
+        var actions = new List<PanelHeaderAction>
+        {
+            new("MapSearchToggle", "M 6,2.5 A 3.5,3.5 0 1 0 6,9.5 A 3.5,3.5 0 1 0 6,2.5 M 8.5,8.5 L 13,13", nameof(L.MapRoomSearchToggle))
+                { Source = model, CheckedPath = nameof(model.IsRoomSearchVisible) },
+            new("MapAutoCenterToggle", "M 8,2 V 5 M 8,11 V 14 M 2,8 H 5 M 11,8 H 14 M 8,6 A 2,2 0 1 0 8,10 A 2,2 0 1 0 8,6", nameof(L.MapAutoCenter))
+                { Source = model, CheckedPath = nameof(model.AutoCenter) },
+            new("FitMapFloor", "M 1,6 V 1 H 6 M 10,1 H 15 V 6 M 15,10 V 15 H 10 M 6,15 H 1 V 10", nameof(L.MapFitFloor)) { Command = model.FitFloorCommand },
+        };
+        if (!editingWorkspace)
+            actions.Add(new("MapToolsToggle", "M 2,4 H 14 M 2,8 H 14 M 2,12 H 14", nameof(L.MapToolsToggle)) { Source = model, CheckedPath = nameof(model.IsToolsOpen) });
+        actions.Add(new("MapStopWalkingToolbar", "M 3,3 H 13 V 13 H 3 Z", nameof(L.MapStopWalk)) { Command = model.StopWalkingCommand, Source = model, VisiblePath = nameof(model.IsWalking) });
+        var buttons = new PanelActionBar(this);
         Control workspace = map;
         if (editingWorkspace)
         {
@@ -164,16 +165,21 @@ public sealed partial class MapView : UserControl
         }
         else
         {
-            tools.Bind(IsVisibleProperty, new Binding(nameof(ToggleButton.IsChecked)) { Source = toggle });
+            tools.Bind(IsVisibleProperty, new Binding(nameof(model.IsToolsOpen)));
             SizeChanged += (_, args) => tools.Width = Math.Max(0, Math.Min(360, args.NewSize.Width - 12));
-            buttons.Children.Add(toggle);
             map.Children.Add(tools);
         }
-        buttons.Children.Add(stop);
+        PanelHeader.SetActions(this, actions);
         var searchRow = CreateRoomSearchRow();
         var toolbarContent = new StackPanel { Spacing = 2, Children = { buttons, searchRow } };
         var toolbar = Ui.Toolbar(toolbarContent, "MapToolbar");
         toolbar.Padding = new Thickness(4, 2);
+        // In a dock panel the actions are in the title bar, so the row is only the search box and takes no room
+        // while the search is closed; the map has that height back.
+        void ShowToolbar() => toolbar.IsVisible = buttons.IsVisible || model.IsRoomSearchVisible;
+        buttons.PropertyChanged += (_, args) => { if (args.Property == IsVisibleProperty) ShowToolbar(); };
+        model.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(model.IsRoomSearchVisible)) ShowToolbar(); };
+        ShowToolbar();
         // The line names only the protocols in use; "GMCP: Supported · MSDP: Not negotiated" truncated into the zoom
         // slider. The full state is the tooltip, with the room fields received.
         var protocols = Label(nameof(model.ProtocolBadge), 10);

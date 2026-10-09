@@ -11,10 +11,18 @@ public sealed partial class WorldLibraryViewModel : ObservableObject
     private readonly Action<ConnectionProfile>? _editProfile;
     /// <summary>The saved list the shown order was built from, in the manual order the settings keep.</summary>
     private IReadOnlyList<ConnectionProfile>? _source;
+    /// <summary>Every saved world in the order shown, before the filter.</summary>
+    private IReadOnlyList<ConnectionProfile> _ordered = [];
     [ObservableProperty] private IReadOnlyList<ConnectionProfile> _profiles = [];
     [ObservableProperty] private ConnectionProfile? _selectedProfile;
-    public bool HasWorlds => Profiles.Count > 0;
+    /// <summary>The Find action's box is open over the list.</summary>
+    [ObservableProperty] private bool _isFilterVisible;
+    /// <summary>Words the shown worlds' names or addresses must contain, ignoring case.</summary>
+    [ObservableProperty] private string _filter = "";
+    public bool HasWorlds => _ordered.Count > 0;
     public bool IsEmpty => !HasWorlds;
+    /// <summary>There are saved worlds, but the filter hides them all.</summary>
+    public bool HasNoMatches => HasWorlds && Profiles.Count == 0;
     public bool CanBrowse { get; }
     public IRelayCommand AddCommand { get; }
     public IRelayCommand BrowseCommand { get; }
@@ -83,11 +91,25 @@ public sealed partial class WorldLibraryViewModel : ObservableObject
 
     private void Show(IReadOnlyList<ConnectionProfile> ordered)
     {
+        _ordered = ordered;
         var id = SelectedProfile?.Id;
-        if (!Profiles.SequenceEqual(ordered)) Profiles = ordered;
+        var shown = Matching(ordered);
+        if (!Profiles.SequenceEqual(shown)) Profiles = shown;
         SelectedProfile = Profiles.FirstOrDefault(p => p.Id == id) ?? Profiles.FirstOrDefault();
-        OnPropertyChanged(nameof(HasWorlds)); OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(HasWorlds)); OnPropertyChanged(nameof(IsEmpty)); OnPropertyChanged(nameof(HasNoMatches));
     }
+
+    private IReadOnlyList<ConnectionProfile> Matching(IReadOnlyList<ConnectionProfile> ordered)
+    {
+        var words = Filter.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (words.Length == 0) return ordered;
+        return ordered.Where(p => words.All(w => p.Name.Contains(w, StringComparison.CurrentCultureIgnoreCase)
+            || $"{p.Host}:{p.Port}".Contains(w, StringComparison.OrdinalIgnoreCase))).ToList();
+    }
+
+    partial void OnFilterChanged(string value) => Show(_ordered);
+    // Closing the box clears what it filtered by, so the whole list comes back.
+    partial void OnIsFilterVisibleChanged(bool value) { if (!value) Filter = ""; }
     // Selecting a saved world only chooses what Connect will open; its theme arrives with the session.
     partial void OnSelectedProfileChanged(ConnectionProfile? value)
     {
@@ -100,8 +122,54 @@ public sealed partial class WorldLibraryViewModel : ObservableObject
     private void Edit() { if (SelectedProfile is { } profile) _editProfile?.Invoke(profile); }
     [RelayCommand]
     private void EditProfile(ConnectionProfile? profile) { if (profile is null) return; SelectedProfile = profile; Edit(); }
-    [RelayCommand(CanExecute = nameof(CanConnect))]
-    private async Task ConnectAsync() { if (SelectedProfile is { } profile) await _sessions.OpenAsync(profile); }
+    /// <summary>
+    /// Connect goes to the world's session when one is already open, so a double-click never logs the same character
+    /// in twice by accident; Connect in new tab always opens another session.
+    /// </summary>
+    // A connection can take a while to finish; another world can be opened meanwhile, each in its own session.
+    [RelayCommand(CanExecute = nameof(CanConnect), AllowConcurrentExecutions = true)]
+    private Task ConnectAsync() => SelectedProfile is { } profile ? ConnectProfileAsync(profile) : Task.CompletedTask;
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task ConnectProfileAsync(ConnectionProfile? profile)
+    {
+        if (profile is null) return;
+        SelectedProfile = profile;
+        if (_sessions.SessionOf(profile) is { } open) _sessions.Select(open);
+        else await _sessions.OpenAsync(profile);
+    }
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task ConnectInNewTabAsync(ConnectionProfile? profile)
+    {
+        if (profile is null) return;
+        SelectedProfile = profile;
+        await _sessions.OpenAsync(profile);
+    }
+
+    /// <summary>
+    /// A copy of a saved world under a new name, with its settings, login and automation, selected so it can be edited.
+    /// The saved password stays with the original: a copy is usually for another character.
+    /// </summary>
+    [RelayCommand]
+    private void DuplicateProfile(ConnectionProfile? profile)
+    {
+        var controller = _sessions.Active.Controller;
+        if (profile is null || controller.Settings.Profiles.FirstOrDefault(p => p.Id == profile.Id) is not { } original) return;
+        var name = Wandur.Core.Localization.Strings.Format(Wandur.Core.Localization.Strings.ScriptDuplicateName, original.Name);
+        // A world's name is at most 100 characters; a long one gives up its end to the copy marker.
+        if (name.Length > 100) name = Wandur.Core.Localization.Strings.Format(Wandur.Core.Localization.Strings.ScriptDuplicateName, original.Name[..Math.Max(1, original.Name.Length - (name.Length - 100))]);
+        var copy = original with { Id = Guid.NewGuid(), Name = name, PasswordId = null, AutoLogin = false };
+        var profiles = controller.Settings.Profiles.ToList();
+        profiles.Insert(profiles.FindIndex(p => p.Id == original.Id) + 1, copy);
+        try { controller.SaveSettings(controller.Settings with { Profiles = profiles }); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { controller.ShowNotice(ex.Message); return; }
+        Refresh();
+        SelectedProfile = Profiles.FirstOrDefault(p => p.Id == copy.Id) ?? SelectedProfile;
+    }
+
+    /// <summary>True when the directory lists this world, so it has a page to explore.</summary>
+    public bool CanExplore(ConnectionProfile profile) => _sessions.ListingFor(profile) is not null;
+    [RelayCommand]
+    private void ExploreProfile(ConnectionProfile? profile) { if (profile is not null) _sessions.Explore(profile); }
     /// <summary>
     /// The world pending deletion, or null when nothing is. Removing a saved world throws away its
     /// credentials, its protocol mapping and its scripts, and the button sits in a toolbar beside the ones

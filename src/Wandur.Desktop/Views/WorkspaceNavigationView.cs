@@ -13,7 +13,7 @@ namespace Wandur.Desktop.Views;
 public sealed class WorkspaceNavigationView : UserControl
 {
     private readonly WorkspaceNavigationViewModel _model;
-    public WorkspaceNavigationView(WorkspaceNavigationViewModel model, WorldLibraryView library)
+    public WorkspaceNavigationView(WorkspaceNavigationViewModel model)
     {
         _model = model; DataContext = model;
         var list = new ListBox { Name = "WorkspaceItems", Background = Brushes.Transparent, Margin = new Thickness(4), MinHeight = 100 };
@@ -64,19 +64,6 @@ public sealed class WorkspaceNavigationView : UserControl
             } };
         };
         list.ContainerClearing += (_, args) => { args.Container.ContextMenu?.Close(); args.Container.ContextMenu = null; };
-        var savedToggle = new ToggleButton { Name = "SavedWorldsSection", IsChecked = true, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left };
-        var savedLabel = Ui.TextKey(nameof(L.SavedWorlds), 12);
-        var chevron = Ui.Text("▾", 12, "muted");
-        var savedHeading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { savedLabel, chevron } };
-        Grid.SetColumn(chevron, 1); savedToggle.Content = savedHeading;
-        savedToggle.HorizontalContentAlignment = HorizontalAlignment.Stretch;
-        savedToggle.IsCheckedChanged += (_, _) => chevron.Text = savedToggle.IsChecked == true ? "▾" : "▸";
-        savedToggle.Bind(Avalonia.Automation.AutomationProperties.NameProperty, LocalizedText.Binding(nameof(L.SavedWorlds)));
-        savedToggle.Classes.Add("workspace-nav");
-        library.MinHeight = 120;
-        library.Bind(IsVisibleProperty, new Binding(nameof(ToggleButton.IsChecked)) { Source = savedToggle });
-        Grid.SetRow(library, 1);
-        var saved = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), Children = { savedToggle, library } };
         var browse = new ToggleButton { Name = "WorkspaceFindMud", Command = model.BrowseCommand, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left };
         browse.Bind(ContentControl.ContentProperty, LocalizedText.Binding(nameof(L.FindAMUD)));
         browse.Classes.Add("workspace-nav");
@@ -99,11 +86,11 @@ public sealed class WorkspaceNavigationView : UserControl
             else if (args.Key == Avalonia.Input.Key.Escape) { model.CancelRenameCommand.Execute(null); args.Handled = true; }
         };
         list.KeyDown += (_, args) => { if (args.Key == Avalonia.Input.Key.F2 && model.Selected?.CanRename == true) { model.Selected.RenameCommand.Execute(null); args.Handled = true; } };
-        // Open sessions sit right under their heading and take what they need (scrolling past a bound); Saved worlds
-        // follow straight after and take the rest, instead of a gap between the two with Saved worlds at the bottom.
-        list.MaxHeight = 280; list.MinHeight = 0;
-        var layout = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*"), Children = { top, list, rename, saved } };
-        Grid.SetRow(list, 1); Grid.SetRow(rename, 2); Grid.SetRow(saved, 3); Content = layout;
+        // Open sessions sit right under their heading and scroll in the rest of the panel; Saved worlds have a panel
+        // of their own under this one.
+        list.MinHeight = 0;
+        var layout = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto"), Children = { top, list, rename } };
+        Grid.SetRow(list, 1); Grid.SetRow(rename, 2); Content = layout;
     }
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e) { base.OnAttachedToVisualTree(e); _model.Attach(); }
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e) { _model.Detach(); base.OnDetachedFromVisualTree(e); }

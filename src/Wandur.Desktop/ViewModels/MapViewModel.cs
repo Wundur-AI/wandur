@@ -23,6 +23,8 @@ public sealed partial class MapViewModel : ObservableObject
     [ObservableProperty] private double _selectedFloor;
     [ObservableProperty] private double _zoom = 1;
     [ObservableProperty] private int _exerciseStep;
+    /// <summary>The map's tools (floors, grid, routes and the rest) are open over the map.</summary>
+    [ObservableProperty] private bool _isToolsOpen;
     private double? _lastCurrentFloor;
     private bool _hasCentered;
     private double _viewportWidth = 320;

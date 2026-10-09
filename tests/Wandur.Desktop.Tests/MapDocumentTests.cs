@@ -24,7 +24,8 @@ public sealed class MapDocumentTests
         {
             window.Show(); await window.Sessions.OpenAsync(); Dispatcher.UIThread.RunJobs();
             var panel = Assert.Single(window.GetVisualDescendants().OfType<MapView>());
-            panel.GetVisualDescendants().OfType<ToggleButton>().Single(b => b.Name == "MapToolsToggle").IsChecked = true;
+            // The tools toggle is one of the Map panel's actions, in its title bar.
+            window.GetVisualDescendants().OfType<ToggleButton>().Single(b => b.Name == "MapToolsToggle").IsChecked = true;
             Dispatcher.UIThread.RunJobs();
             Assert.DoesNotContain(panel.GetVisualDescendants().OfType<TextBox>(), c => c.Name == "MapRoomName");
             var open = panel.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "OpenMapEditor");
@@ -32,7 +33,7 @@ public sealed class MapDocumentTests
             open.Command!.Execute(null); Dispatcher.UIThread.RunJobs();
             var document = Assert.Single(window.Workspace.MapDocuments);
             Assert.False(panel.Model.IsEditMode);
-            Assert.False(panel.GetVisualDescendants().OfType<ToggleButton>().Single(b => b.Name == "MapToolsToggle").IsChecked);
+            Assert.False(window.GetVisualDescendants().OfType<ToggleButton>().Single(b => b.Name == "MapToolsToggle").IsChecked);
             Assert.True(document.CanFloat);
             Assert.Single(window.GetVisualDescendants().OfType<MapEditorView>());
             window.Workspace.OpenMapEditor(window.Controller);

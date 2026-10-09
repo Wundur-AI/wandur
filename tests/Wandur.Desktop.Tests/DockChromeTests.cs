@@ -52,10 +52,13 @@ public sealed class DockChromeTests
         try
         {
             var document = ChromeBorder<DocumentControl>(window, _ => true);
-            var leftHeader = ChromeBorder<ToolChromeControl>(window, control => AlignedTo(control, Alignment.Left));
+            // The Workspace; Saved worlds below it shares the left edge and is rounded on it the same way.
+            var leftHeader = ChromeBorder<ToolChromeControl>(window, control => AlignedTo(control, Alignment.Left, "left"));
+            var savedHeader = ChromeBorder<ToolChromeControl>(window, control => AlignedTo(control, Alignment.Left, "saved-worlds-dock"));
             var rightHeader = ChromeBorder<ToolChromeControl>(window, control => AlignedTo(control, Alignment.Right, "map-dock"));
             var channelsHeader = ChromeBorder<ToolChromeControl>(window, control => AlignedTo(control, Alignment.Right, "channels-dock"));
-            var leftContent = ChromeBorder<ToolControl>(window, control => AlignedTo(control, Alignment.Left));
+            var leftContent = ChromeBorder<ToolControl>(window, control => AlignedTo(control, Alignment.Left, "left"));
+            var savedContent = ChromeBorder<ToolControl>(window, control => AlignedTo(control, Alignment.Left, "saved-worlds-dock"));
             var rightContent = ChromeBorder<ToolControl>(window, control => AlignedTo(control, Alignment.Right, "map-dock"));
             var channelsContent = ChromeBorder<ToolControl>(window, control => AlignedTo(control, Alignment.Right, "channels-dock"));
 
@@ -65,6 +68,8 @@ public sealed class DockChromeTests
             Assert.Equal(new Thickness(1), document.BorderThickness);
             Assert.Equal(new CornerRadius(r, 0, 0, 0), leftHeader.CornerRadius);
             Assert.Equal(new CornerRadius(0, 0, 0, r), leftContent.CornerRadius);
+            Assert.Equal(new CornerRadius(r, 0, 0, 0), savedHeader.CornerRadius);
+            Assert.Equal(new CornerRadius(0, 0, 0, r), savedContent.CornerRadius);
             Assert.Equal(new CornerRadius(0, r, 0, 0), rightHeader.CornerRadius);
             Assert.Equal(new CornerRadius(0, 0, r, 0), rightContent.CornerRadius);
             // The Channels panel shares the right edge below the map, rounded on that edge the same way.
@@ -189,8 +194,9 @@ public sealed class DockChromeTests
         try
         {
             var library = Assert.IsAssignableFrom<IToolDock>(window.Workspace.WorldsTool!.Owner);
-            var layout = Assert.IsAssignableFrom<IProportionalDock>(library.Owner);
-            Assert.Equal(new[] { "left", "splitter", "documents", "splitter", "right" }, LayoutShape(layout));
+            // The Workspace shares the left column with Saved worlds.
+            var layout = Assert.IsAssignableFrom<IProportionalDock>(library.Owner!.Owner);
+            Assert.Equal(new[] { "left-column", "splitter", "documents", "splitter", "right" }, LayoutShape(layout));
             Assert.True(window.IsMapVisible);
             Assert.True(window.IsChannelsVisible);
 
@@ -201,7 +207,7 @@ public sealed class DockChromeTests
 
             Assert.False(window.IsMapVisible);
             Assert.False(window.IsChannelsVisible);
-            Assert.Equal(new[] { "left", "splitter", "documents" }, LayoutShape(layout));
+            Assert.Equal(new[] { "left-column", "splitter", "documents" }, LayoutShape(layout));
             Assert.DoesNotContain(layout.VisibleDockables!, item => item.Id == "right");
 
             // Restoring either tool brings the right column back.
@@ -222,7 +228,8 @@ public sealed class DockChromeTests
             var map = window.Workspace.MapTool!;
             var channels = window.Workspace.ChannelsTool!;
             var library = Assert.IsAssignableFrom<IToolDock>(window.Workspace.WorldsTool!.Owner);
-            var layout = Assert.IsAssignableFrom<IProportionalDock>(library.Owner);
+            // The Workspace shares the left column with Saved worlds.
+            var layout = Assert.IsAssignableFrom<IProportionalDock>(library.Owner!.Owner);
             Assert.Contains(layout.VisibleDockables!, item => item.Id == "right");
 
             window.Workspace.PinDockable(map);
@@ -232,7 +239,7 @@ public sealed class DockChromeTests
 
             Assert.True(window.Workspace.IsDockablePinned(map));
             Assert.True(window.Workspace.IsDockablePinned(channels));
-            Assert.Equal(new[] { "left", "splitter", "documents" }, LayoutShape(layout));
+            Assert.Equal(new[] { "left-column", "splitter", "documents" }, LayoutShape(layout));
             Assert.DoesNotContain(layout.VisibleDockables!, item => item.Id == "right");
         }
         finally { window.Close(); }

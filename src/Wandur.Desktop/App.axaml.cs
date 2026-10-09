@@ -25,6 +25,7 @@ public partial class App : Application
             Wandur.Core.Localization.UiLanguage.Apply(_services.GetRequiredService<ISettingsStore>().Load().Settings.Language);
         }
         ConfigureDocking();
+        PanelHeader.Install();
         AvaloniaXamlLoader.Load(this);
         ThemeService.Apply(new());
         WorkspaceFactory.RegisterTemplates(DataTemplates);

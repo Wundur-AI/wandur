@@ -70,7 +70,8 @@ public sealed class ComposerFocusTests
         {
             window.Controller.SaveSettings(window.Controller.Settings with { Profiles = [new ConnectionProfile { Name = "Saved", Host = "saved.example.org" }] });
             Dispatcher.UIThread.RunJobs();
-            Find<Button>(window, "EditSavedWorld").Command!.Execute(null);
+            // Edit, as the saved world's row menu does it.
+            Assert.IsType<ViewModels.WorldLibraryViewModel>(window.GetVisualDescendants().OfType<WorldLibraryView>().Single().DataContext).EditCommand.Execute(null);
             Dispatcher.UIThread.RunJobs();
             var dialog = Assert.Single(window.OwnedWindows.OfType<ProfileDialog>());
             var name = Find<TextBox>(dialog, "WorldName");

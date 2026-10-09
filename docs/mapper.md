@@ -2,14 +2,14 @@
 
 Open the Map panel from the View menu. Maps belong to a stable Wandur world identity and are saved in `wandur.db`. Sessions for the same world retain edits and deletions when their cached maps are merged, including when the world profile's hostname changes.
 
-The panel gives its space to the map. Its compact toolbar provides floor arrows, centering, fitting and **Map tools** (☰). Open Map tools for area/grid settings, routes and protocol diagnostics. Choose **Open map editor…** to open a separate editor document beside the session and script tabs.
+The panel gives its space to the map. Its title bar holds search, auto-centering, fitting and **Map tools** (☰), beside the panel's own collapse, pin and close buttons; when the panel is too narrow for them they sit in a row just under the title. The map editor keeps them in a toolbar. Open Map tools for area/grid settings, routes and protocol diagnostics. Choose **Open map editor…** to open a separate editor document beside the session and script tabs.
 
 ## Reading the map
 
 - North is up. Choose an area and use the floor arrows to inspect levels independently.
 - Standard mode draws colored room nodes and directed connections. A one-way exit has one arrow; inferred connections are dashed. Door marks distinguish open, closed and locked exits.
 - Small teal lights mark known exits on room edges and diagonal corners, in both normal and grid views, including unmapped destinations. Up/down lights sit off-center on the top/bottom edges and contain small chevrons when zoom permits. Links marked closed or locked use amber lights. A light confirms an exit exists; it does not by itself establish a route to another room.
-- **Grid mode** is saved per area. Toggle it with the grid icon on the map toolbar or in map tools. Rooms fill their coordinate cells with terrain colors; grid lines follow cell edges at every zoom level. Ordinary connection lines disappear. Touching cells do not imply a known exit or a walkable route.
+- **Grid mode** is saved per area. Toggle it in map tools. Rooms fill their coordinate cells with terrain colors; grid lines follow cell edges at every zoom level. Ordinary connection lines disappear. Touching cells do not imply a known exit or a walkable route.
 - Empty cells preserve unknown space and separated room groups. Grid mode does not pack disconnected rooms together or change their saved coordinates; games whose coordinates use a different scale may need an adapter or manual layout.
 - Terrain comes from room metadata or your edits. When a game sends no terrain, an optional local model can infer it from the room's name and description; inferred terrain uses the same colors and is marked "inferred" with its confidence in the room tooltip and editor. Server terrain and your edits always take precedence, and inference never changes exits, identity or routes. Enable it under **Map tools → Room terrain inference** (one 80 MB download, kept in the app data folder; nothing leaves your computer during inference).
 - Symbols and notes annotate rooms. Hover to see the room name, terrain, coordinates and notes. Click a room to select it. Cross-area/floor badges inspect the destination without sending a game command.
@@ -29,7 +29,7 @@ The exit editor edits a directed exit's destination, direction, command, travers
 
 Select a destination and expand **Routes**. Plan a route to see its commands and total cost. The pathfinder uses directed connections and weights, excludes closed/locked doors and excluded rooms/exits, and normally excludes inferred connections and provisional rooms. You can opt into inferred routes for preview.
 
-In the live map, **double-click a room** to plan and immediately walk a verified route. A single click still selects the room. Double-click walking is disabled in edit mode and the local exercise. A **Stop** square appears on the toolbar during a walk; progress or an unavailable-route explanation appears above the protocol status. Double-clicking another room during a walk does not replace that walk; stop it first.
+In the live map, **double-click a room** to plan and immediately walk a verified route. A single click still selects the room. Double-click walking is disabled in edit mode and the local exercise. A **Stop** square appears in the Map panel's title bar during a walk; progress or an unavailable-route explanation appears above the protocol status. Double-clicking another room during a walk does not replace that walk; stop it first.
 
 **Walk route** requires a connected session and confirmed server room IDs for the entire route. Wandur sends one direction and waits for the expected room ID before sending another. Stop cancels future moves. Wrong rooms, blocked moves, timeout, disconnect, private input, automatic login, another command, or a changed graph stop the walk. A command already sent to the game cannot be recalled.
 

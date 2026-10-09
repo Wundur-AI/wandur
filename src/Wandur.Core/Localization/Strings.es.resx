@@ -442,7 +442,7 @@ Tu aventura empieza con un solo comando.</value>
   <data name="DoubleClickToConnect" xml:space="preserve">
     <value>{0}
 {1}
-Haz doble clic para conectar</value>
+Haz doble clic para conectar y clic derecho para más opciones</value>
   </data>
   <data name="Edit2" xml:space="preserve">
     <value>Editar…</value>
@@ -1990,5 +1990,23 @@ Detente después de recibir una lista del inventario.</value></data>
   </data>
   <data name="QuickCommandSendTip" xml:space="preserve">
     <value>Enviar: {0}</value>
+  </data>
+  <data name="SavedWorldsFind" xml:space="preserve">
+    <value>Buscar un mundo guardado</value>
+  </data>
+  <data name="SavedWorldsFilterPlaceholder" xml:space="preserve">
+    <value>Nombre o dirección</value>
+  </data>
+  <data name="SavedWorldsNoMatch" xml:space="preserve">
+    <value>Ningún mundo guardado coincide.</value>
+  </data>
+  <data name="ConnectSavedWorld" xml:space="preserve">
+    <value>Conectar</value>
+  </data>
+  <data name="ConnectInNewTab" xml:space="preserve">
+    <value>Conectar en una pestaña nueva</value>
+  </data>
+  <data name="ExploreInDirectory" xml:space="preserve">
+    <value>Explorar en el directorio</value>
   </data>
 </root>

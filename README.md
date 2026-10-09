@@ -27,7 +27,7 @@ For a real MUD, choose **+ Add world**, paste `host:port` or enter the fields se
 ## Available now
 
 - Native desktop workspace with draggable, resizable and floating panels, visible drag grips and close buttons.
-- Separate **Open sessions** and **Saved worlds** lists in the Workspace sidebar. Each connection has its own ID, transcript, command history, draft, scripts runtime, and private-input state. Connect repeatedly to the same saved world to log in as different characters. Right-click a session → **Rename session**, or press F2; names last for that open session. Background output marks sessions with an activity indicator.
+- **Open sessions** in the Workspace panel and a **Saved worlds** panel under it. Each connection has its own ID, transcript, command history, draft, scripts runtime, and private-input state. Double-click a saved world (or press Enter) to connect, or to go back to its session if one is open; right-click it for **Connect in new tab** (to log in as another character), Edit, Duplicate, Explore in directory and Delete. Right-click a session → **Rename session**, or press F2; names last for that open session. Background output marks sessions with an activity indicator.
 - Dedicated XTerm display with cursor positioning, erase commands, bounded scrollback, selection/copy, 16/256/true colors, bold, italic, underline, and optional blinking text. Built with Avalonia 12.1.2 and Iciclecreek.Avalonia.Terminal 4.0.2.
 - Partial-line prompts, carriage-return updates, backspace, selectable/copyable text.
 - Bounded scrollback (up to 2,000 lines / approximately 200,000 characters; 4,096 characters per line). Reading older output pauses following; **Latest output** returns to the prompt.

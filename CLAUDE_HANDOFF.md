@@ -329,6 +329,13 @@ count installs" (`SendInstallId`, on by default) under the update check. Site si
   edges) and a translucent accent rectangle of exactly where it will land, or the floating
   window it would open. See the drag paragraph in `docs/client-architecture.md`;
   `DockDropPreviewTests` drives headless drags in System, Fleet and Armored.
+- Panel headers (branch `ui/panel-headers`, October 2026): a drop lands at the size its preview showed
+  (`WorkspaceFactory.SplitToDock` corrects the split after layout); panels can put icon actions in their title bar
+  (`PanelHeader`, `PanelHeaderAction`, with `PanelActionBar` for a view outside a dock), dropping to one row under a
+  header too narrow to keep 8 characters of the title; Map's toolbar buttons are header actions; Saved worlds is its
+  own panel under the Workspace (Add and Find in the header, row menu with Connect, Connect in new tab, Edit,
+  Duplicate, Explore in directory, Delete); System and Fleet show the dock's collapse, pin and close only on hover or
+  keyboard focus. See the dock paragraphs in `docs/client-architecture.md`; captures in `.superpowers/ui/panels/`.
 - Session character (branch `feature/session-character`): `WorkspaceController.CharacterName`
   is the name the world reported through the mapping (identity `name` of the character, kept for
   the connection once seen), else the profile's `Username`, else empty, with `CharacterChanged`

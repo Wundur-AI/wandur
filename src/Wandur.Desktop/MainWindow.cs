@@ -902,6 +902,17 @@ public sealed partial class MainWindow : Window
         _menus.Refresh();
     }
 
+    public bool IsSavedWorldsVisible
+        => Workspace.SavedWorldsTool is { Owner: Dock.Model.Core.IDock owner } tool && owner.VisibleDockables?.Contains(tool) == true;
+
+    public void ToggleSavedWorlds()
+    {
+        if (Workspace.SavedWorldsTool is not { } tool) return;
+        if (IsSavedWorldsVisible) Workspace.HideDockable(tool);
+        else Workspace.RestoreDockable(tool);
+        _menus.Refresh();
+    }
+
     public bool IsMapVisible => Workspace.MapTool is { Owner: Dock.Model.Core.IDock owner } tool && owner.VisibleDockables?.Contains(tool) == true;
     public void ToggleMap()
     {
@@ -963,6 +974,7 @@ public sealed partial class MainWindow : Window
     private void RefreshLanguage()
     {
         if (Workspace.WorldsTool is { } worlds) worlds.Title = L.Workspace;
+        if (Workspace.SavedWorldsTool is { } saved) saved.Title = L.SavedWorlds;
         if (Workspace.MapTool is { } map) map.Title = L.Map;
         if (Workspace.ChannelsTool is { } channels) channels.Title = L.Channels;
         Refresh();

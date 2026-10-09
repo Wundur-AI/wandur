@@ -67,7 +67,12 @@ internal static class ContrastProbe
     {
         double opacity = 1; var owners = new List<string>();
         for (Visual? v = visual; v is not null; v = v.GetVisualParent())
+        {
+            // A dock header's own buttons are transparent until the header is hovered or focused (System and Fleet), and are
+            // read at full opacity whenever they can be used, so their glyphs are held to the floor as shown.
+            if (v is StyledElement { Classes: var classes } && classes.Contains("dock-buttons")) continue;
             if (v.Opacity < 1) { opacity *= v.Opacity; owners.Add($"{v.GetType().Name}{(v is Control { Name: { } n } ? "#" + n : "")}@{v.Opacity:0.00}"); }
+        }
         return (opacity, owners.Count == 0 ? "" : " dimmed by " + string.Join(" x ", owners));
     }
 

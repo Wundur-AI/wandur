@@ -72,8 +72,16 @@ public sealed class WorldLibraryToolbarTests
         try
         {
             window.Show(); Dispatcher.UIThread.RunJobs();
-            var delete = panel.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "DeleteSavedWorld");
             var list = panel.GetVisualDescendants().OfType<ListBox>().Single();
+            var model = Assert.IsType<ViewModels.WorldLibraryViewModel>(panel.DataContext);
+            // The panel has no Delete button any more: the Delete key on the list asks, as the row menu does.
+            void PressDelete()
+            {
+                Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+                Assert.True((list.ContainerFromItem(list.SelectedItem!) ?? list).Focus());
+                window.KeyPressQwerty(PhysicalKey.Delete, RawInputModifiers.None);
+                window.KeyReleaseQwerty(PhysicalKey.Delete, RawInputModifiers.None);
+            }
             list.SelectedItem = second; Dispatcher.UIThread.RunJobs();
             if (Environment.GetEnvironmentVariable("WANDUR_CAPTURE_DIR") is { } captures)
             {
@@ -82,8 +90,8 @@ public sealed class WorldLibraryToolbarTests
                 Directory.CreateDirectory(captures); frame.Save(Path.Combine(captures, "worlds-toolbar.png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
             }
             if (failSave) { File.Delete(store.FilePath); Directory.CreateDirectory(store.FilePath); }
-            // The toolbar button only asks now; confirming is what removes anything.
-            delete.Command!.Execute(null);
+            // The key only asks; confirming is what removes anything.
+            PressDelete();
             Dispatcher.UIThread.RunJobs();
             await Assert.IsAssignableFrom<IAsyncRelayCommand>(panel.GetVisualDescendants()
                 .OfType<Button>().Single(b => b.Name == "ConfirmDeleteWorld").Command).ExecuteAsync(null);
@@ -102,13 +110,13 @@ public sealed class WorldLibraryToolbarTests
                 Assert.Null(await vault.ReadAsync(PasswordVault.Key(second)));
                 Assert.Equal(first, list.SelectedItem);
             // Removing the last world also goes through the prompt.
-            delete.Command!.Execute(null);
+            PressDelete();
             Dispatcher.UIThread.RunJobs();
             await Assert.IsAssignableFrom<IAsyncRelayCommand>(panel.GetVisualDescendants()
                 .OfType<Button>().Single(b => b.Name == "ConfirmDeleteWorld").Command).ExecuteAsync(null);
                 Assert.Empty(controller.Settings.Profiles);
-                Assert.False(delete.IsEffectivelyEnabled);
-                Assert.False(panel.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "EditSavedWorld").IsEffectivelyEnabled);
+                Assert.False(model.RequestDeleteCommand.CanExecute(null));
+                Assert.False(model.EditCommand.CanExecute(null));
             }
         }
         finally { window.Close(); if (Directory.Exists(store.FilePath)) Directory.Delete(store.FilePath); }

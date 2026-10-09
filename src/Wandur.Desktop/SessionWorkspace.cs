@@ -71,6 +71,23 @@ public sealed partial class SessionWorkspace : IAsyncDisposable
     internal ViewModels.WorldBrowserViewModel Browser(Wandur.Core.Discovery.WorldCatalog catalog)
         => _browser ??= new(catalog, this);
 
+    /// <summary>The directory's listing for a saved world, matched by its address; null when it is not listed.</summary>
+    public Wandur.Core.Discovery.WorldListing? ListingFor(ConnectionProfile profile) =>
+        _disposed ? null : _catalog?.FindEndpoint(profile.Host, profile.Port, profile.UseTls);
+
+    /// <summary>Shows a saved world's page in Find a MUD, when the directory lists it.</summary>
+    public bool Explore(ConnectionProfile profile)
+    {
+        if (_catalog is null || ListingFor(profile) is not { } listing) return false;
+        Browser(_catalog).Explore(listing);
+        Browse();
+        return true;
+    }
+
+    /// <summary>The open session of a saved world, if there is one (the first, when there are several).</summary>
+    public SessionTab? SessionOf(ConnectionProfile profile) =>
+        Tabs.FirstOrDefault(t => t.Profile?.Id == profile.Id && t.Controller.HasSession && !t.IsClosing);
+
     public void Browse()
     {
         if (_disposed) return;

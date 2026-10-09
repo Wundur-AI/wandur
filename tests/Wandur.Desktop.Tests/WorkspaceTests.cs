@@ -60,16 +60,17 @@ public sealed class WorkspaceTests
         var window = CreateWindow();
         try
         {
-            var edit = Find<Button>(window, "EditSavedWorld");
-            Assert.False(edit.IsEffectivelyEnabled);
+            // Edit acts on the selected saved world (from its row menu; the panel no longer has an Edit button).
+            var edit = Assert.IsType<ViewModels.WorldLibraryViewModel>(window.GetVisualDescendants().OfType<WorldLibraryView>().Single().DataContext).EditCommand;
+            Assert.False(edit.CanExecute(null));
             var first = new ConnectionProfile { Name = "First", Host = "first.example.org" };
             var second = new ConnectionProfile { Name = "Second", Host = "second.example.org" };
             window.Controller.SaveSettings(window.Controller.Settings with { Profiles = [first, second] });
             var list = Find<ListBox>(window, "WorldProfiles");
             list.SelectedItem = second;
             Dispatcher.UIThread.RunJobs();
-            Assert.True(edit.IsEffectivelyEnabled);
-            edit.Command!.Execute(null);
+            Assert.True(edit.CanExecute(null));
+            edit.Execute(null);
             Dispatcher.UIThread.RunJobs();
             var dialog = Assert.Single(window.OwnedWindows.OfType<ProfileDialog>());
             Assert.Equal("Second", Find<TextBox>(dialog, "WorldName").Text);
@@ -80,7 +81,7 @@ public sealed class WorkspaceTests
             Assert.Equal(first, window.Controller.Settings.Profiles[0]);
             Assert.Equal("Renamed", window.Controller.Settings.Profiles.Single(p => p.Id == second.Id).Name);
             list.SelectedIndex = -1;
-            Assert.False(edit.IsEffectivelyEnabled);
+            Assert.False(edit.CanExecute(null));
         }
         finally { await window.Sessions.DisposeAsync(); window.Close(); }
     }
@@ -763,7 +764,8 @@ public sealed class WorkspaceTests
             await window.Controller.StartAsync();
             var closeButtons = window.GetVisualDescendants().OfType<Button>()
                 .Where(b => b.Name == "PART_CloseButton" && b.IsEffectivelyVisible).ToArray();
-            Assert.Equal(3, closeButtons.Length);
+            // Workspace, Saved worlds, Map and Channels.
+            Assert.Equal(4, closeButtons.Length);
             for (var i = 0; i < closeButtons.Length; i++)
             {
                 // Closing a nested tool dock can recreate the remaining panel headers.

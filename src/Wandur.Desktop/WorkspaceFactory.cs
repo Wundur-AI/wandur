@@ -34,10 +34,12 @@ public sealed partial class WorkspaceFactory(SessionWorkspace sessions, Action e
     private SessionDocument? _sessionDocument;
     private ProportionalDock? _layout;
     private ProportionalDock? _right;
+    private ProportionalDock? _leftColumn;
     private ToolDock? _libraryDock;
     private ToolDock? _mapDock;
     private ToolDock? _channelsDock;
     public WorkspaceTool? WorldsTool { get; private set; }
+    public WorkspaceTool? SavedWorldsTool { get; private set; }
     public WorkspaceTool? MapTool { get; private set; }
     public WorkspaceTool? ChannelsTool { get; private set; }
 
@@ -53,12 +55,18 @@ public sealed partial class WorkspaceFactory(SessionWorkspace sessions, Action e
         SelectedKey = sessions.IsBrowsing ? SearchKey : sessions.Active;
         sessions.SelectionChanged += SessionSelected;
         UpdateDocumentTabs();
-        var library = WorldsTool = new WorkspaceTool { Id = "worlds", Title = L.Workspace, CanClose = true, Build = () => new WorkspaceNavigationView(Navigation, new WorldLibraryView(sessions, editWorld, browseWorlds, editProfile)) };
+        var library = WorldsTool = new WorkspaceTool { Id = "worlds", Title = L.Workspace, CanClose = true, Build = () => new WorkspaceNavigationView(Navigation) };
+        var saved = SavedWorldsTool = new WorkspaceTool { Id = "saved-worlds", Title = L.SavedWorlds, CanClose = true, Build = () => new WorldLibraryView(sessions, editWorld, browseWorlds, editProfile) };
         MapTool = new WorkspaceTool { Id = "map", Title = L.Map, CanClose = true, Build = () => new ActiveSessionView(sessions, controller => new MapView(controller, source => OpenMapEditor(controller, source))) };
         ChannelsTool = new WorkspaceTool { Id = "channels", Title = L.Channels, CanClose = true, Build = () => new ActiveSessionView(sessions, controller => new ChannelsView(controller.ChannelPanel)) };
         var session = _sessionDocument = new SessionDocument { Id = "session", Title = L.Session, CanClose = false, CanFloat = false, Sessions = sessions, Catalog = catalog, EditAutomation = editAutomation, Selected = () => { SelectedKey = sessions.IsBrowsing ? SearchKey : sessions.Active; Navigation.Refresh(); } };
         var documents = _documents = new DocumentDock { Id = "documents", CanCreateDocument = false, VisibleDockables = CreateList<IDockable>(session), ActiveDockable = session, Proportion = 0.59 };
-        var left = _libraryDock = new ToolDock { Id = "left", Alignment = Alignment.Left, Proportion = 0.18, VisibleDockables = CreateList<IDockable>(library), ActiveDockable = library };
+        var workspace = _libraryDock = new ToolDock { Id = "left", Alignment = Alignment.Left, Proportion = 0.35, VisibleDockables = CreateList<IDockable>(library), ActiveDockable = library };
+        var savedWorlds = new ToolDock { Id = "saved-worlds-dock", Alignment = Alignment.Left, Proportion = 0.65, VisibleDockables = CreateList<IDockable>(saved), ActiveDockable = saved };
+        // The Workspace (Find a MUD and the open sessions) above Saved worlds on the left edge, each closable from the
+        // View menu; like the right column, this one leaves the layout when both are pinned or hidden.
+        var left = _leftColumn = new ProportionalDock { Id = "left-column", Proportion = 0.18, Orientation = Dock.Model.Core.Orientation.Vertical, IsCollapsable = true,
+            VisibleDockables = CreateList<IDockable>(workspace, new ProportionalDockSplitter(), savedWorlds), ActiveDockable = workspace };
         var map = _mapDock = new ToolDock { Id = "map-dock", Alignment = Alignment.Right, Proportion = 0.58, VisibleDockables = CreateList<IDockable>(MapTool), ActiveDockable = MapTool };
         var channels = _channelsDock = new ToolDock { Id = "channels-dock", Alignment = Alignment.Right, Proportion = 0.42, VisibleDockables = CreateList<IDockable>(ChannelsTool), ActiveDockable = ChannelsTool };
         // The map and the channels share the right edge, one above the other, both closable from the View menu.

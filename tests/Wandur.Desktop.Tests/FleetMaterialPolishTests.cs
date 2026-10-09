@@ -61,7 +61,8 @@ public sealed class FleetMaterialPolishTests
             Assert.All(docks, dock => Assert.InRange(dock.Child!.Bounds.Left, 0, 2));
             var fit = window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "FitMapFloor");
             Assert.InRange(fit.Bounds.Width / fit.Bounds.Height, .95, 1.05);
-            Assert.True(fit.Bounds.Width >= 26, "An icon button needs room around its glyph.");
+            // Fit is one of the Map panel's title bar actions, the size of the dock's own header buttons.
+            Assert.True(fit.Bounds.Width >= 24, "An icon button needs room around its glyph.");
             var mapInk = Assert.IsAssignableFrom<ISolidColorBrush>(fit.Foreground).Color;
             // Use the painted control surface, not the gradient's bottom bevel pixel,
             // which is outside the inset glyph and intentionally dark.

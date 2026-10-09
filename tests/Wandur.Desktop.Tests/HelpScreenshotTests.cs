@@ -288,7 +288,7 @@ public sealed class HelpScreenshotTests
         map.Model.PlanRouteCommand.Execute(null);
         Assert.NotNull(map.Model.PlannedRoute);
         Assert.Equal(L.Format(L.MapRouteReady, map.Model.PlannedRoute!.Steps.Count, map.Model.PlannedRoute.Cost), map.Model.RouteStatus);
-        Single<ToggleButton>(map, "MapToolsToggle").IsChecked = true; HelpCapture.Settle(window);
+        Single<ToggleButton>(window, "MapToolsToggle").IsChecked = true; HelpCapture.Settle(window);
         var tools = Single<Border>(map, "MapToolsPanel");
         var route = Single<Expander>(map, "MapRouteTools");
         route.IsExpanded = true; HelpCapture.Settle(window);
@@ -304,7 +304,7 @@ public sealed class HelpScreenshotTests
         map.Model.Pan(-covered / 2, 0); HelpCapture.Settle(window);
         Assert.True(tools.IsEffectivelyVisible);
         HelpCapture.Crop(window, "help-map-route.png", Chrome(map));
-        Single<ToggleButton>(map, "MapToolsToggle").IsChecked = false;
+        Single<ToggleButton>(window, "MapToolsToggle").IsChecked = false;
         map.Model.ClearRouteCommand.Execute(null);
         right.Proportion = rightShare; documents.Proportion = documentShare;
         session.FitMap();
@@ -631,11 +631,13 @@ public sealed class HelpScreenshotTests
         var navigation = Single<WorkspaceNavigationView>(window);
         var model = Assert.IsType<WorkspaceNavigationViewModel>(navigation.DataContext);
         Assert.Equal(2, model.OpenEntries.Count(e => e.Key is SessionTab));
-        var saved = Single<ListBox>(navigation, "WorldProfiles");
+        // Saved worlds are a panel of their own, under the Workspace.
+        var saved = Single<ListBox>(window, "WorldProfiles");
         Assert.Equal(new[] { "Emberwake", "Starfall Reach", "The Lantern Road", "The Verdant Roads" },
             saved.Items.OfType<ConnectionProfile>().Select(p => p.Name).Order(StringComparer.Ordinal).ToArray());
         Assert.Equal(4, saved.GetVisualDescendants().OfType<ListBoxItem>().Count(i => i.IsEffectivelyVisible));
-        HelpCapture.Crop(window, "help-first-world-workspace.png", Chrome(navigation));
+        HelpCapture.CropRect(window, "help-first-world-workspace.png",
+            HelpCapture.BoundsIn(Chrome(navigation), window).Union(HelpCapture.BoundsIn(Chrome(saved), window)).Inflate(HelpCapture.Margin));
         await window.Sessions.CloseAsync(starfall); HelpCapture.Settle(window);
     }
 
@@ -648,7 +650,7 @@ public sealed class HelpScreenshotTests
         var view = menu.Items.OfType<MenuItem>().Single(m => m.Header as string == L.View);
         view.IsSubMenuOpen = true; HelpCapture.Settle(window);
         var items = view.Items.OfType<MenuItem>().ToArray();
-        foreach (var key in new[] { L.Workspace, L.MapPanel, L.ChannelsPanel })
+        foreach (var key in new[] { L.Workspace, L.SavedWorlds, L.MapPanel, L.ChannelsPanel })
         {
             var item = items.Single(i => i.Header as string == key);
             Assert.True(item.IsChecked, key); Assert.Equal(MenuItemToggleType.CheckBox, item.ToggleType); Assert.True(item.IsEffectivelyVisible);

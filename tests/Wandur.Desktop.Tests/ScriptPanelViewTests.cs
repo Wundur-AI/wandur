@@ -229,8 +229,9 @@ public sealed class ScriptPanelViewTests
             Assert.Equal(new IDockable[] { workspace.MapTool }, mapDock.VisibleDockables!);
             var library = Assert.IsAssignableFrom<IToolDock>(workspace.WorldsTool!.Owner);
             Assert.Equal(new IDockable[] { workspace.WorldsTool }, library.VisibleDockables!);
-            var layout = Assert.IsAssignableFrom<IProportionalDock>(library.Owner);
-            Assert.Equal("layout", layout.Id);
+            var column = Assert.IsAssignableFrom<IProportionalDock>(library.Owner);
+            Assert.Equal("left-column", column.Id);
+            Assert.Equal("layout", column.Owner!.Id);
             Assert.Null(workspace.LeftPanelsDock);
             // The open accordion section shows the first declared panel; others stay in the tree collapsed.
             var shown = Assert.Single(window.GetVisualDescendants().OfType<ScriptPanelView>(), candidate => ReferenceEquals(candidate.Panel, shipPanel));
@@ -269,9 +270,9 @@ public sealed class ScriptPanelViewTests
             var nav = panels[2];
             Assert.True(rail.Shows(nav));
             Assert.Same(library, workspace.WorldsTool.Owner);
-            Assert.Same(layout, library.Owner);
-            Assert.Equal(new[] { "left", "splitter", "documents", "splitter", "right" }, Shape(layout));
-            Assert.Equal(0.18, library.Proportion);
+            Assert.Same(column, library.Owner);
+            Assert.Equal(new[] { "left-column", "splitter", "documents", "splitter", "right" }, Shape((IProportionalDock)column.Owner!));
+            Assert.Equal(0.18, column.Proportion);
 
             // Closing the nav panel leaves the two right panels in the rail.
             Assert.True(await window.Controller.SendAsync("closenav"));

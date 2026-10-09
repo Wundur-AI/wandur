@@ -50,6 +50,26 @@ toolbar brushes to the panel surface, removing those overrides on other skins.
 The original Dock grip, commands, drop targets and content remain intact; no
 texture is added to the bays and the terminal retains no heading.
 
+A panel can put its own actions in its title bar (`PanelHeader`). Its view sets `PanelHeader.Actions` on itself to a
+list of `PanelHeaderAction`s (a glyph, a localized tooltip key that is also the accessible name, and a command or, for
+a toggle, the view model property it follows). Dock's `ToolChromeControl` template is left as Dock ships it: when it is
+applied, `PanelHeaderHost` adds the buttons to the free Auto column of the header grid, so they sit right-aligned
+between the title and the dock's collapse, pin and close buttons and come before them in tab order, and adds one row
+under the header to the template's root grid. When the header cannot keep `PanelHeader.MinimumTitleCharacters` (8) of
+the title readable (all of it when shorter) beside the actions and the dock's buttons, the same buttons move to that
+row, which takes the header's colour and line, and they move back once the header is wide enough; there is no overflow
+menu. The host finds the declaring view among the panel's shown content, so a hidden session view (`ActiveSessionView`)
+gives the header to the shown one, and a floating panel's view declares its own when it is built again. In System and Fleet the dock's
+own collapse, pin and close buttons show only while the pointer is over the header or the keyboard is in it (styles in
+`App.axaml` on the `dock-buttons` strip `PanelHeaderHost` tags). Hidden, they are a transparent, zero-width, clipped
+strip, never `IsVisible=False`, so they keep their place in the tab order (after the panel's actions) and in the
+automation tree, and they show as soon as one takes focus. There the actions take the header's right edge and the
+dock's buttons open between the title and them, taking the title's room, so an action never moves under a pointer
+on its way to it; the room the hidden buttons would take is left to the actions when deciding whether they fit.
+Armored keeps its buttons shown. A view that is also shown where there is no
+panel header (built on its own, or inside a document such as the map editor) adds a `PanelActionBar`, which draws the
+same actions as a plain toolbar row there and stays empty inside a dock panel, so each button exists once.
+
 Dragging a panel works the way Visual Studio's does (`Styles/DockDrop.axaml`). Dock still decides
 every drop; the app only draws it. The `DockTarget` and `GlobalDockTarget` templates keep Dock's
 PART names and indicator operations but replace its bitmap guides with `DockGuide` tiles (a window
@@ -61,7 +81,12 @@ opacity. A tool body's drop area names the whole panel as its adorner host, so t
 the panel and a split previews the half it will really take, header included. The window-edge
 guides take `DockSettings.GlobalDockingProportion`, which `App.ConfigureDocking` sets to a quarter
 before any template loads, and `WorkspaceFactory.SplitToDock` gives the dock an edge drop creates
-that same share (Dock left both halves without a proportion, so they split the window evenly).
+that same share (Dock left both halves without a proportion, so they split the window evenly). A drop
+lands at the size its preview showed: `SplitToDock` measures the previewed extent before the drop (half
+the target panel, or the window-edge share), and because taking the dragged panel out of its old place
+can widen the target first (an emptied column or row gives its space away), it corrects the new dock and
+the one it split from after the next layout passes so the new panel has that extent in pixels; other
+panels keep their proportions.
 Away from every guide the panel would float: Dock's drag preview window, sized to the panel
 (`ShowDockablePreviewOnDrag`), draws the same translucent rectangle with the panel's title, and
 `PanelDragOffset` keeps the grabbed point under the pointer so the preview and the window a release
@@ -95,6 +120,7 @@ Sessions have independent connection lifetimes. `SessionWorkspace` creates/owns 
 - `ProfileEditorViewModel` owns editable fields, address normalization, cancellable directory suggestions, validation, save/remove commands and busy/error state. It uses `IWorldProfileStore`; `ProfileDialog.axaml` binds properties/commands. Code-behind only handles window lifetime and focus normalization.
 - `PreferencesViewModel` uses `IClientSettingsStore` and an injected appearance-preview callback. `OptionsDialog.axaml` contains the presentation and bindings. Cancel restores the previous appearance; save preserves other settings changed by another session.
 - `WorldLibraryViewModel` owns saved-world selection and add/edit/connect commands, and orders the list by `WorldUsage` (connections counted in `world_usage` and `world_connections`, weighted by recency) with a reorder that waits while the pointer is over the list. Its view formats rows, each with a `WorldThumbnail` (the directory's cached art or the world's initials), and handles pointer/key gestures.
+- `WorldLibraryViewModel` backs the Saved worlds dock panel (`WorkspaceFactory.SavedWorldsTool`, under the Workspace in the left column, which collapses like the right one when both of its panels are hidden). Its header actions are Add (the world editor) and Find, which opens a filter box over the list (words matched against name or address; Escape closes it and clears the filter). A double-click or Enter connects, going back to the world's open session if there is one (`SessionWorkspace.SessionOf`); Delete (or Backspace) raises the existing confirmation. The row menu has Connect, Connect in new tab (always another session), Edit, Duplicate (a copy after the world, without its saved password), Explore in directory (only when the directory lists the world: `SessionWorkspace.Explore` opens its page in Find a MUD) and Delete. The Workspace panel keeps Find a MUD and the open sessions. The dock layout is not saved between runs, so every start and Restore panels use this arrangement.
 - `WorldBrowserViewModel` owns directory queries, facet options, filtering/sorting, result selection, count/status/feedback and save/connect commands. It also retains transient exploration state and scroll positions. Its view owns controls, images, layout and external-link launching. Results occupy the whole existing dock; Explore replaces the list with details, and Back restores selection, scroll and keyboard focus. `DirectoryWorldCard` reflows artwork, text and actions from the dock's measured width; localized actions stack when their measured widths require it. Advanced filters use a bounded popup and narrow docks use a sort menu. Each realized row owns a cancellable scaled bitmap loaded through `WorldThumbnails` in uncached-bitmap mode; the catalog still caches bytes on disk, loads run one at a time, and detached rows dispose their images and reject stale completions. Saving a row does not connect or change the dock layout.
 - `WorkspaceController` remains the session presentation/application adapter: connection lifecycle, bounded output queue, prompt/private-input state, transcript/history and login coordination. It does not construct controls. An injected `ITranscriptDisplayFactory` creates the session-owned `ITranscriptDisplay`; the controller disposes it. The display adapter owns terminal emulation, rendering, scrolling and copy gestures. Core remains GUI-independent and retains its lightweight ANSI model for prompt/transcript analysis.
 - `MainWindow` and `DesktopMenus` own native window/menu/dialog integration. OS dialogs, clipboard and Avalonia controls stay in the presentation layer.
@@ -148,7 +174,7 @@ The initial translations have automated coverage and layout checks; they have no
 
 ## Mapping
 
-`WorkspaceController.Mapping` coordinates room observations and movement evidence for each session. Its `RoomMapTracker` and protocol/text decoders live in Core. `IRoomMapStore` is injected from startup through the window and session factory; `MapViewModel` owns presentation and an isolated offline recognition exercise. See [the mapper guide](mapper.md) for supported formats and inference limits. `MapViewModel` partials separate editing and navigation commands; `RoomMapControl` draws a north-up viewport and forwards explicit edit gestures. Core owns validated JSON, directed weighted routes, map revisions/deletion tombstones, merge aliases and bounded undo. `WorkspaceController.Navigation` binds a verified walk to one session and its privacy epoch, with room acknowledgements queued beside transcript output before the next movement is sent. `Wandur.Core.Mapping.RoomSearch` matches rooms by their effective observed name/description (AND terms, a quoted phrase, case-insensitive, never a room with none) for the map toolbar's search box, `IRoomMapStore.SearchRooms` exposes it per world, and `MapViewModel`'s search partial drives the highlight, dimming, stepping and cross-floor dropdown that `RoomMapControl` renders.
+`WorkspaceController.Mapping` coordinates room observations and movement evidence for each session. Its `RoomMapTracker` and protocol/text decoders live in Core. `IRoomMapStore` is injected from startup through the window and session factory; `MapViewModel` owns presentation and an isolated offline recognition exercise. See [the mapper guide](mapper.md) for supported formats and inference limits. `MapViewModel` partials separate editing and navigation commands; `RoomMapControl` draws a north-up viewport and forwards explicit edit gestures. Core owns validated JSON, directed weighted routes, map revisions/deletion tombstones, merge aliases and bounded undo. `WorkspaceController.Navigation` binds a verified walk to one session and its privacy epoch, with room acknowledgements queued beside transcript output before the next movement is sent. `Wandur.Core.Mapping.RoomSearch` matches rooms by their effective observed name/description (AND terms, a quoted phrase, case-insensitive, never a room with none) for the map's search box (the magnifier in the Map panel's title bar opens it as a row over the map), `IRoomMapStore.SearchRooms` exposes it per world, and `MapViewModel`'s search partial drives the highlight, dimming, stepping and cross-floor dropdown that `RoomMapControl` renders.
 
 ### Room terrain inference
 

@@ -263,6 +263,9 @@
       <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     </Style>
+    <Style Selector="dc|ToolChromeControl /template/ TextBlock#PART_Title">
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
     <!-- The centre document is squared off and butts straight against the splitters on either side. -->
     <Style Selector="dc|DocumentControl /template/ Border#PART_Border">
       <Setter Property="BorderThickness" Value="{DynamicResource DocumentFrameThickness}" />
@@ -365,6 +368,35 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Foreground" Value="{ReflectionBinding $parent[Button].Foreground}" />
+    </Style>
+    <!-- A panel's own actions in its title bar (PanelHeader): the dock buttons' size, the header glyph colour, and the
+         full text colour under the pointer or while a toggle is on. In the row under a narrow header they look the same. -->
+    <Style Selector=":is(Button).command-bar-button.panel-action">
+      <Setter Property="Width" Value="24" />
+      <Setter Property="Height" Value="24" />
+      <Setter Property="Padding" Value="4" />
+      <Setter Property="Foreground" Value="{DynamicResource DockHeaderGlyphBrush}" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector=":is(Button).command-bar-button.panel-action Path">
+      <Setter Property="Width" Value="13" />
+      <Setter Property="Height" Value="13" />
+    </Style>
+    <Style Selector=":is(Button).command-bar-button.panel-action:pointerover, ToggleButton.command-bar-button.panel-action:checked">
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    </Style>
+    <!-- System and Fleet show a panel's collapse, pin and close buttons only while the pointer is over its header or
+         the keyboard is in it, so the header's actions and title have the room. Hidden, they keep their place in the
+         tab order and the automation tree (a zero-width, clipped, transparent strip, never IsVisible=False), and they
+         show as soon as one of them takes focus. PanelHeaderHost tags Dock's button panel with dock-buttons. -->
+    <Style Selector="loc|ThemeDockSkinHost.system dc|ToolChromeControl /template/ StackPanel.dock-buttons, loc|ThemeDockSkinHost.fleet:not(.armored) dc|ToolChromeControl /template/ StackPanel.dock-buttons">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="MaxWidth" Value="0" />
+      <Setter Property="ClipToBounds" Value="True" />
+    </Style>
+    <Style Selector="loc|ThemeDockSkinHost.system dc|ToolChromeControl /template/ Grid#PART_Grip:pointerover StackPanel.dock-buttons, loc|ThemeDockSkinHost.system dc|ToolChromeControl /template/ Grid#PART_Grip:focus-within StackPanel.dock-buttons, loc|ThemeDockSkinHost.fleet:not(.armored) dc|ToolChromeControl /template/ Grid#PART_Grip:pointerover StackPanel.dock-buttons, loc|ThemeDockSkinHost.fleet:not(.armored) dc|ToolChromeControl /template/ Grid#PART_Grip:focus-within StackPanel.dock-buttons">
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="MaxWidth" Value="Infinity" />
     </Style>
     <Style Selector="ComboBox.toolbar-world-picker">
       <Setter Property="Background" Value="{DynamicResource ShellBrush}" />

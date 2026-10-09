@@ -1,5 +1,7 @@
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Wandur.Core.Settings;
@@ -8,9 +10,9 @@ using Wandur.Desktop.Views;
 namespace Wandur.Desktop.Tests;
 
 /// <summary>
-/// Deleting a saved world throws away its login, its protocol mapping and its scripts, and the button sits
-/// in a toolbar next to add and edit. One stray click used to be enough to lose all of it with nothing to
-/// undo it, which is exactly how it was lost.
+/// Deleting a saved world throws away its login, its protocol mapping and its scripts. One stray click on
+/// the toolbar button the panel used to have was enough to lose all of it with nothing to undo it, which is
+/// exactly how it was lost; the Delete key and the row menu ask first.
 /// </summary>
 public sealed class WorldDeleteConfirmTests
 {
@@ -37,11 +39,8 @@ public sealed class WorldDeleteConfirmTests
         return (window.Sessions, view, path);
     }
 
-    private static Button Named(WorldLibraryView view, string name) =>
-        view.GetVisualDescendants().OfType<Button>().Single(b => b.Name == name);
-
     [AvaloniaFact]
-    public async Task TheToolbarButtonAsksBeforeItRemovesAnything()
+    public async Task TheDeleteKeyAsksBeforeItRemovesAnything()
     {
         var (sessions, view, path) = await OpenAsync();
         try
@@ -50,7 +49,11 @@ public sealed class WorldDeleteConfirmTests
             model.SelectedProfile = model.Profiles.Single(p => p.Name == "Legends of the Jedi");
             Dispatcher.UIThread.RunJobs();
 
-            Named(view, "DeleteSavedWorld").Command!.Execute(null);
+            var list = view.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "WorldProfiles");
+            list.ContainerFromItem(model.SelectedProfile!)!.Focus();
+            var window = (Window)TopLevel.GetTopLevel(view)!;
+            window.KeyPressQwerty(PhysicalKey.Delete, RawInputModifiers.None);
+            window.KeyReleaseQwerty(PhysicalKey.Delete, RawInputModifiers.None);
             Dispatcher.UIThread.RunJobs();
 
             // Asked, not done.

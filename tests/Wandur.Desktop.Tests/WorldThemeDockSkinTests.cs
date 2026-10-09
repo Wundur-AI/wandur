@@ -42,15 +42,16 @@ public sealed class WorldThemeDockSkinTests
         Assert.Equal(new Thickness(8, 0, 8, 0), Application.Current.Resources["DockHeaderMargin"]);
 
         var library = Assert.IsAssignableFrom<IToolDock>(harness.Window.Workspace.WorldsTool!.Owner);
-        var layout = Assert.IsAssignableFrom<IProportionalDock>(library.Owner);
-        Assert.Equal(new[] { "left", "splitter", "documents", "splitter", "right" }, LayoutShape(layout));
+        // The Workspace shares the left column with Saved worlds.
+        var layout = Assert.IsAssignableFrom<IProportionalDock>(library.Owner!.Owner);
+        Assert.Equal(new[] { "left-column", "splitter", "documents", "splitter", "right" }, LayoutShape(layout));
 
         // Closing both right tools still collapses the column.
         harness.Window.ToggleMap();
         harness.Window.ToggleChannels();
         Dispatcher.UIThread.RunJobs();
         AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
-        Assert.Equal(new[] { "left", "splitter", "documents" }, LayoutShape(layout));
+        Assert.Equal(new[] { "left-column", "splitter", "documents" }, LayoutShape(layout));
         Assert.DoesNotContain(layout.VisibleDockables!, item => item.Id == "right");
 
         harness.Window.ToggleMap();
@@ -73,7 +74,7 @@ public sealed class WorldThemeDockSkinTests
         AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
 
         var leftChrome = harness.Window.GetVisualDescendants().OfType<ToolChromeControl>()
-            .Single(c => c.DataContext is IToolDock dock && dock.Alignment == Alignment.Left);
+            .Single(c => c.DataContext is IToolDock { Id: "left" } dock && dock.Alignment == Alignment.Left);
         Assert.NotNull(leftChrome.GetVisualDescendants().OfType<Button>().SingleOrDefault(b => b.Name == "PART_CloseButton"));
         Assert.NotNull(leftChrome.GetVisualDescendants().OfType<TextBlock>().SingleOrDefault(t => t.Name == "PART_Title"));
         Assert.NotNull(leftChrome.GetVisualDescendants().OfType<Grid>().SingleOrDefault(g => g.Name == "PART_Grip"));

@@ -36,17 +36,18 @@ public sealed class WindowSkinDockTests
             foreach (var (showLeft, showRight) in new[] { (false, true), (true, false), (false, false), (true, true) })
             {
                 if (window.IsPanelVisible() != showLeft) window.TogglePanel();
+                if (window.IsSavedWorldsVisible != showLeft) window.ToggleSavedWorlds();
                 if (window.IsMapVisible != showRight) window.ToggleMap();
                 if (window.IsChannelsVisible != showRight) window.ToggleChannels();
                 WindowSkinTransitionTests.Settle(window);
                 Assert.Same(worlds, window.Workspace.WorldsTool);
                 var visible = window.GetVisualDescendants().OfType<ThemeDockSkinHost>()
                     .Where(d => d.IsEffectivelyVisible && d.Bounds.Width > 6 && d.Bounds.Height > 6).ToArray();
-                Assert.Equal((showLeft ? 1 : 0) + (showRight ? 2 : 0), visible.Length);
+                Assert.Equal((showLeft ? 2 : 0) + (showRight ? 2 : 0), visible.Length);
                 foreach (var dock in visible)
                 {
                     Assert.Equal(rim, dock.Child!.Bounds.Top);
-                    if (dock.DataContext is IToolDock { Id: "left" }) Assert.Equal(0, dock.Child.Bounds.Left);
+                    if (dock.DataContext is IToolDock { Id: "left" or "saved-worlds-dock" }) Assert.Equal(0, dock.Child.Bounds.Left);
                     else Assert.Equal(dock.Bounds.Width, dock.Child.Bounds.Right);
                 }
             }

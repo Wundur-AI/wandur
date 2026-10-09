@@ -39,6 +39,7 @@ public sealed class WorldLibraryView : UserControl
             // The picture sits on the left at a fixed size, so the two text lines keep the row height they had.
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 8, Children = { new WorldThumbnail(profile, sessions.Thumbnails), text } };
             Grid.SetColumn(text, 1);
+            // Named, with its address, because a long name is cut short in a narrow panel.
             ToolTip.SetTip(row, L.Format(L.DoubleClickToConnect, profile.Name, endpoint));
             return row;
         });
@@ -49,15 +50,29 @@ public sealed class WorldLibraryView : UserControl
         worlds.ContainerPrepared += (_, args) =>
         {
             if (args.Container is not ListBoxItem item || item.Content is not ConnectionProfile profile) return;
+            MenuItem Item(string key, string name, System.Windows.Input.ICommand command) =>
+                new() { [!MenuItem.HeaderProperty] = LocalizedText.Binding(key), Name = name, Command = command, CommandParameter = profile };
             item.ContextMenu = new ContextMenu
             {
-                ItemsSource = new[]
+                ItemsSource = new Control[]
                 {
-                    new MenuItem { [!MenuItem.HeaderProperty] = LocalizedText.Binding(nameof(L.Edit2)), Name = "EditWorldMenu", Command = _model.EditProfileCommand, CommandParameter = profile },
-                    new MenuItem { [!MenuItem.HeaderProperty] = LocalizedText.Binding(nameof(L.DeleteSavedWorld)), Name = "DeleteWorldMenu", Command = _model.RequestDeleteProfileCommand, CommandParameter = profile }
+                    Item(nameof(L.ConnectSavedWorld), "ConnectWorldMenu", _model.ConnectProfileCommand),
+                    Item(nameof(L.ConnectInNewTab), "ConnectNewTabWorldMenu", _model.ConnectInNewTabCommand),
+                    new Separator(),
+                    Item(nameof(L.Edit2), "EditWorldMenu", _model.EditProfileCommand),
+                    Item(nameof(L.ScriptDuplicate), "DuplicateWorldMenu", _model.DuplicateProfileCommand),
+                    Item(nameof(L.ExploreInDirectory), "ExploreWorldMenu", _model.ExploreProfileCommand),
+                    new Separator(),
+                    Item(nameof(L.DeleteSavedWorld), "DeleteWorldMenu", _model.RequestDeleteProfileCommand),
                 }
             };
-            item.ContextMenu.Opening += (_, _) => { menuOpen = true; _model.SelectedProfile = profile; };
+            item.ContextMenu.Opening += (_, _) =>
+            {
+                menuOpen = true; _model.SelectedProfile = profile;
+                // Only a world the directory lists has a page to explore; the directory can change while the app runs.
+                if (item.ContextMenu.Items.OfType<MenuItem>().FirstOrDefault(m => m.Name == "ExploreWorldMenu") is { } explore)
+                    explore.IsVisible = _model.CanExplore(profile);
+            };
             item.ContextMenu.Closed += (_, _) => { menuOpen = false; if (!worlds.IsPointerOver) _model.ApplyPendingOrder(); };
         };
         worlds.ContainerClearing += (_, args) =>
@@ -73,27 +88,56 @@ public sealed class WorldLibraryView : UserControl
             if (!pointer.IsLeftButtonPressed && !pointer.IsRightButtonPressed) return;
             _model.SelectedProfile = profile;
         }, RoutingStrategies.Tunnel);
-        worlds.DoubleTapped += async (_, _) => await _model.ConnectCommand.ExecuteAsync(null);
-        worlds.KeyDown += async (_, args) =>
+        worlds.DoubleTapped += async (_, args) =>
+        {
+            // A double-click on a row connects; one on the empty part of the list does nothing.
+            if (args.Source is Visual source && source.GetSelfAndVisualAncestors().OfType<ListBoxItem>().Any())
+                await _model.ConnectCommand.ExecuteAsync(null);
+        };
+        // On the way down: a focused row takes Enter for itself (it selects), so the list would never see it on the way up.
+        worlds.AddHandler(KeyDownEvent, async (_, args) =>
         {
             if (args.Key == Key.Enter) { args.Handled = true; await _model.ConnectCommand.ExecuteAsync(null); }
+            // Delete (Backspace is the delete key on a Mac keyboard) asks first, as the menu does.
+            else if (args.Key is Key.Delete or Key.Back && args.KeyModifiers == KeyModifiers.None && _model.RequestDeleteCommand.CanExecute(null))
+            { args.Handled = true; _model.RequestDeleteCommand.Execute(null); }
+        }, RoutingStrategies.Tunnel);
+
+        // Add and Find are the panel's actions, in its title bar (or in a row of their own outside a dock panel).
+        PanelHeader.SetActions(this, [
+            new PanelHeaderAction("AddSavedWorld", "M 8,2 V 14 M 2,8 H 14", nameof(L.AddAWorld)) { Command = _model.AddCommand },
+            new PanelHeaderAction("FindSavedWorld", "M 6,2.5 A 3.5,3.5 0 1 0 6,9.5 A 3.5,3.5 0 1 0 6,2.5 M 8.5,8.5 L 13,13", nameof(L.SavedWorldsFind))
+                { Source = _model, CheckedPath = nameof(_model.IsFilterVisible) },
+        ]);
+        var actionBar = new PanelActionBar(this) { Margin = new Thickness(6, 4, 6, 0) };
+        var filter = new TextBox { Name = "SavedWorldsFilter", FontSize = 12, Margin = new Thickness(8, 6, 8, 0) };
+        filter.Bind(TextBox.TextProperty, new Binding(nameof(_model.Filter)) { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
+        filter.Bind(TextBox.PlaceholderTextProperty, LocalizedText.Binding(nameof(L.SavedWorldsFilterPlaceholder)));
+        filter.Bind(Avalonia.Automation.AutomationProperties.NameProperty, LocalizedText.Binding(nameof(L.SavedWorldsFind)));
+        filter.Bind(IsVisibleProperty, new Binding(nameof(_model.IsFilterVisible)));
+        filter.KeyDown += (_, args) =>
+        {
+            if (args.Key == Key.Escape) { _model.IsFilterVisible = false; worlds.Focus(); args.Handled = true; }
+            else if (args.Key == Key.Down && _model.Profiles.Count > 0) { worlds.ContainerFromItem(_model.SelectedProfile ?? _model.Profiles[0])?.Focus(); args.Handled = true; }
+            else if (args.Key == Key.Enter && _model.Profiles.Count > 0) { args.Handled = true; _ = _model.ConnectCommand.ExecuteAsync(null); }
         };
-        Button ActionButton(string label, string name, System.Windows.Input.ICommand command, string geometry)
-            => Ui.ToolbarIconKey(new Button { Name = name, Command = command }, geometry, label);
-        var connect = ActionButton(nameof(L.ConnectToSelectedWorld), "ConnectSavedWorld", _model.ConnectCommand, "M 4,2 L 13,8 L 4,14 Z");
-        var add = ActionButton(nameof(L.AddAWorld), "AddSavedWorld", _model.AddCommand, "M 8,2 V 14 M 2,8 H 14");
-        var edit = ActionButton(nameof(L.Edit), "EditSavedWorld", _model.EditCommand, "M 2,10 L 10,2 L 14,6 L 6,14 L 2,14 Z M 8,4 L 12,8");
-        var delete = ActionButton(nameof(L.DeleteSavedWorld), "DeleteSavedWorld", _model.RequestDeleteCommand, "M 2,4 H 14 M 6,4 V 2 H 10 V 4 M 4,4 L 5,14 H 11 L 12,4 M 7,7 V 11 M 9,7 V 11");
-        var browse = ActionButton(nameof(L.FindAMUDInTheDirectory), "BrowseWorlds", _model.BrowseCommand, "M 11,6 A 5,5 0 1 1 1,6 A 5,5 0 1 1 11,6 M 10,10 L 15,15");
-        browse.IsVisible = _model.CanBrowse;
-        var actions = new WrapPanel { Orientation = Orientation.Horizontal, Children = { connect, add, edit, delete, browse } };
-        var toolbar = Ui.Toolbar(actions, "WorldLibraryToolbar");
+        // Opening Find puts the cursor in its box.
+        _model.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(_model.IsFilterVisible) && _model.IsFilterVisible)
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => filter.Focus(), Avalonia.Threading.DispatcherPriority.Loaded);
+        };
         var empty = Ui.TextKey(nameof(L.KeepYourFavoriteWorldsHereAddOneToStart), 12, "muted");
+        empty.Name = "SavedWorldsEmpty";
         empty.Margin = new Thickness(14); empty.VerticalAlignment = VerticalAlignment.Top;
         empty.Bind(IsVisibleProperty, new Binding(nameof(_model.IsEmpty)));
-        var content = new Grid { Children = { worlds, empty } };
+        var noMatch = Ui.TextKey(nameof(L.SavedWorldsNoMatch), 12, "muted");
+        noMatch.Name = "SavedWorldsNoMatch";
+        noMatch.Margin = new Thickness(14); noMatch.VerticalAlignment = VerticalAlignment.Top;
+        noMatch.Bind(IsVisibleProperty, new Binding(nameof(_model.HasNoMatches)));
+        var content = new Grid { Children = { worlds, empty, noMatch } };
 
-        // The prompt names the world, because the toolbar button acts on the selection and the reader
+        // The prompt names the world, because the Delete key acts on the selection and the reader
         // cannot otherwise be sure which row it caught.
         var prompt = Ui.TextKey(nameof(L.DeleteSavedWorldPrompt), 12);
         prompt.TextWrapping = TextWrapping.Wrap;
@@ -120,8 +164,8 @@ public sealed class WorldLibraryView : UserControl
         };
         confirm.Bind(IsVisibleProperty, new Binding(nameof(_model.ConfirmDelete)));
 
-        var panel = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*"), Children = { toolbar, confirm, content } };
-        Grid.SetRow(confirm, 1); Grid.SetRow(content, 2); Content = panel;
+        var panel = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*"), Children = { actionBar, filter, confirm, content } };
+        Grid.SetRow(filter, 1); Grid.SetRow(confirm, 2); Grid.SetRow(content, 3); Content = panel;
     }
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e) { base.OnAttachedToVisualTree(e); _model.Attach(); }
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e) { _model.Detach(); base.OnDetachedFromVisualTree(e); }

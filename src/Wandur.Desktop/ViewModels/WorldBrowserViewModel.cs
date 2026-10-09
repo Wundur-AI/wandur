@@ -197,6 +197,14 @@ public sealed partial class WorldBrowserViewModel : ObservableObject, IDisposabl
         _ => Query.Search.Trim().Length == 0 ? matches.OrderBy(w => w.Community.Rank is null).ThenBy(w => w.Community.Rank) : matches
     };
     [RelayCommand] private void ResetFilters() => Query = new();
+
+    /// <summary>Opens a world's page, clearing the search and filters first when they would hide it.</summary>
+    public void Explore(WorldListing world)
+    {
+        if (!Results.Any(w => w.Id == world.Id)) Query = new();
+        SelectedWorld = Results.FirstOrDefault(w => w.Id == world.Id) ?? world;
+        IsExploring = true;
+    }
     [RelayCommand(CanExecute = nameof(CanRefresh))] private Task RefreshAsync() => LoadAsync(true);
     public async Task LoadAsync(bool force = false)
     {

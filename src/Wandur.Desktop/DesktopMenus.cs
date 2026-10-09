@@ -61,6 +61,7 @@ internal sealed class DesktopMenus
 
         var view = Group(nameof(L.View),
             Action(nameof(L.Workspace), () => { window.TogglePanel(); return Task.CompletedTask; }),
+            Action(nameof(L.SavedWorlds), () => { window.ToggleSavedWorlds(); return Task.CompletedTask; }),
             Action(nameof(L.MapPanel), () => { window.ToggleMap(); return Task.CompletedTask; }),
             Action(nameof(L.ChannelsPanel), () => { window.ToggleChannels(); return Task.CompletedTask; }),
             Action(nameof(L.RestorePanels), () => { window.ResetLayout(); return Task.CompletedTask; }), null,
@@ -68,9 +69,10 @@ internal sealed class DesktopMenus
             Action(nameof(L.FocusCommandInput), () => { window.FocusCommandInput(); return Task.CompletedTask; }, Key.L),
             Action(nameof(L.SessionHistory), window.ShowHistoryAsync, enabled: () => window.Sessions.HistoryStore is not null));
         Check(view, 0, () => window.IsPanelVisible());
-        Check(view, 1, () => window.IsMapVisible);
-        Check(view, 2, () => window.IsChannelsVisible);
-        Check(view, 5, () => window.ToolbarVisible);
+        Check(view, 1, () => window.IsSavedWorldsVisible);
+        Check(view, 2, () => window.IsMapVisible);
+        Check(view, 3, () => window.IsChannelsVisible);
+        Check(view, 6, () => window.ToolbarVisible);
         var nativeSkins = new NativeMenu();
         var fallbackSkins = new MenuItem { [!MenuItem.HeaderProperty] = LocalizedText.Binding(nameof(L.Skin)) };
         view.Native.Items.Add(new NativeMenuItem { [!NativeMenuItem.HeaderProperty] = LocalizedText.Binding(nameof(L.Skin)), Menu = nativeSkins });

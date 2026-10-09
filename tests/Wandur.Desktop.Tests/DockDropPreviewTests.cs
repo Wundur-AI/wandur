@@ -160,6 +160,69 @@ public sealed class DockDropPreviewTests
         finally { await Close(window); }
     }
 
+    public static TheoryData<string, string, string, string, string> NewSides()
+    {
+        var data = new TheoryData<string, string, string, string, string>();
+        foreach (var (skin, theme) in new[] { ("System", "Linen"), ("Fleet", "Hull") })
+        {
+            // Against an edge of the window that has no panel yet: the Workspace and Saved worlds hidden for the left
+            // edge, Map and Channels for the right one; top and bottom never have one.
+            data.Add(skin, theme, "map", "window", "Left");
+            data.Add(skin, theme, "worlds", "window", "Right");
+            data.Add(skin, theme, "map", "window", "Top");
+            data.Add(skin, theme, "map", "window", "Bottom");
+            // Beside the Map, from the column the Map shares (which empties as Channels leaves it) and from the other
+            // side of the window (which empties the left column).
+            foreach (var side in new[] { "Left", "Right", "Top", "Bottom" }) data.Add(skin, theme, "channels", "map", side);
+            data.Add(skin, theme, "worlds", "map", "Left");
+            data.Add(skin, theme, "worlds", "map", "Bottom");
+        }
+        return data;
+    }
+
+    /// <summary>
+    /// A drop that makes a new column or row gives the panel exactly the width (or height) its preview showed, even
+    /// when taking the panel out of its old place widens the panel it splits or the window's empty side.
+    /// </summary>
+    [AvaloniaTheory]
+    [MemberData(nameof(NewSides))]
+    public async Task ADroppedPanelTakesTheSizeItsPreviewShowed(string skin, string theme, string dragged, string onto, string side)
+    {
+        var (window, drag) = Open(skin, theme);
+        try
+        {
+            if (onto == "window" && side == "Left") { window.TogglePanel(); window.ToggleSavedWorlds(); }
+            if (onto == "window" && side == "Right") { window.ToggleMap(); window.ToggleChannels(); }
+            Settle(window);
+            drag.Press(drag.Header(dragged));
+            TemplatedControl target;
+            if (onto == "window")
+            {
+                drag.Move(drag.Centre(window.GetVisualDescendants().OfType<DockControl>().Single(d => d.Name == "WorkspaceDock")));
+                target = window.GetVisualDescendants().OfType<GlobalDockTarget>().Single();
+            }
+            else
+            {
+                drag.Move(drag.Centre(drag.Panel(onto)));
+                target = drag.LocalTarget();
+            }
+            drag.Move(drag.Centre(Part<Control>(target, $"PART_{side}Selector")));
+            var preview = drag.Bounds(AssertPreview(window, target, $"PART_{side}Indicator"));
+            Capture(window, $"size-{dragged}-{onto}-{side}-{skin}-{theme}");
+            drag.Release();
+
+            var landed = drag.Bounds(drag.Panel(dragged).FindAncestorOfType<DockableControl>()!);
+            // The preview is inset by its 1-DIP margin; the panel loses part of the splitter beside it.
+            var horizontal = side is "Left" or "Right";
+            var (shown, got) = horizontal ? (preview.Width, landed.Width) : (preview.Height, landed.Height);
+            Assert.True(Math.Abs(shown - got) <= 4, $"{dragged} {side} of {onto}: preview {preview}, landed {landed}");
+            // Against the window the strip is exactly where the preview was too.
+            if (onto == "window") AssertRect(preview, landed, 4);
+            AssertLayoutStillWorks(window, hidden: onto == "window" && side is "Left" or "Right");
+        }
+        finally { await Close(window); }
+    }
+
     [AvaloniaFact]
     public async Task TheGuidesAreDrawnInTheThemeNotDocksBitmaps()
     {
@@ -221,13 +284,16 @@ public sealed class DockDropPreviewTests
 
     // A drop leaves a model the View menu still drives: every panel can be hidden and shown again, and Restore panels
     // brings back the default arrangement.
-    private static void AssertLayoutStillWorks(MainWindow window, bool floating = false)
+    private static void AssertLayoutStillWorks(MainWindow window, bool floating = false, bool hidden = false)
     {
         Settle(window);
-        Assert.True(window.IsMapVisible);
-        Assert.True(window.IsChannelsVisible);
-        Assert.True(window.IsPanelVisible());
-        if (!floating)
+        if (!hidden)
+        {
+            Assert.True(window.IsMapVisible);
+            Assert.True(window.IsChannelsVisible);
+            Assert.True(window.IsPanelVisible());
+        }
+        if (!floating && !hidden)
         {
             window.ToggleMap(); Settle(window);
             Assert.False(window.IsMapVisible);
@@ -289,8 +355,9 @@ public sealed class DockDropPreviewTests
         using var canvas = new SKCanvas(main);
         // The preview window is transparent, which a headless frame does not keep, so its content is rendered on its
         // own with its alpha and laid over the main frame at the window's screen position.
-        var (preview, control) = DragPreview();
-        if (preview.IsVisible && control.Bounds is { Width: > 0, Height: > 0 } bounds)
+        var helper = typeof(DockControl).Assembly.GetType("Dock.Avalonia.Internal.DragPreviewHelper")!;
+        if (helper.GetField("s_window", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null) is DragPreviewWindow { IsVisible: true } preview
+            && helper.GetField("s_control", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null) is DragPreviewControl { Bounds: { Width: > 0, Height: > 0 } bounds } control)
         {
             using var rendered = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(bounds.Width), (int)Math.Ceiling(bounds.Height)));
             rendered.Render(control);

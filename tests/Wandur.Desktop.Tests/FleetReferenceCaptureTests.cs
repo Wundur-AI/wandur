@@ -113,13 +113,14 @@ public sealed class FleetReferenceCaptureTests
             Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
             Assert.True(document.Bounds.Width > withBoth + 100);
             var withLeft = document.Bounds.Width;
-            window.TogglePanel();
+            // The left column holds the Workspace and Saved worlds; it goes when both do.
+            window.TogglePanel(); window.ToggleSavedWorlds();
             Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
             Assert.True(document.Bounds.Width > withLeft + 100);
             if (worldName.Length <= 25) Capture(window, $"fleet-no-docks-{width}x{height}.png");
-            window.ToggleMap(); window.ToggleChannels(); window.TogglePanel();
+            window.ToggleMap(); window.ToggleChannels(); window.TogglePanel(); window.ToggleSavedWorlds();
             Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
-            Assert.True(window.IsMapVisible && window.IsChannelsVisible && window.IsPanelVisible());
+            Assert.True(window.IsMapVisible && window.IsChannelsVisible && window.IsPanelVisible() && window.IsSavedWorldsVisible);
             window.Sessions.PreviewAppearanceSettings(new ClientSettings { Theme = "Paper" });
             Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
             Assert.InRange(terminal.TranslatePoint(default, document)!.Value.Y, 0, 2);
