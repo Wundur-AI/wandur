@@ -324,6 +324,11 @@ count installs" (`SendInstallId`, on by default) under the update check. Site si
   `ui/flat-headers` (October 2026) System and Fleet draw that grip at the far
   left of the header (dots about 7 DIP from the panel edge, title 8 DIP after
   them; `Fleet.axaml`, `DockGripPositionTests`); Armored keeps it 20 DIP in.
+- Dock drop preview (branch `ui/dock-drop-preview`, October 2026): dragging a panel shows
+  themed guides (a five-tile compass over the panel under the pointer, four at the window
+  edges) and a translucent accent rectangle of exactly where it will land, or the floating
+  window it would open. See the drag paragraph in `docs/client-architecture.md`;
+  `DockDropPreviewTests` drives headless drags in System, Fleet and Armored.
 - Session character (branch `feature/session-character`): `WorkspaceController.CharacterName`
   is the name the world reported through the mapping (identity `name` of the character, kept for
   the connection once seen), else the profile's `Username`, else empty, with `CharacterChanged`

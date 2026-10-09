@@ -24,9 +24,23 @@ public partial class App : Application
             _services = BuildServices(directory);
             Wandur.Core.Localization.UiLanguage.Apply(_services.GetRequiredService<ISettingsStore>().Load().Settings.Language);
         }
+        ConfigureDocking();
         AvaloniaXamlLoader.Load(this);
         ThemeService.Apply(new());
         WorkspaceFactory.RegisterTemplates(DataTemplates);
+    }
+
+    /// <summary>
+    /// Dragging a panel shows where it will land (Styles/DockDrop.axaml). Dock's drag preview window is sized to the
+    /// panel so it can show the floating window a release would make, at full opacity because the template draws its
+    /// own translucency; a drop on a window-edge guide takes <see cref="DockDropPalette.WindowEdgeProportion"/> of the
+    /// window. Dock reads these when it builds its templates and states, so they are set before the styles load.
+    /// </summary>
+    internal static void ConfigureDocking()
+    {
+        Dock.Settings.DockSettings.ShowDockablePreviewOnDrag = true;
+        Dock.Settings.DockSettings.DragPreviewOpacity = 1;
+        Dock.Settings.DockSettings.GlobalDockingProportion = DockDropPalette.WindowEdgeProportion;
     }
 
     private async void AboutClicked(object? sender, EventArgs args)

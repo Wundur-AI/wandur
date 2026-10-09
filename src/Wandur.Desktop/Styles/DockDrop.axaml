@@ -1,0 +1,190 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dc="clr-namespace:Dock.Avalonia.Controls;assembly=Dock.Avalonia"
+        xmlns:ds="clr-namespace:Dock.Settings;assembly=Dock.Settings"
+        xmlns:psp="clr-namespace:Dock.Controls.ProportionalStackPanel;assembly=Dock.Controls.ProportionalStackPanel"
+        xmlns:conv="using:Wandur.Desktop.Converters"
+        xmlns:local="using:Wandur.Desktop"
+        x:CompileBindings="False">
+
+  <!-- Dragging a panel, the way Visual Studio does it. Dock decides where a drop goes; these templates only draw it.
+       The preview is the exact rectangle the panel will take: half of the panel under the pointer for a split, all of
+       it for a tab, a strip of the window for an edge, and the floating window itself when the panel would float.
+       Every colour comes from the theme's accent (DockDropPalette, written by ThemeService), so no skin shows Dock's stock blue.
+       The PART names and IndicatorDockOperation values are the ones Dock 12.1's DockTargetBase looks for. -->
+
+  <Styles.Resources>
+    <!-- The drop preview. Dock shows the indicator it has chosen by setting its opacity to 0.5 (and the others to 0),
+         so the brushes are written at twice the alpha the eye should see: DockDropPalette has the numbers. -->
+    <ControlTheme x:Key="DockDropIndicator" TargetType="Panel">
+      <Setter Property="Margin" Value="1" />
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="IsHitTestVisible" Value="False" />
+    </ControlTheme>
+    <ControlTheme x:Key="DockDropIndicatorFill" TargetType="Border">
+      <Setter Property="Background" Value="{DynamicResource DockDropIndicatorFillBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DockDropIndicatorEdgeBrush}" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="CornerRadius" Value="{DynamicResource SmallCornerRadius}" />
+    </ControlTheme>
+    <ControlTheme x:Key="DockDropGuide" TargetType="local:DockGuide">
+      <Setter Property="Width" Value="{DynamicResource DockGuideSize}" />
+      <Setter Property="Height" Value="{DynamicResource DockGuideSize}" />
+      <Setter Property="Plate" Value="{DynamicResource DockGuidePlateBrush}" />
+      <Setter Property="LitPlate" Value="{DynamicResource DockGuideLitPlateBrush}" />
+      <Setter Property="Edge" Value="{DynamicResource DockGuideEdgeBrush}" />
+      <Setter Property="Glyph" Value="{DynamicResource DockGuideGlyphBrush}" />
+      <Setter Property="Accent" Value="{DynamicResource AccentBrush}" />
+    </ControlTheme>
+
+    <!-- The guides over one panel: a compass of five, the centre one docking as a tab. -->
+    <ControlTheme x:Key="{x:Type dc:DockTarget}" TargetType="dc:DockTarget">
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Grid Name="PART_IndicatorGrid" RowDefinitions="*,*" ColumnDefinitions="*,*">
+            <Panel Name="PART_TopIndicator" Theme="{StaticResource DockDropIndicator}" Grid.Row="0" Grid.ColumnSpan="2"
+                   IsVisible="{TemplateBinding ShowVerticalTargets}" DockProperties.IndicatorDockOperation="Top">
+              <Border Theme="{StaticResource DockDropIndicatorFill}" />
+            </Panel>
+            <Panel Name="PART_BottomIndicator" Theme="{StaticResource DockDropIndicator}" Grid.Row="1" Grid.ColumnSpan="2"
+                   IsVisible="{TemplateBinding ShowVerticalTargets}" DockProperties.IndicatorDockOperation="Bottom">
+              <Border Theme="{StaticResource DockDropIndicatorFill}" />
+            </Panel>
+            <Panel Name="PART_LeftIndicator" Theme="{StaticResource DockDropIndicator}" Grid.Column="0" Grid.RowSpan="2"
+                   IsVisible="{TemplateBinding ShowHorizontalTargets}" DockProperties.IndicatorDockOperation="Left">
+              <Border Theme="{StaticResource DockDropIndicatorFill}" />
+            </Panel>
+            <Panel Name="PART_RightIndicator" Theme="{StaticResource DockDropIndicator}" Grid.Column="1" Grid.RowSpan="2"
+                   IsVisible="{TemplateBinding ShowHorizontalTargets}" DockProperties.IndicatorDockOperation="Right">
+              <Border Theme="{StaticResource DockDropIndicatorFill}" />
+            </Panel>
+            <Panel Name="PART_CenterIndicator" Theme="{StaticResource DockDropIndicator}" Grid.RowSpan="2" Grid.ColumnSpan="2"
+                   DockProperties.IndicatorDockOperation="Fill">
+              <Border Theme="{StaticResource DockDropIndicatorFill}" />
+            </Panel>
+            <Panel Name="PART_SelectorPanel" Grid.RowSpan="2" Grid.ColumnSpan="2">
+              <Grid Name="PART_SelectorGrid" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,Auto,Auto"
+                    RowSpacing="{DynamicResource DockGuideSpacing}" ColumnSpacing="{DynamicResource DockGuideSpacing}">
+                <local:DockGuide Name="PART_TopSelector" Theme="{StaticResource DockDropGuide}" Grid.Row="0" Grid.Column="1" Zone="Top"
+                                 IsVisible="{TemplateBinding ShowVerticalTargets}" DockProperties.IndicatorDockOperation="Top"
+                                 IsLit="{Binding #PART_TopIndicator.Opacity, Converter={x:Static conv:DockDropConverters.IsShown}}" />
+                <local:DockGuide Name="PART_BottomSelector" Theme="{StaticResource DockDropGuide}" Grid.Row="2" Grid.Column="1" Zone="Bottom"
+                                 IsVisible="{TemplateBinding ShowVerticalTargets}" DockProperties.IndicatorDockOperation="Bottom"
+                                 IsLit="{Binding #PART_BottomIndicator.Opacity, Converter={x:Static conv:DockDropConverters.IsShown}}" />
+                <local:DockGuide Name="PART_LeftSelector" Theme="{StaticResource DockDropGuide}" Grid.Row="1" Grid.Column="0" Zone="Left"
+                                 IsVisible="{TemplateBinding ShowHorizontalTargets}" DockProperties.IndicatorDockOperation="Left"
+                                 IsLit="{Binding #PART_LeftIndicator.Opacity, Converter={x:Static conv:DockDropConverters.IsShown}}" />
+                <local:DockGuide Name="PART_RightSelector" Theme="{StaticResource DockDropGuide}" Grid.Row="1" Grid.Column="2" Zone="Right"
+                                 IsVisible="{TemplateBinding ShowHorizontalTargets}" DockProperties.IndicatorDockOperation="Right"
+                                 IsLit="{Binding #PART_RightIndicator.Opacity, Converter={x:Static conv:DockDropConverters.IsShown}}" />
+                <local:DockGuide Name="PART_CenterSelector" Theme="{StaticResource DockDropGuide}" Grid.Row="1" Grid.Column="1" Zone="Fill"
+                                 DockProperties.IndicatorDockOperation="Fill"
+                                 IsLit="{Binding #PART_CenterIndicator.Opacity, Converter={x:Static conv:DockDropConverters.IsShown}}" />
+              </Grid>
+            </Panel>
+          </Grid>
+        </ControlTemplate>
+      </Setter>
+      <Style Selector="^[ShowIndicatorsOnly=True] /template/ Panel#PART_SelectorPanel">
+        <Setter Property="IsVisible" Value="False" />
+      </Style>
+    </ControlTheme>
+
+    <!-- The guides at the edges of the whole window. A strip there takes DockSettings.GlobalDockingProportion of the
+         window, which App sets before any template is built, and the indicators use the same panel and proportion as
+         the dock that the drop creates. -->
+    <ControlTheme x:Key="{x:Type dc:GlobalDockTarget}" TargetType="dc:GlobalDockTarget">
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Panel>
+            <psp:ProportionalStackPanel Orientation="Horizontal">
+              <Panel Name="PART_LeftIndicator" Theme="{StaticResource DockDropIndicator}"
+                     psp:ProportionalStackPanel.Proportion="{x:Static ds:DockSettings.GlobalDockingProportion}"
+                     DockProperties.IndicatorDockOperation="Left">
+                <Border Theme="{StaticResource DockDropIndicatorFill}" />
+              </Panel>
+              <Border />
+              <Panel Name="PART_RightIndicator" Theme="{StaticResource DockDropIndicator}"
+                     psp:ProportionalStackPanel.Proportion="{x:Static ds:DockSettings.GlobalDockingProportion}"
+                     DockProperties.IndicatorDockOperation="Right">
+                <Border Theme="{StaticResource DockDropIndicatorFill}" />
+              </Panel>
+            </psp:ProportionalStackPanel>
+            <psp:ProportionalStackPanel Orientation="Vertical">
+              <Panel Name="PART_TopIndicator" Theme="{StaticResource DockDropIndicator}"
+                     psp:ProportionalStackPanel.Proportion="{x:Static ds:DockSettings.GlobalDockingProportion}"
+                     DockProperties.IndicatorDockOperation="Top">
+                <Border Theme="{StaticResource DockDropIndicatorFill}" />
+              </Panel>
+              <Border />
+              <Panel Name="PART_BottomIndicator" Theme="{StaticResource DockDropIndicator}"
+                     psp:ProportionalStackPanel.Proportion="{x:Static ds:DockSettings.GlobalDockingProportion}"
+                     DockProperties.IndicatorDockOperation="Bottom">
+                <Border Theme="{StaticResource DockDropIndicatorFill}" />
+              </Panel>
+            </psp:ProportionalStackPanel>
+            <Panel Name="PART_SelectorPanel" Margin="{DynamicResource DockGuideEdgeMargin}">
+              <local:DockGuide Name="PART_TopSelector" Theme="{StaticResource DockDropGuide}" IsEdge="True" Zone="Top"
+                               HorizontalAlignment="Center" VerticalAlignment="Top" DockProperties.IndicatorDockOperation="Top"
+                               IsVisible="{TemplateBinding ShowVerticalTargets}"
+                               IsLit="{Binding #PART_TopIndicator.Opacity, Converter={x:Static conv:DockDropConverters.IsShown}}" />
+              <local:DockGuide Name="PART_BottomSelector" Theme="{StaticResource DockDropGuide}" IsEdge="True" Zone="Bottom"
+                               HorizontalAlignment="Center" VerticalAlignment="Bottom" DockProperties.IndicatorDockOperation="Bottom"
+                               IsVisible="{TemplateBinding ShowVerticalTargets}"
+                               IsLit="{Binding #PART_BottomIndicator.Opacity, Converter={x:Static conv:DockDropConverters.IsShown}}" />
+              <local:DockGuide Name="PART_LeftSelector" Theme="{StaticResource DockDropGuide}" IsEdge="True" Zone="Left"
+                               HorizontalAlignment="Left" VerticalAlignment="Center" DockProperties.IndicatorDockOperation="Left"
+                               IsVisible="{TemplateBinding ShowHorizontalTargets}"
+                               IsLit="{Binding #PART_LeftIndicator.Opacity, Converter={x:Static conv:DockDropConverters.IsShown}}" />
+              <local:DockGuide Name="PART_RightSelector" Theme="{StaticResource DockDropGuide}" IsEdge="True" Zone="Right"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" DockProperties.IndicatorDockOperation="Right"
+                               IsVisible="{TemplateBinding ShowHorizontalTargets}"
+                               IsLit="{Binding #PART_RightIndicator.Opacity, Converter={x:Static conv:DockDropConverters.IsShown}}" />
+            </Panel>
+          </Panel>
+        </ControlTemplate>
+      </Setter>
+      <Style Selector="^[ShowIndicatorsOnly=True] /template/ Panel#PART_SelectorPanel">
+        <Setter Property="IsVisible" Value="False" />
+      </Style>
+    </ControlTheme>
+  </Styles.Resources>
+
+  <!-- Dock finds the drop target under the pointer by its innermost drop area, which in a tool panel is the body under
+       the header, and would draw the guides and the preview over the body alone. A split takes the whole panel, header
+       included, so the preview is hosted by the panel itself (ThemeDockSkin.axaml's PART_DockableControl, the dock's
+       own drop target) and shows the rectangle the panel will really occupy. -->
+  <Style Selector="dc|ToolControl /template/ DockPanel#PART_DockPanel">
+    <Setter Property="DockProperties.DockAdornerHost" Value="{Binding RelativeSource={RelativeSource AncestorType=dc:DockableControl}}" />
+  </Style>
+
+  <!-- The floating preview: Dock's drag preview window follows the pointer at the dragged panel's size, which is where
+       and how big the floating window will be if the panel is released over nothing. The app's Window style would paint
+       it with the shell colour, so it is cleared here. While the pointer is on a guide the drop preview above shows
+       where the panel goes instead, and this one hides; it hides too when the panel can neither dock nor float there. -->
+  <Style Selector="dc|DragPreviewWindow">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="TransparencyLevelHint" Value="Transparent" />
+  </Style>
+  <Style Selector="dc|DragPreviewControl">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Width="{TemplateBinding PreviewContentWidth}" Height="{TemplateBinding PreviewContentHeight}"
+               MinWidth="160" MinHeight="{DynamicResource DockGuideSize}">
+          <Border Name="PART_Ghost" Background="{DynamicResource DockDropFillBrush}" BorderBrush="{DynamicResource DockDropEdgeBrush}"
+                  BorderThickness="2" CornerRadius="{DynamicResource CardCornerRadius}" />
+          <Border Name="PART_Caption" Height="30" VerticalAlignment="Top" Margin="2,2,2,0"
+                  Background="{DynamicResource DockDropCaptionBrush}" CornerRadius="{DynamicResource SmallCornerRadius}">
+            <TextBlock Name="PART_CaptionText" Text="{Binding Converter={x:Static conv:DockDropConverters.Title}}" Margin="12,0" VerticalAlignment="Center"
+                       FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource DockDropCaptionTextBrush}"
+                       TextTrimming="CharacterEllipsis" />
+          </Border>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="dc|DragPreviewControl[Status=Dock], dc|DragPreviewControl[Status=None]">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+</Styles>

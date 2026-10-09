@@ -122,7 +122,7 @@ public sealed partial class MainWindow : Window
         Workspace = new(Sessions, async () => await EditWorldAsync(), async () => await BrowseWorldsAsync(), async profile => await EditWorldAsync(profile), catalog: Catalog, editAutomation: async (controller, section) => await EditSessionAutomationAsync(controller, section));
         var layout = Workspace.CreateLayout();
         Workspace.InitLayout(layout);
-        _dock = new DockControl { Name = "WorkspaceDock", Factory = Workspace, Layout = layout, InitializeFactory = true, InitializeLayout = false };
+        _dock = new DockControl { Name = "WorkspaceDock", Factory = Workspace, Layout = layout, InitializeFactory = true, InitializeLayout = false, DragOffsetCalculator = new PanelDragOffset() };
 
         _menus = new DesktopMenus(this);
         _worldPicker.ItemTemplate = new FuncDataTemplate<ConnectionProfile>((profile, _) =>

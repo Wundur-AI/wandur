@@ -49,6 +49,24 @@ accent marker bound to the dock's active state. Its host scopes the header and
 toolbar brushes to the panel surface, removing those overrides on other skins.
 The original Dock grip, commands, drop targets and content remain intact; no
 texture is added to the bays and the terminal retains no heading.
+
+Dragging a panel works the way Visual Studio's does (`Styles/DockDrop.axaml`). Dock still decides
+every drop; the app only draws it. The `DockTarget` and `GlobalDockTarget` templates keep Dock's
+PART names and indicator operations but replace its bitmap guides with `DockGuide` tiles (a window
+glyph with the docking zone in the accent, drawn with no allocation while a drag moves) and its
+indicators with a translucent accent rectangle: 30% fill, 50% edge (`DockDropPalette`, written by
+`ThemeService` with the rest of the palette, at twice those alphas because Dock shows the chosen
+indicator at opacity 0.5). A guide lights when Dock has chosen it, by binding to that indicator's
+opacity. A tool body's drop area names the whole panel as its adorner host, so the guides centre on
+the panel and a split previews the half it will really take, header included. The window-edge
+guides take `DockSettings.GlobalDockingProportion`, which `App.ConfigureDocking` sets to a quarter
+before any template loads, and `WorkspaceFactory.SplitToDock` gives the dock an edge drop creates
+that same share (Dock left both halves without a proportion, so they split the window evenly).
+Away from every guide the panel would float: Dock's drag preview window, sized to the panel
+(`ShowDockablePreviewOnDrag`), draws the same translucent rectangle with the panel's title, and
+`PanelDragOffset` keeps the grabbed point under the pointer so the preview and the window a release
+opens sit over the panel rather than hanging from the pointer by their corner. The preview window is
+cleared of the app's opaque `Window` background and hides while the pointer is on a guide.
 Fullscreen releases decorative insets and preserves an exit even with the toolbar
 hidden; restoration resolves the current skin rather than a saved geometry snapshot.
 The app's fullscreen command clears chrome and performs the resulting layout before

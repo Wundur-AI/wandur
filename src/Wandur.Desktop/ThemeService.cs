@@ -302,6 +302,7 @@ public static class ThemeService
         Set("DockApplicationAccentBrushIndicator", accent); Set("DockApplicationAccentForegroundBrush", text);
         Set("DockSurfaceEditorBrush", terminal); Set("DockTabActiveForegroundBrush", text); Set("DockTabActiveIndicatorBrush", accent);
         Set("DockSplitterIdleBrush", "Transparent");
+        DockDropPalette.Apply(resources, Color.Parse(accent), panelColor, Color.Parse(muted), Color.Parse(line), textColor);
         ApplyGrip(resources, Color.Parse(muted));
         resources.Value("DockDocumentContentBorderThickness", new Thickness(0));
         if (!app.Resources.ContainsKey("DockDocumentControlTabStripVisible")) app.Resources["DockDocumentControlTabStripVisible"] = false;
