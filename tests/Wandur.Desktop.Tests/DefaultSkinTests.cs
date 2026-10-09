@@ -108,7 +108,7 @@ public sealed class DefaultSkinTests
         Assert.Equal(TitleBarMetrics.Fleet.BandHeight, bar.Height);
         Assert.False(bar.HostsToolbar);
         Assert.Equal(default, bar.Padding);
-        Assert.Equal(38, merged.Layout.PanelHeader!.Height);
+        Assert.Equal(30, merged.Layout.PanelHeader!.Height);
         Assert.Equal(new SkinBox(8, 0, 8, 0), merged.Layout.PanelHeader.Inset);
         var plaque = bar.Plaque!;
         Assert.Equal("fleet", plaque.Shape);

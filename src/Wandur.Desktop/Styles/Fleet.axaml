@@ -1,5 +1,5 @@
 <Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:dc="using:Dock.Avalonia.Controls">
+        xmlns:dc="using:Dock.Avalonia.Controls" xmlns:local="using:Wandur.Desktop">
   <!-- Kept after the base styles. A floating dock's host also carries fleet. -->
   <Style Selector="Window.fleet dc|DocumentControl /template/ Border#PART_Border">
     <Setter Property="Margin" Value="0" />
@@ -27,6 +27,16 @@
   </Style>
   <Style Selector=":is(Control).skin-controls dc|ToolChromeControl /template/ TextBlock#PART_Title, :is(Control).fleet dc|ToolChromeControl /template/ TextBlock#PART_Title">
     <Setter Property="Margin" Value="26,0,0,0" />
+  </Style>
+  <!-- System and Fleet: the grip sits at the far left of the header. Dock's header row starts 12 DIP in
+       (DockToolChromeHeaderMargin, shared with Armored), so a -7 margin puts the 12 DIP grip box 5 DIP from the panel
+       edge; it draws its dots about 2 DIP inside the box, so they sit about 7 DIP from the edge. The title starts at
+       23 DIP, 8 after the dots. Armored keeps its own placement. -->
+  <Style Selector="local|ThemeDockSkinHost.system dc|ToolChromeControl /template/ Grid#PART_Grid, local|ThemeDockSkinHost.fleet:not(.armored) dc|ToolChromeControl /template/ Grid#PART_Grid">
+    <Setter Property="Margin" Value="-7,0,0,0" />
+  </Style>
+  <Style Selector="local|ThemeDockSkinHost.system dc|ToolChromeControl /template/ TextBlock#PART_Title, local|ThemeDockSkinHost.fleet:not(.armored) dc|ToolChromeControl /template/ TextBlock#PART_Title">
+    <Setter Property="Margin" Value="11,0,0,0" />
   </Style>
   <Style Selector=":is(Control).skin-controls dc|ToolChromeControl /template/ Button Viewbox, :is(Control).fleet dc|ToolChromeControl /template/ Button Viewbox">
     <Setter Property="Width" Value="14" />

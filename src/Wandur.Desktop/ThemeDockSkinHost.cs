@@ -151,6 +151,11 @@ public sealed class ThemeDockSkinHost : Decorator
                 Resources[key] = face;
             else Resources.Remove(key);
         }
+        // Flat headers (System, Fleet) let the header row fill the header's height so the title is centred in it
+        // rather than squeezed into the 12 DIP left between the shared 9 DIP top and bottom margins, which cut off
+        // descenders. Armored keeps the shared margins.
+        if (definition.FlatPanelHeader) Resources["DockToolChromeHeaderMargin"] = new Thickness(12, 0, 6, 0);
+        else Resources.Remove("DockToolChromeHeaderMargin");
         HeaderHeight = definition.DockHeaderHeight;
         ApplyPanelRadius();
         var skin = ThemeSkinResources.FromApplied();
@@ -245,7 +250,9 @@ public sealed class ThemeDockSkinHost : Decorator
                 if (!_joinsLeft) context.DrawLine(edge, new(.5, 0), new(.5, Bounds.Height));
                 if (!_joinsRight) context.DrawLine(edge, new(Bounds.Width - .5, 0), new(Bounds.Width - .5, Bounds.Height));
             }
-            context.DrawLine(new Pen(FleetSkin.RimHighlight, 1), new(2, 1.5), new(Bounds.Width - 2, 1.5));
+            // The raised look's highlight along the top; a flat header goes without it.
+            if (!ThemeService.ActiveWindowSkin.FlatPanelHeader)
+                context.DrawLine(new Pen(FleetSkin.RimHighlight, 1), new(2, 1.5), new(Bounds.Width - 2, 1.5));
         }
         if (!IsSkinActive || BorderBitmap is not { } bitmap || BorderMeta is not { } meta) return;
         var size = Bounds.Size;

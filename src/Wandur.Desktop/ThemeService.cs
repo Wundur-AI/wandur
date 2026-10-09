@@ -188,6 +188,11 @@ public static class ThemeService
         var skin = DefaultSkin.Merge(worldTheme?.Skin, fallback,
             keepSurfaces: textured);
         skin = ActiveWindowSkin.ApplyGeometry(skin);
+        // Flat headers. A custom theme's chrome colour wins, as it does for the header brushes below; otherwise System
+        // takes the panel colour (which is what its header brushes are set to below) and any other flat skin keeps the
+        // middle of the shading its header had.
+        if (ActiveWindowSkin.FlatPanelHeader)
+            skin = FlattenPanelHeader(skin, personal?.Colors["Chrome"] ?? (ActiveWindowSkin.Id == WindowSkinId.System ? panel : null));
         // The System skin has no metal frame, so the centre document blends into the docked panels: the gaps
         // between the docks take the panels' own colour rather than the dark chassis the drawn skins rest on,
         // and the document drops its hairline and the 4 px above and below it. A world that paints its own
@@ -347,6 +352,27 @@ public static class ThemeService
         resources.Brush("ChannelBodyBrush", resources.Read("TerminalBrush"));
         _lastAppearance = appearance;
         Applied?.Invoke();
+    }
+
+    /// <summary>
+    /// The panel header surface as one colour: no bevel, gloss or grain. The colour is <paramref name="face"/> when
+    /// given, otherwise the middle of the surface's own gradient, so a palette or world that shades its headers keeps
+    /// their colour without the raised look. An accent rule a world draws under its headers stays.
+    /// </summary>
+    internal static WorldThemeSkin FlattenPanelHeader(WorldThemeSkin skin, string? face)
+    {
+        if (skin.Surfaces?.PanelHeader is not { } header) return skin;
+        var color = face;
+        if (color is null && Color.TryParse(header.From, out var from) && Color.TryParse(header.To, out var to))
+            color = $"#{(from.R + to.R + 1) / 2:X2}{(from.G + to.G + 1) / 2:X2}{(from.B + to.B + 1) / 2:X2}";
+        color ??= header.From;
+        return skin with
+        {
+            Surfaces = skin.Surfaces with
+            {
+                PanelHeader = header with { From = color, To = color, Bevel = "none", BevelStrength = 0, Gloss = 0, Grain = 0 }
+            }
+        };
     }
 
     private static double Luminance(Color color)

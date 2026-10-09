@@ -320,7 +320,10 @@ count installs" (`SendInstallId`, on by default) under the update check. Site si
   world's initials in the panel colour. The same branch squared every dock
   (later undone by `feature/rounded-side-docks`, which restored the outer-edge
   radius; `DockChromeTests` asserts the shape) and puts the move cursor on the
-  header's grip glyph with a plain arrow over the rest of the header.
+  header's grip glyph with a plain arrow over the rest of the header. Since
+  `ui/flat-headers` (October 2026) System and Fleet draw that grip at the far
+  left of the header (dots about 7 DIP from the panel edge, title 8 DIP after
+  them; `Fleet.axaml`, `DockGripPositionTests`); Armored keeps it 20 DIP in.
 - Session character (branch `feature/session-character`): `WorkspaceController.CharacterName`
   is the name the world reported through the mapping (identity `name` of the character, kept for
   the connection once seen), else the profile's `Username`, else empty, with `CharacterChanged`

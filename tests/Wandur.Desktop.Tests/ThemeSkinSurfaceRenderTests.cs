@@ -46,17 +46,27 @@ public sealed class ThemeSkinSurfaceRenderTests
     public void NamedSurfacesBecomeGradientResources()
     {
         var theme = SurfacesOnly();
-        ThemeService.Apply(new(), theme);
-        Dispatcher.UIThread.RunJobs();
-
-        foreach (var key in new[] { "DockHeaderBrush", "DockSurfaceHeaderBrush", "DockSurfaceHeaderActiveBrush" })
+        try
         {
-            var brush = Gradient(Avalonia.Application.Current!.Resources[key], key);
-            Assert.Equal(Color.Parse("#CBD6E1"), brush.GradientStops[1].Color);   // after the bevel stop
-            Assert.Equal(Color.Parse("#7F8D9C"), brush.GradientStops[^2].Color);
+            // Armored still shades a world's panel header with its bevel.
+            ThemeService.Apply(new() { Skin = "Armored" }, theme);
+            Dispatcher.UIThread.RunJobs();
+            foreach (var key in new[] { "DockHeaderBrush", "DockSurfaceHeaderBrush", "DockSurfaceHeaderActiveBrush" })
+            {
+                var brush = Gradient(Avalonia.Application.Current!.Resources[key], key);
+                Assert.Equal(Color.Parse("#CBD6E1"), brush.GradientStops[1].Color);   // after the bevel stop
+                Assert.Equal(Color.Parse("#7F8D9C"), brush.GradientStops[^2].Color);
+            }
+
+            // Fleet's headers are flat: the world's header colour is kept as the middle of its shading.
+            ThemeService.Apply(new() { Skin = "Fleet" }, theme);
+            Dispatcher.UIThread.RunJobs();
+            foreach (var key in new[] { "DockHeaderBrush", "DockSurfaceHeaderBrush", "DockSurfaceHeaderActiveBrush" })
+                Assert.Equal(Color.Parse("#A5B2BF"), FleetFlatHeaderTests.SolidColor((IBrush)Avalonia.Application.Current!.Resources[key]!));
+            var chrome = Gradient(Avalonia.Application.Current!.Resources["ChromeBrush"], "ChromeBrush");
+            Assert.Equal(Color.Parse("#8A97A6"), chrome.GradientStops[1].Color);
         }
-        var chrome = Gradient(Avalonia.Application.Current!.Resources["ChromeBrush"], "ChromeBrush");
-        Assert.Equal(Color.Parse("#8A97A6"), chrome.GradientStops[1].Color);
+        finally { ThemeService.Apply(new()); }
     }
 
     /// <summary>The hard step at the midline is what reads as machined metal; a smooth fade does not.</summary>
@@ -81,10 +91,11 @@ public sealed class ThemeSkinSurfaceRenderTests
 
     /// <summary>
     /// The one that matters: the dock header the reader actually looks at must end up painted with the
-    /// skin's gradient, not merely have it sitting in a resource dictionary.
+    /// skin's header colour, not merely have it sitting in a resource dictionary. Fleet's headers are flat,
+    /// so that is the middle of the world's header shading.
     /// </summary>
     [AvaloniaFact]
-    public async Task ThePanelHeaderIsPaintedWithTheSkinsGradient()
+    public async Task ThePanelHeaderIsPaintedWithTheSkinsColour()
     {
         var theme = SurfacesOnly();
         await using var harness = await DockHarness.OpenAsync(theme);
@@ -98,7 +109,7 @@ public sealed class ThemeSkinSurfaceRenderTests
             .Where(g => g.Name == "PART_Grip")
             .ToList();
         Assert.NotEmpty(grips);
-        Assert.All(grips, grip => Gradient(grip.Background, "PART_Grip.Background"));
+        Assert.All(grips, grip => Assert.Equal(Color.Parse("#A5B2BF"), FleetFlatHeaderTests.SolidColor(grip.Background)));
     }
 
     /// <summary>
@@ -125,7 +136,10 @@ public sealed class ThemeSkinSurfaceRenderTests
             .Where(g => g.Name == "PART_Grip")
             .ToList();
         Assert.NotEmpty(grips);
-        Assert.All(grips, grip => Gradient(grip.Background, "PART_Grip.Background"));
+        // Shaded by the client's default from the theme's colours, then flattened: one colour, no bevel.
+        var face = FleetFlatHeaderTests.SolidColor(grips[0].Background);
+        Assert.All(grips, grip => Assert.Equal(face, FleetFlatHeaderTests.SolidColor(grip.Background)));
+        Assert.Equal("none", ThemeService.AppliedSkin!.Surfaces!.PanelHeader!.Bevel);
     }
 
     /// <summary>Answers for whatever assets a theme declares; a surfaces-only skin needs none.</summary>

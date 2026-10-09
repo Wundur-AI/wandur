@@ -54,7 +54,7 @@ internal static class DefaultSkin
                         Shadow = new WorldThemeSkinShadow { Color = "#000000", Opacity = 0.30, Blur = 4, Y = 2 },
                     },
                 },
-                PanelHeader = new WorldThemeSkinPanelHeader { Height = 38, Inset = new SkinBox(8, 0, 8, 0) },
+                PanelHeader = new WorldThemeSkinPanelHeader { Height = 30, Inset = new SkinBox(8, 0, 8, 0) },
             },
             Surfaces = new WorldThemeSkinSurfaces
             {

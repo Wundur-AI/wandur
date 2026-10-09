@@ -34,10 +34,16 @@ are hosted in that toolbar; custom skins move the same controls to their titleba
 Long System titles yield space to the measured action group. It does not turn Avalonia widgets
 into native AppKit/WinUI controls.
 
-Dock headers share compact controls and palette resources, with 38/30/30-DIP heights
-for Fleet/Armored/System. Side docks join the window edge; floating docks retain
+Dock headers share compact controls and palette resources, 30 DIP tall in every skin
+(Fleet's were 38 until October 2026). Fleet's are flat like System's: one colour, the middle
+of the shading the header had (or a custom theme's chrome colour), with no top highlight,
+inset shadow or bevel, over its rim edge; its band, plaque and toolbar keep their metal. In
+both, the host scopes `DockToolChromeHeaderMargin` so the title row fills the header. Side docks join the window edge; floating docks retain
 native OS captions and compact themed content headers. `SkinnedDockHostWindow`
 subscribes only while open. Skin changes retain the same session and Dock content.
+System headers are flat (`WindowSkinDefinition.FlatPanelHeader`): `ThemeService.FlattenPanelHeader`
+turns the header surface into the panel colour (or a custom theme's chrome colour) with no
+bevel, gloss or grain, and `SystemSkin.axaml` draws one 1-DIP hairline in `LineBrush` under it.
 Armored's `ArmoredDocks.axaml` adds a non-interactive recessed rim and a short
 accent marker bound to the dock's active state. Its host scopes the header and
 toolbar brushes to the panel surface, removing those overrides on other skins.

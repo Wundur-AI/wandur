@@ -25,7 +25,7 @@ internal static class FleetSkin
                     Wings = new() { Extend = 32, Fill = "#D1D3D1", Edge = "#454C50" },
                 },
             },
-            PanelHeader = new() { Height = 38, Inset = new(8, 0, 8, 0) },
+            PanelHeader = new() { Height = 30, Inset = new(8, 0, 8, 0) },
         },
         Surfaces = new()
         {
@@ -84,7 +84,8 @@ internal static class FleetSkin
             resources.Brush("FooterBrush", Toolbar);
         }
         resources.Brush("FleetRimEdgeBrush", RimEdge);
-        resources.Value("FleetHeaderShadow", new BoxShadows(new BoxShadow
+        // A flat header has no top highlight; Armored's own style already clears it.
+        resources.Value("FleetHeaderShadow", ThemeService.ActiveWindowSkin.FlatPanelHeader ? default : new BoxShadows(new BoxShadow
         {
             OffsetY = 1, IsInset = true, Color = ((ISolidColorBrush)RimHighlight).Color
         }));
@@ -142,15 +143,19 @@ internal static class FleetSkin
         return brush;
     }
 
+    private static readonly string[] HeaderKeys = ["DockHeaderBrush", "DockSurfaceHeaderBrush", "DockSurfaceHeaderActiveBrush"];
+
     public static void Apply(ThemeResources resources)
     {
+        // Flat headers keep the single colour ThemeSkinSurfaces painted from the flattened header surface.
+        var flat = ThemeService.ActiveWindowSkin.FlatPanelHeader;
         foreach (var key in new[] { "ChromeBrush", "DockHeaderBrush", "DockSurfaceHeaderBrush", "DockSurfaceHeaderActiveBrush",
                      "DockWindowChromeTitleBarBackgroundBrush", "DockDocumentTabStripBackgroundBrush", "FooterBrush" })
-            resources.Brush(key, ReferenceMetal);
+            if (!flat || !HeaderKeys.Contains(key)) resources.Brush(key, ReferenceMetal);
         resources.Brush("ToolbarBrush", ReferenceToolbar);
         foreach (var key in new[] { "DockHeaderBrush", "DockSurfaceHeaderBrush", "DockSurfaceHeaderActiveBrush",
                      "DockWindowChromeTitleBarBackgroundBrush" })
-            resources.Brush(key, ReferenceDock);
+            if (!flat || !HeaderKeys.Contains(key)) resources.Brush(key, ReferenceDock);
         resources.Color("ToolbarIconBrush", "#36464E");
         resources.Color("WorldSelectionBrush", "#A4DBE6");
         resources.Color("DockHeaderGlyphBrush", "#283942");

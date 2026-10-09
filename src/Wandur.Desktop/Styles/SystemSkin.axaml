@@ -14,6 +14,13 @@
   <Style Selector="local|ThemeDockSkinHost.system dc|ToolChromeControl:pointerover /template/ Path#PART_PinPath, local|ThemeDockSkinHost.system dc|ToolChromeControl:pointerover /template/ Path#PART_ClosePath, local|ThemeDockSkinHost.system dc|ToolChromeControl:pointerover /template/ Path#PART_MenuPath, local|ThemeDockSkinHost.system dc|ToolChromeControl /template/ Button:focus-visible Path">
     <Setter Property="Fill" Value="{DynamicResource TextBrush}" />
   </Style>
+  <!-- Flat headers: the header is the panel colour (ThemeService flattens its surface) and a single hairline in the
+       theme's line colour separates it from the body. No highlight, no inset shadow. -->
+  <Style Selector="local|ThemeDockSkinHost.system dc|ToolChromeControl /template/ Border#PART_Border">
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BoxShadow" Value="0 0 0 0 Transparent" />
+  </Style>
   <Style Selector="local|ThemeDockSkinHost.system dc|ToolChromeControl /template/ TextBlock#PART_Title">
     <Setter Property="FontWeight" Value="Medium" />
     <Setter Property="FontSize" Value="13" />

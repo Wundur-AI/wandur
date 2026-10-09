@@ -9,7 +9,7 @@ namespace Wandur.Desktop.Tests;
 public sealed class WindowSkinDockTests
 {
     [AvaloniaTheory]
-    [InlineData("Fleet", 2, 38)]
+    [InlineData("Fleet", 2, 30)]
     [InlineData("Armored", 1, 30)]
     [InlineData("System", 0, 30)]
     public async Task PanelsUseSelectedMetricsWithoutRebuildingDockTree(string skin, double rim, double header)

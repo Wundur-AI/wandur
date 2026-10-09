@@ -126,7 +126,7 @@ public sealed class FleetPaletteTests
         Assert.Equal("fleet", skin.Layout!.TitleBar!.Plaque!.Shape);
         Assert.Equal(TitleBarMetrics.Fleet.BandHeight, skin.Layout.TitleBar.Height);
         Assert.False(skin.Layout.TitleBar.HostsToolbar);
-        Assert.Equal(38, skin.Layout.PanelHeader!.Height);
+        Assert.Equal(30, skin.Layout.PanelHeader!.Height);
         Assert.Equal(2, skin.Radii!.Panel);
         Assert.Equal(3, skin.Radii.Control);
         Assert.Equal(6, skin.Edge!.Thickness);

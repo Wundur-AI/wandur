@@ -38,7 +38,7 @@ public sealed class WorldThemeDockSkinTests
             Assert.Equal(default, s.Inset);
             Assert.Contains("fleet", s.Classes);
         });
-        Assert.Equal(38d, Application.Current!.Resources["DockHeaderHeight"]);
+        Assert.Equal(30d, Application.Current!.Resources["DockHeaderHeight"]);
         Assert.Equal(new Thickness(8, 0, 8, 0), Application.Current.Resources["DockHeaderMargin"]);
 
         var library = Assert.IsAssignableFrom<IToolDock>(harness.Window.Workspace.WorldsTool!.Owner);

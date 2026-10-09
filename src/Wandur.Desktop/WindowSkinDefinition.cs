@@ -10,10 +10,12 @@ internal sealed record WindowSkinDefinition(string Id, TitleBarMetrics? TitleBar
 {
     internal const double ArmoredRailWidth = 24;
     internal const double ArmoredFootHeight = 30;
-    private static readonly WindowSkinDefinition Fleet = new(WindowSkinId.Fleet, TitleBarMetrics.Fleet, new(6, 0, 6, 6), 38);
+    private static readonly WindowSkinDefinition Fleet = new(WindowSkinId.Fleet, TitleBarMetrics.Fleet, new(6, 0, 6, 6), 30) { FlatPanelHeader = true };
     private static readonly WindowSkinDefinition Armored = new(WindowSkinId.Armored, TitleBarMetrics.Armored,
         new(ArmoredRailWidth, 0, ArmoredRailWidth, ArmoredFootHeight), 30);
-    private static readonly WindowSkinDefinition System = new(WindowSkinId.System, null, default, 30);
+    private static readonly WindowSkinDefinition System = new(WindowSkinId.System, null, default, 30) { FlatPanelHeader = true };
+    /// <summary>Panel headers are one flat colour with no bevel, gloss or grain, over a single rule.</summary>
+    public bool FlatPanelHeader { get; init; }
     public bool IsArmored => Id == WindowSkinId.Armored;
     public bool CustomChrome => TitleBar is not null;
     /// <summary>The title band's height, or zero when the system draws the title bar.</summary>
