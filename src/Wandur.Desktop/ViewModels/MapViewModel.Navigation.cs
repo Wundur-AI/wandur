@@ -38,6 +38,19 @@ public sealed partial class MapViewModel
             return L.Format(L.MapProtocolSummary, State(evidence?.Gmcp ?? TelnetOptionState.Unknown), State(evidence?.Msdp ?? TelnetOptionState.Unknown));
         }
     }
+    /// <summary>The status line's short form: only the protocols the world turned on ("GMCP", "GMCP · MSDP"), or nothing.
+    /// The full negotiation state stays in <see cref="ProtocolStatus"/>, the line's tooltip.</summary>
+    public string ProtocolBadge
+    {
+        get
+        {
+            var evidence = Controller?.ProtocolEvidence;
+            var enabled = new List<string>();
+            if (evidence?.Gmcp == TelnetOptionState.Enabled) enabled.Add("GMCP");
+            if (evidence?.Msdp == TelnetOptionState.Enabled) enabled.Add("MSDP");
+            return string.Join(" · ", enabled);
+        }
+    }
     public string RoomFieldsStatus
     {
         get
@@ -69,7 +82,7 @@ public sealed partial class MapViewModel
     private void RefreshNavigationState()
     {
         OnPropertyChanged(nameof(IsWalking)); OnPropertyChanged(nameof(HasWalkFeedback)); OnPropertyChanged(nameof(NavigationFeedback));
-        OnPropertyChanged(nameof(WalkStatus)); OnPropertyChanged(nameof(ProtocolStatus)); OnPropertyChanged(nameof(RoomFieldsStatus));
+        OnPropertyChanged(nameof(WalkStatus)); OnPropertyChanged(nameof(ProtocolStatus)); OnPropertyChanged(nameof(ProtocolBadge)); OnPropertyChanged(nameof(RoomFieldsStatus));
         WalkRouteCommand.NotifyCanExecuteChanged(); StopWalkingCommand.NotifyCanExecuteChanged();
     }
     public void ImportMap(string json)

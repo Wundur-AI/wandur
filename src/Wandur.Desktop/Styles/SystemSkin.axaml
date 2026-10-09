@@ -1,0 +1,41 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dc="using:Dock.Avalonia.Controls" xmlns:local="using:Wandur.Desktop">
+  <!-- The System skin only: a dock's skin host carries the system class in the main window and in floating dock
+       windows alike (a floating panel's header is not a logical descendant of its host window, so Window classes do
+       not reach it). Fleet and Armored keep their drawn headers. Kept after Fleet.axaml so these win over the shared
+       skin-controls faces. -->
+
+  <!-- Dock headers recede: the three header glyphs are drawn in the secondary text color (still 4.5:1 on the
+       header) and come up to the full text color only while the pointer is over that header or a button has
+       keyboard focus; the title is set at medium rather than semibold weight. -->
+  <Style Selector="local|ThemeDockSkinHost.system dc|ToolChromeControl /template/ Path#PART_PinPath, local|ThemeDockSkinHost.system dc|ToolChromeControl /template/ Path#PART_ClosePath, local|ThemeDockSkinHost.system dc|ToolChromeControl /template/ Path#PART_MenuPath">
+    <Setter Property="Fill" Value="{DynamicResource MutedBrush}" />
+  </Style>
+  <Style Selector="local|ThemeDockSkinHost.system dc|ToolChromeControl:pointerover /template/ Path#PART_PinPath, local|ThemeDockSkinHost.system dc|ToolChromeControl:pointerover /template/ Path#PART_ClosePath, local|ThemeDockSkinHost.system dc|ToolChromeControl:pointerover /template/ Path#PART_MenuPath, local|ThemeDockSkinHost.system dc|ToolChromeControl /template/ Button:focus-visible Path">
+    <Setter Property="Fill" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <Style Selector="local|ThemeDockSkinHost.system dc|ToolChromeControl /template/ TextBlock#PART_Title">
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+
+  <!-- Buttons answer the pointer with a short fade (100 ms, run once per change, never continuous) and sit on a
+       hairline shadow instead of the shared 0 2 3 drop shadow, which read as dated on the flat System surfaces. Every
+       window carries skin-system in this skin (ThemeService marks dialogs too). -->
+  <Style Selector="Window.skin-system Button.app-button, Window.skin-system :is(Button).command-bar-button">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.1" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Window.skin-system Button.app-button /template/ Border#ButtonSurface">
+    <Setter Property="BoxShadow" Value="0 1 1 0 #14000000" />
+  </Style>
+  <Style Selector="Window.skin-system Button.app-button:pressed /template/ Border#ButtonSurface">
+    <Setter Property="BoxShadow" Value="inset 0 1 2 0 #26000000" />
+  </Style>
+  <Style Selector="Window.skin-system Button.app-button:focus-visible /template/ Border#ButtonSurface">
+    <Setter Property="BoxShadow" Value="0 0 0 2 #607F9CC0" />
+  </Style>
+</Styles>

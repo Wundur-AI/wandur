@@ -33,12 +33,16 @@ public sealed class RoomMapControl : Control
     public IBrush CanvasBrush { get => GetValue(CanvasBrushProperty); set => SetValue(CanvasBrushProperty, value); }
     public IBrush GridBrush { get => GetValue(GridBrushProperty); set => SetValue(GridBrushProperty, value); }
     public IBrush SearchHighlightBrush { get => GetValue(SearchHighlightBrushProperty); set => SetValue(SearchHighlightBrushProperty, value); }
-    static RoomMapControl() => AffectsRender<RoomMapControl>(CanvasBrushProperty, GridBrushProperty, SearchHighlightBrushProperty);
+    /// <summary>Readable ink on the map canvas, for the north marker.</summary>
+    public static readonly StyledProperty<IBrush> LabelBrushProperty = AvaloniaProperty.Register<RoomMapControl, IBrush>(nameof(LabelBrush), Brush.Parse("#81D9BE"));
+    public IBrush LabelBrush { get => GetValue(LabelBrushProperty); set => SetValue(LabelBrushProperty, value); }
+    static RoomMapControl() => AffectsRender<RoomMapControl>(CanvasBrushProperty, GridBrushProperty, SearchHighlightBrushProperty, LabelBrushProperty);
     public RoomMapControl()
     {
         this.Bind(CanvasBrushProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("MapCanvasBrush"));
         this.Bind(GridBrushProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("MapGridBrush"));
         this.Bind(SearchHighlightBrushProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("AccentBrush"));
+        this.Bind(LabelBrushProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("MapLabelBrush"));
         GestureRecognizers.Add(new PinchGestureRecognizer());
         AddHandler(InputElement.PinchEvent, OnPinch);
         AddHandler(InputElement.PinchEndedEvent, (_, e) => { _pinchStartZoom = null; e.Handled = true; });
@@ -77,6 +81,8 @@ public sealed class RoomMapControl : Control
         base.Render(context);
         context.FillRectangle(CanvasBrush, new Rect(Bounds.Size));
         _hits.Clear(); _destinationHits.Clear();
+        // Nothing mapped yet: a plain surface under the empty message, without a grid or a north marker for nothing.
+        if (Model.IsEmpty) return;
         var viewport = Model.CreateViewport(Bounds.Width, Bounds.Height);
         var rooms = Model.VisibleRooms;
         var byId = Model.Snapshot.Rooms.ToDictionary(r => r.Id);
@@ -241,9 +247,10 @@ public sealed class RoomMapControl : Control
                 if (byId.TryGetValue(step.FromId, out var from) && byId.TryGetValue(step.ToId, out var to) && visibleIds.Contains(from.Id) && visibleIds.Contains(to.Id))
                     context.DrawLine(new Pen(Amber, 3, DashStyle.Dash), Project(from), Project(to));
         if (_dragPreview is { } ghost) context.DrawRectangle(null, new Pen(Brushes.White, 2, DashStyle.Dash), new Rect(ghost.X-half,ghost.Y-half,half*2,half*2));
-        var north = Text("↑ " + L.MapNorth, Mint, 11);
-        context.FillRectangle(Ground, new Rect(8, 8, north.Width + 16, 26), 5);
-        context.DrawText(north, new Point(16, 13));
+        // The north marker is a quiet chip in the map's own colours: a near-black pill drew the eye on a light map.
+        var north = Text("↑ " + L.MapNorth, LabelBrush, 11);
+        context.DrawRectangle(CanvasBrush, new Pen(GridBrush, 1), new Rect(8.5, 8.5, north.Width + 16, 24), 5, 5);
+        context.DrawText(north, new Point(16.5, 12.5));
     }
 
     private static FormattedText Text(string text, IBrush brush, double size) =>

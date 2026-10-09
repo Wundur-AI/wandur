@@ -146,11 +146,10 @@ public sealed partial class WorldBrowserView : UserControl
         _detailScroll.ScrollChanged += (_, _) => { if (!_closed && !_restoringScroll) _model.DetailScrollOffset = _detailScroll.Offset.Y; };
         _detailPage = _detailScroll;
 
-        var introHeading = DirectoryLook.Label(L.FindYourNextWorld, 30, weight: FontWeight.Bold);
-        introHeading.Bind(TextBlock.TextProperty, LocalizedText.Binding(nameof(L.FindYourNextWorld)));
         var lede = DirectoryLook.Label(L.DirectoryLede, 16, "MutedBrush");
         lede.Bind(TextBlock.TextProperty, LocalizedText.Binding(nameof(L.DirectoryLede)));
-        _intro = new StackPanel { Name = "DirectoryIntro", Spacing = 4, Margin = new Thickness(0, 4, 0, 6), Children = { introHeading, lede } };
+        // The page title is the document header's "Find a MUD"; a second, larger heading under it said the same thing.
+        _intro = new StackPanel { Name = "DirectoryIntro", Spacing = 4, Margin = new Thickness(0, 4, 0, 6), Children = { lede } };
         var footer = new StackPanel { Spacing = 4, Children = { _feedback, _status } };
         var bar = CreateFilterBar();
         var counts = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { _count, _resetFilters } };

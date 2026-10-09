@@ -63,11 +63,20 @@ internal sealed class DirectoryWorldCard : Border
         var pills = new FlowPanel { Name = "DirectoryRowPills", Gap = 6, LineGap = 6 };
         foreach (var pill in top) pills.Children.Add(DirectoryLook.Pill(pill));
         if (world.IsAdult) { var adult = DirectoryLook.Pill(L.AdultChip); adult.Name = "DirectoryRowAdult"; pills.Children.Add(adult); }
-        if (DirectoryLook.OnlineText(world, now ?? DateTimeOffset.UtcNow) is { } online) pills.Children.Add(DirectoryLook.Live(online));
+        // Online status sits at the end of the title line on every row, rather than wherever the tags happened to wrap.
+        var heading = new DockPanel { Name = "DirectoryRowHeading", LastChildFill = true };
+        if (DirectoryLook.OnlineText(world, now ?? DateTimeOffset.UtcNow) is { } online)
+        {
+            var live = DirectoryLook.Live(online);
+            live.Margin = new Thickness(12, 0, 0, 0);
+            DockPanel.SetDock(live, Avalonia.Controls.Dock.Right);
+            heading.Children.Add(live);
+        }
+        heading.Children.Add(title);
         var blurbText = string.IsNullOrWhiteSpace(world.Summary) ? world.Description : world.Summary;
         var blurb = DirectoryLook.Label(blurbText.ReplaceLineEndings(" ").Trim(), 14, "MutedBrush");
         blurb.Name = "DirectoryRowBlurb"; blurb.MaxLines = 2; blurb.TextTrimming = TextTrimming.WordEllipsis; blurb.LineHeight = 20;
-        _copy = new StackPanel { Spacing = 7, VerticalAlignment = VerticalAlignment.Center, Children = { title } };
+        _copy = new StackPanel { Spacing = 7, VerticalAlignment = VerticalAlignment.Center, Children = { heading } };
         if (pills.Children.Count > 0) _copy.Children.Add(pills);
         if (blurbText.Length > 0) _copy.Children.Add(blurb);
         if (world.BeginnerFriendly == true || bottom is not null)

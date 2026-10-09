@@ -21,12 +21,14 @@ public static partial class AppRunner
         var app = appPath ?? Path.Combine(root, "src/Wandur.Desktop/bin/Release/net10.0/Wandur");
         if (!File.Exists(app)) throw new FileNotFoundException("Build the client in Release first", app);
         var results = new List<Run>();
-        var data = Path.Combine(root, ".superpowers/perf", $"data-{scenario}");
+        // WANDUR_BENCH_DATA_ROOT moves the throwaway data folders (relative to the repository root).
+        var dataRoot = Environment.GetEnvironmentVariable("WANDUR_BENCH_DATA_ROOT") is { Length: > 0 } custom ? custom : ".superpowers/perf";
+        var data = Path.Combine(root, dataRoot, $"data-{scenario}");
         if (Directory.Exists(data)) Directory.Delete(data, true);
         for (var i = 0; i < runs; i++)
         {
             var settings = Scenario(scenario);
-            MudServer? mud = settings.Rate is { } rate ? new MudServer(0, rate, chat: settings.Chat) : null;
+            MudServer? mud = settings.Rate is { } rate ? new MudServer(0, rate, chat: settings.Chat, writeMs: settings.WriteMs) : null;
             DirectoryServer? directory = null;
             if (settings.Worlds > 0)
             {
@@ -72,7 +74,7 @@ public static partial class AppRunner
         return results;
     }
 
-    private sealed record Settings(string Mode, int Seconds, int Settle, int Sessions, int? Rate, int Worlds, bool Chat = true);
+    private sealed record Settings(string Mode, int Seconds, int Settle, int Sessions, int? Rate, int Worlds, bool Chat = true, int WriteMs = 100);
 
     private static Settings Scenario(string name) => name switch
     {
@@ -86,6 +88,9 @@ public static partial class AppRunner
         "multi-4-nochat" => new("sessions", 10, 3, 4, 50_000, 0, false),
         "multi-8-idle" => new("sessions", 10, 3, 8, 0, 0),
         "directory" => new("directory", 5, 6, 0, null, 300),
+        // A steady stream (a write every 2 ms) instead of ten bursts a second, as a busy world sends.
+        "steady-1m" => new("sessions", 10, 3, 1, 1_000_000, 0, false, 2),
+        "steady-4x250k" => new("sessions", 10, 3, 4, 250_000, 0, false, 2),
         _ => throw new ArgumentException("Unknown scenario " + name)
     };
 
@@ -149,6 +154,9 @@ public static partial class AppRunner
                 }
             }
         if (artRequests > 0) extra.Add("artRequests=" + artRequests);
+        if (end is { } e && e.TryGetProperty("framesPerSec", out var fps))
+            extra.Add(string.Create(CultureInfo.InvariantCulture,
+                $"frames/s={fps.GetDouble():F1} uiFrames/s={e.GetProperty("uiFramesPerSec").GetDouble():F1} uiRenderMs/s={e.GetProperty("uiRenderMsPerSec").GetDouble():F1} compMs/s={e.GetProperty("compRenderMsPerSec").GetDouble():F1} measures/s={e.GetProperty("measuresPerSec").GetDouble():F1} compUpdates/s={e.GetProperty("compUpdatesPerSec").GetDouble():F1} timers={e.GetProperty("dispatcherTimers").GetInt64()} focus={e.GetProperty("focused").GetString()}"));
         double D(JsonElement? e, string name) => e is { } v ? v.GetProperty(name).GetDouble() : 0;
         int I(JsonElement? e, string name) => e is { } v ? v.GetProperty(name).GetInt32() : 0;
         return new(scenario, index, startup, D(end, "workingSetMb"), footprint, D(after, "gcHeapMb"), D(end, "cpuPercent"), D(end, "allocMbPerSec"),

@@ -28,6 +28,9 @@ public sealed class MapViewTests
         {
             window.Show(); Dispatcher.UIThread.RunJobs();
             Assert.True(window.IsMapVisible);
+            // The status bar shows once there is a room to zoom on (an empty map is only its message).
+            window.Controller.Map.Observe(new RoomObservation("hall", "Copper hall", "A quiet hall.", new Dictionary<string, string?>(), Source: RoomDataSource.Gmcp));
+            Dispatcher.UIThread.RunJobs();
             AssertZoomSliderLayout(window, "docked", null);
         }
         finally
@@ -44,7 +47,9 @@ public sealed class MapViewTests
             foreach (var (theme, captureName) in new[] { ("Ember", "slider-after-dark.png"), ("Paper", "slider-after-light.png") })
             {
                 ThemeService.Apply(new ClientSettings { Theme = theme });
-                var view = new MapView(new MapViewModel(new RoomMapTracker()));
+                var tracker = new RoomMapTracker();
+                tracker.Observe(new RoomObservation("hall", "Copper hall", "A quiet hall.", new Dictionary<string, string?>(), Source: RoomDataSource.Gmcp));
+                var view = new MapView(new MapViewModel(tracker));
                 var themed = new Window { Content = view, Width = 1200, Height = 200 };
                 try
                 {
@@ -108,6 +113,7 @@ public sealed class MapViewTests
     public void MapStatusBarTrimsTheNegotiationTextInsteadOfOverlappingTheSlider()
     {
         var tracker = new RoomMapTracker();
+        tracker.Observe(new RoomObservation("hall", "Copper hall", "A quiet hall.", new Dictionary<string, string?>(), Source: RoomDataSource.Gmcp));
         var model = new MapViewModel(tracker);
         var view = new MapView(model);
         // No Controller is attached, so ProtocolStatus reports "GMCP: Not negotiated / MSDP: Not negotiated",
@@ -409,13 +415,14 @@ public sealed class MapViewTests
             Dispatcher.UIThread.RunJobs();
             Capture(window, "map-recognition-resolved.png");
             window.Sessions.NewTab(); Dispatcher.UIThread.RunJobs();
-            var next = Assert.Single(window.GetVisualDescendants().OfType<MapView>());
+            // Each session keeps its map view, hidden while another session is shown (UI review item 17).
+            var next = Assert.Single(window.GetVisualDescendants().OfType<MapView>(), v => v.IsEffectivelyVisible);
             Assert.NotSame(initial, next);
             Assert.False(next.Model.IsExercise);
             Assert.Empty(next.Model.Snapshot.Rooms);
             window.ToggleMap(); Dispatcher.UIThread.RunJobs(); Assert.False(window.IsMapVisible);
             window.ResetLayout(); Dispatcher.UIThread.RunJobs(); Assert.True(window.IsMapVisible);
-            Assert.Single(window.GetVisualDescendants().OfType<MapView>());
+            Assert.Single(window.GetVisualDescendants().OfType<MapView>(), v => v.IsEffectivelyVisible);
         }
         finally { await window.Sessions.DisposeAsync(); window.Close(); if (Directory.Exists(directory)) Directory.Delete(directory, true); }
     }

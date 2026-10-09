@@ -6,9 +6,9 @@ using Avalonia.Headless;
 using Wandur.Bench;
 
 // Usage (from the repository root; see docs/perf.md):
-//   dotnet run -c Release --project bench/Wandur.Bench -- micro [--label NAME] [--only terminal,display,directory,sessions,thumbnails]
+//   dotnet run -c Release --project bench/Wandur.Bench -- micro [--label NAME] [--only terminal,display,directory,sessions,switch,thumbnails]
 //   dotnet run -c Release --project bench/Wandur.Bench -- app [--label NAME] [--runs N] startup session-idle flood-100k ...
-//   dotnet run -c Release --project bench/Wandur.Bench -- mud-server [--port 4400] [--rate BYTES_PER_SECOND]
+//   dotnet run -c Release --project bench/Wandur.Bench -- mud-server [--port 4400] [--rate BYTES_PER_SECOND] [--write-ms 100] [--nochat]
 //   dotnet run -c Release --project bench/Wandur.Bench -- directory-server [--port 4401] [--worlds 300]
 var root = FindRoot();
 Micro.Root = root;
@@ -35,6 +35,7 @@ switch (command)
             if (only.Contains("terminal")) list.AddRange(Micro.Terminal());
             if (only.Contains("display")) list.AddRange(Micro.Display());
             if (only.Contains("directory")) list.AddRange(await Micro.DirectoryAsync(root));
+            if (only.Contains("switch")) list.Add(await Harness.SwitchAsync());
             if (only.Contains("sessions"))
             {
                 list.Add(await Harness.SessionsAsync(1, 200_000, 8));
@@ -78,7 +79,8 @@ switch (command)
     }
     case "mud-server":
     {
-        await using var server = new MudServer(int.Parse(Option("--port", "4400"), CultureInfo.InvariantCulture), int.Parse(Option("--rate", "0"), CultureInfo.InvariantCulture));
+        await using var server = new MudServer(int.Parse(Option("--port", "4400"), CultureInfo.InvariantCulture), int.Parse(Option("--rate", "0"), CultureInfo.InvariantCulture),
+            chat: !args.Contains("--nochat"), writeMs: int.Parse(Option("--write-ms", "100"), CultureInfo.InvariantCulture));
         Console.WriteLine($"Loopback MUD on 127.0.0.1:{server.Port}; Ctrl+C stops it.");
         await WaitForCancel();
         break;

@@ -26,20 +26,30 @@ public sealed class WorkspaceNavigationView : UserControl
             var title = Ui.Text("", 13);
             title.TextWrapping = TextWrapping.NoWrap; title.TextTrimming = TextTrimming.CharacterEllipsis;
             title.Bind(TextBlock.TextProperty, new Binding(nameof(entry.Title)));
-            var details = Ui.Text("", 10, "muted");
+            var details = Ui.Text("", 11, "muted");
             details.TextWrapping = TextWrapping.NoWrap; details.TextTrimming = TextTrimming.CharacterEllipsis;
             details.Bind(TextBlock.TextProperty, new Binding(nameof(entry.Details)));
-            details.IsVisible = entry.HasDetails;
-            var status = Ui.Text("", 10, "muted");
+            // A small dot beside the state: the live colour while connected, the secondary text colour otherwise.
+            var live = new Avalonia.Controls.Shapes.Ellipse { Width = 6, Height = 6, VerticalAlignment = VerticalAlignment.Center };
+            live.Bind(Avalonia.Controls.Shapes.Shape.FillProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("MutedBrush"));
+            entry.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(entry.IsLive)) PaintLive(); };
+            void PaintLive() => live[!Avalonia.Controls.Shapes.Shape.FillProperty] = new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension(entry.IsLive ? "LiveBrush" : "MutedBrush");
+            PaintLive();
+            var state = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, IsVisible = entry.HasDetails, Children = { live, details } };
+            // New activity in another session is the one thing on this row worth catching the eye: the accent, not grey.
+            var status = Ui.Text("", 10);
             status.Bind(TextBlock.TextProperty, new Binding(nameof(entry.Status)));
+            status.Bind(TextBlock.ForegroundProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("AccentTextBrush"));
+            status.FontWeight = FontWeight.SemiBold; status.VerticalAlignment = VerticalAlignment.Center;
+            status.Bind(IsVisibleProperty, new Binding(nameof(entry.HasActivity)));
             var close = new Button { Content = "×", Command = entry.CloseCommand, IsVisible = entry.CanClose, Name = "CloseWorkspaceItem", VerticalAlignment = VerticalAlignment.Center };
             close.Classes.Add("tab-close");
             close.Bind(ToolTip.TipProperty, LocalizedText.Binding(nameof(L.CloseWorkspaceItem)));
             close.Bind(Avalonia.Automation.AutomationProperties.NameProperty, LocalizedText.Binding(nameof(L.CloseWorkspaceItem)));
-            var text = new StackPanel { Spacing = 3, Children = { title, details } };
+            var text = new StackPanel { Spacing = 3, Children = { title, state } };
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 6, Margin = new Thickness(entry.IsChild ? 16 : 0, 2, 0, 2), Children = { text, status, close } };
             Grid.SetColumn(status, 1); Grid.SetColumn(close, 2);
-            row.Bind(ToolTip.TipProperty, new Binding(nameof(entry.Details)));
+            if (entry.HasDetails) row.Bind(ToolTip.TipProperty, new Binding(nameof(entry.Address)));
             return row;
         });
         list.ContainerPrepared += (_, args) =>
@@ -63,9 +73,10 @@ public sealed class WorkspaceNavigationView : UserControl
         savedToggle.IsCheckedChanged += (_, _) => chevron.Text = savedToggle.IsChecked == true ? "▾" : "▸";
         savedToggle.Bind(Avalonia.Automation.AutomationProperties.NameProperty, LocalizedText.Binding(nameof(L.SavedWorlds)));
         savedToggle.Classes.Add("workspace-nav");
-        library.MinHeight = 120; library.MaxHeight = 320;
+        library.MinHeight = 120;
         library.Bind(IsVisibleProperty, new Binding(nameof(ToggleButton.IsChecked)) { Source = savedToggle });
-        var saved = new StackPanel { Children = { savedToggle, library } };
+        Grid.SetRow(library, 1);
+        var saved = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), Children = { savedToggle, library } };
         var browse = new ToggleButton { Name = "WorkspaceFindMud", Command = model.BrowseCommand, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left };
         browse.Bind(ContentControl.ContentProperty, LocalizedText.Binding(nameof(L.FindAMUD)));
         browse.Classes.Add("workspace-nav");
@@ -88,7 +99,10 @@ public sealed class WorkspaceNavigationView : UserControl
             else if (args.Key == Avalonia.Input.Key.Escape) { model.CancelRenameCommand.Execute(null); args.Handled = true; }
         };
         list.KeyDown += (_, args) => { if (args.Key == Avalonia.Input.Key.F2 && model.Selected?.CanRename == true) { model.Selected.RenameCommand.Execute(null); args.Handled = true; } };
-        var layout = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto,Auto"), Children = { top, list, rename, saved } };
+        // Open sessions sit right under their heading and take what they need (scrolling past a bound); Saved worlds
+        // follow straight after and take the rest, instead of a gap between the two with Saved worlds at the bottom.
+        list.MaxHeight = 280; list.MinHeight = 0;
+        var layout = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*"), Children = { top, list, rename, saved } };
         Grid.SetRow(list, 1); Grid.SetRow(rename, 2); Grid.SetRow(saved, 3); Content = layout;
     }
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e) { base.OnAttachedToVisualTree(e); _model.Attach(); }

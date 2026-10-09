@@ -14,6 +14,8 @@ public sealed partial class WorkspaceController
     private bool _agentOwnsControl;
     private readonly AnsiTerminal _agentTranscript = new(60);
     private string _agentPublicText = "";
+    /// <summary>Output arrived while no agent run was going; the filtered text is rebuilt when one observes.</summary>
+    private bool _agentTextStale;
     private string _agentProtocol = "";
     private long _agentRevision;
     private long _agentGeneration;
@@ -28,12 +30,20 @@ public sealed partial class WorkspaceController
     private void ResetAgentContext(string status = "AgentPaused")
     {
         _agentRunner?.Stop(status); _agentGeneration++;
-        _agentTranscript.Clear(); _agentPublicText = ""; _agentProtocol = ""; _agentRevision++;
+        _agentTranscript.Clear(); _agentPublicText = ""; _agentTextStale = false; _agentProtocol = ""; _agentRevision++;
     }
     private void FeedAgentText(string text)
     {
         if (_agentRunner is null) return;
         _agentTranscript.Append(text);
+        // Rebuilding means every kept line through the channel rules, so it is done per chunk only while a run is
+        // going (its revision checks need it current); otherwise once, when the next run first observes.
+        if (_agentRunner.IsBusy) RebuildAgentText();
+        else _agentTextStale = true;
+    }
+    private void RebuildAgentText()
+    {
+        _agentTextStale = false;
         var plain = _agentTranscript.PlainText;
         // Chat is not useful evidence that a movement or command completed.
         plain = string.Join('\n', plain.Split('\n').Where(line => !IsChat(line)));
@@ -68,6 +78,7 @@ public sealed partial class WorkspaceController
         public AgentObservation Observe()
         {
             owner.FlushOutput();
+            if (owner._agentTextStale) owner.RebuildAgentText();
             return new(owner._agentRevision, owner._agentGeneration,
                 owner._agentProtocol + "\nRecent world output:\n" + owner._agentPublicText,
                 owner.IsConnected && !owner.IsConnecting && !owner._disposed && !owner.IsPrivate && owner._login is null && owner._session is not Wandur.Core.Sessions.TelnetSession { RemoteEcho: true });

@@ -55,7 +55,7 @@ public sealed partial class WorkspaceFactory(SessionWorkspace sessions, Action e
         UpdateDocumentTabs();
         var library = WorldsTool = new WorkspaceTool { Id = "worlds", Title = L.Workspace, CanClose = true, Build = () => new WorkspaceNavigationView(Navigation, new WorldLibraryView(sessions, editWorld, browseWorlds, editProfile)) };
         MapTool = new WorkspaceTool { Id = "map", Title = L.Map, CanClose = true, Build = () => new ActiveSessionView(sessions, controller => new MapView(controller, source => OpenMapEditor(controller, source))) };
-        ChannelsTool = new WorkspaceTool { Id = "channels", Title = L.Channels, CanClose = true, Build = () => new ActiveSessionView(sessions, controller => new ChannelsView(new ChannelsViewModel(controller))) };
+        ChannelsTool = new WorkspaceTool { Id = "channels", Title = L.Channels, CanClose = true, Build = () => new ActiveSessionView(sessions, controller => new ChannelsView(controller.ChannelPanel)) };
         var session = _sessionDocument = new SessionDocument { Id = "session", Title = L.Session, CanClose = false, CanFloat = false, Sessions = sessions, Catalog = catalog, EditAutomation = editAutomation, Selected = () => { SelectedKey = sessions.IsBrowsing ? SearchKey : sessions.Active; Navigation.Refresh(); } };
         var documents = _documents = new DocumentDock { Id = "documents", CanCreateDocument = false, VisibleDockables = CreateList<IDockable>(session), ActiveDockable = session, Proportion = 0.59 };
         var left = _libraryDock = new ToolDock { Id = "left", Alignment = Alignment.Left, Proportion = 0.18, VisibleDockables = CreateList<IDockable>(library), ActiveDockable = library };

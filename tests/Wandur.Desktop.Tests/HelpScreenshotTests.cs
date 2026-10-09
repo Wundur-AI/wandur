@@ -264,7 +264,9 @@ public sealed class HelpScreenshotTests
         messages.SelectedItem = model.Entries.First(e => e.Content?.Name == "Comm.Channel.Text"); HelpCapture.Settle(window);
         Assert.Contains("\"talker\"", diagnostics.GetVisualDescendants().OfType<DiagnosticsBodyEditor>().First(e => e.IsEffectivelyVisible).Document.Text);
         var status = Single<TextBlock>(Single<MapView>(window), "MapProtocolStatus");
-        Assert.Contains("GMCP: " + L.MapProtocolEnabled, status.Text);
+        // The status line names the protocols in use; the full negotiation state is its tooltip (UI review item 15).
+        Assert.Equal("GMCP", status.Text);
+        Assert.Contains("GMCP: " + L.MapProtocolEnabled, Single<MapView>(window).Model.ProtocolStatus);
         Assert.True(model.Visible.Count >= 10);
         HelpCapture.Window(window, "help-troubleshooting-diagnostics.png");
         messages.SelectedItem = null; model.Follow = true;

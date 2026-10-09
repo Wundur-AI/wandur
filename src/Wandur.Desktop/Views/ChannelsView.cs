@@ -21,17 +21,23 @@ namespace Wandur.Desktop.Views;
 /// The docked Channels panel. It mirrors what the classifier recognized: the transcript still holds every
 /// line, and this shows a copy of the conversation, one tab per channel, with a box to answer on it.
 /// </summary>
-public sealed class ChannelsView : UserControl
+public sealed class ChannelsView : UserControl, ISessionPanel
 {
+    private ChannelMessageList? _messages;
+    /// <summary>While another session is in front, the rows wait and catch up when this panel is shown again.</summary>
+    public void SetShown(bool shown) => _messages?.SetShown(shown);
     public ChannelsViewModel Model { get; }
 
     public ChannelsView(ChannelsViewModel model)
     {
         Model = model; DataContext = model;
         Name = "ChannelsView";
-        var note = Ui.TextKey(nameof(L.ChannelsMirrorNote), 11, "muted");
+        var note = Ui.TextKey(nameof(L.ChannelsMirrorNote), 12, "muted");
         note.Name = "ChannelsMirrorNote";
-        note.Margin = new Thickness(10, 8);
+        note.Margin = new Thickness(24);
+        // Before the first message the panel shows this note, centred, and no reply bar, which has nothing to answer yet.
+        note.HorizontalAlignment = HorizontalAlignment.Center; note.VerticalAlignment = VerticalAlignment.Center;
+        note.TextAlignment = TextAlignment.Center; note.TextWrapping = TextWrapping.Wrap; note.MaxWidth = 260;
         note.Bind(IsVisibleProperty, new Binding(nameof(model.IsMirrorNoteVisible)));
         var tabs = new ListBox
         {
@@ -41,7 +47,7 @@ public sealed class ChannelsView : UserControl
         };
         tabs.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(model.Tabs)));
         tabs.Bind(SelectingItemsControl.SelectedIndexProperty, new Binding(nameof(model.SelectedIndex)) { Mode = BindingMode.TwoWay });
-        var messages = new ChannelMessageList(model) { Name = "ChannelMessages" };
+        var messages = _messages = new ChannelMessageList(model) { Name = "ChannelMessages" };
         var reply = new TextBox { Name = "ChannelReply", MaxLength = 1024, FontSize = 13, MinHeight = 36, AcceptsReturn = false };
         // The reply bar sits on the transcript surface, so the field takes the terminal's own field chrome
         // and placeholder. With the chrome placeholder it was a light-chrome grey on a dark transcript.
@@ -73,8 +79,10 @@ public sealed class ChannelsView : UserControl
         replyRow.Bind(Border.BorderBrushProperty, new DynamicResourceExtension("LineBrush"));
         var header = Ui.Toolbar(tabs, "ChannelsToolbar");
         header.Padding = new Thickness(4, 2);
-        Grid.SetRow(note, 1); Grid.SetRow(messages, 2); Grid.SetRow(replyRow, 3);
-        var body = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto"), Children = { header, note, messages, replyRow } };
+        var notEmpty = new Binding(nameof(model.IsEmpty)) { Converter = Avalonia.Data.Converters.BoolConverters.Not };
+        replyRow.Bind(IsVisibleProperty, notEmpty);
+        Grid.SetRow(note, 2); Grid.SetRow(messages, 2); Grid.SetRow(replyRow, 3);
+        var body = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto"), Children = { header, messages, note, replyRow } };
         body.Bind(BackgroundProperty, new DynamicResourceExtension("ChannelBodyBrush"));
         Content = body;
     }
@@ -109,9 +117,9 @@ public sealed class ChannelsView : UserControl
 internal sealed class ChannelMessageList : Border
 {
     private readonly ChannelsViewModel _model;
-    private readonly StackPanel _rows = new() { Spacing = 3, Margin = new Thickness(10, 6) };
+    private readonly StackPanel _rows = new() { Spacing = 6, Margin = new Thickness(12, 10, 12, 12) };
     private readonly ScrollViewer _viewer;
-    private static readonly StyledProperty<IBrush?> MutedProperty = AvaloniaProperty.Register<ChannelMessageList, IBrush?>("Muted");
+    internal static readonly StyledProperty<IBrush?> MutedProperty = AvaloniaProperty.Register<ChannelMessageList, IBrush?>("Muted");
     private readonly List<IDisposable> _bindings = [];
     private System.Collections.Specialized.INotifyCollectionChanged? _watched;
     private bool _follow = true;
@@ -126,27 +134,67 @@ internal sealed class ChannelMessageList : Border
         _bindings.Add(this.Bind(TextElement.ForegroundProperty, new DynamicResourceExtension("TerminalTextBrush")));
         _bindings.Add(this.Bind(MutedProperty, new DynamicResourceExtension("MutedBrush")));
         TerminalPalette.Bind(this, _bindings);
-        _viewer.ScrollChanged += (_, _) =>
+        _viewer.ScrollChanged += (_, e) =>
+        {
+            // New rows grow the extent after the follow request ran, which left the newest message half under the reply
+            // bar. While following, a grown extent scrolls on to the end; only the reader's own scrolling changes _follow.
+            if (_follow && (e.ExtentDelta.Y != 0 || e.ViewportDelta.Y != 0)) { _viewer.ScrollToEnd(); return; }
             _follow = _viewer.Offset.Y >= _viewer.Extent.Height - _viewer.Viewport.Height - 2;
+        };
     }
 
     /// <summary>The text on screen, one entry per message.</summary>
-    public IReadOnlyList<string> Rows =>
-        [.. _rows.Children.OfType<TextBlock>().Select(block => string.Concat(block.Inlines!.OfType<Run>().Select(run => run.Text)))];
+    public IReadOnlyList<string> Rows => [.. _rows.Children.OfType<ChannelRow>().Select(row => row.Text)];
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
         _model.PropertyChanged += ModelChanged;
-        ThemeService.Applied += Rebuild;
+        ThemeService.Applied += ThemeApplied;
         Watch();
-        Rebuild();
+        CatchUp();
+    }
+
+    private bool _shown = true;
+
+    // A hidden panel takes the new palette when it is shown again (CatchUp sees the generation change).
+    private void ThemeApplied() { if (_shown) Rebuild(); }
+
+    /// <summary>A hidden panel (another session in front) adds no rows, which would still cost frames; it catches up,
+    /// row by row, when it is shown again.</summary>
+    public void SetShown(bool shown)
+    {
+        if (_shown == shown) return;
+        _shown = shown;
+        if (shown && _watched is not null) CatchUp();
+    }
+
+    /// <summary>
+    /// Brings the rows level with the messages after a pause: drops the rows of messages trimmed from the front, refills
+    /// the last row if a wrapped tail replaced its message, and appends the rest. Rebuilds only when the rows cannot be
+    /// lined up (another tab, a palette change, or more than a whole tab of new messages).
+    /// </summary>
+    private void CatchUp()
+    {
+        var messages = _model.Selected.Messages;
+        var rows = _rows.Children;
+        if (rows.Count == 0 || _builtForTheme != _themeGeneration) { Rebuild(); return; }
+        var first = ((ChannelRow)rows[0]).Message;
+        var start = -1;
+        for (var i = 0; i < messages.Count; i++) if (ReferenceEquals(messages[i], first)) { start = i; break; }
+        if (start < 0 || start + rows.Count > messages.Count + 1) { Rebuild(); return; }
+        for (var i = 0; i < start; i++) rows.RemoveAt(0);
+        for (var i = 0; i < rows.Count; i++)
+            if (i < messages.Count && !ReferenceEquals(((ChannelRow)rows[i]).Message, messages[i])) ((ChannelRow)rows[i]).Fill(messages[i], this);
+        while (rows.Count > messages.Count) rows.RemoveAt(rows.Count - 1);
+        for (var i = rows.Count; i < messages.Count; i++) { var row = new ChannelRow(); row.Fill(messages[i], this); rows.Add(row); }
+        FollowIfAtEnd();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         _model.PropertyChanged -= ModelChanged;
-        ThemeService.Applied -= Rebuild;
+        ThemeService.Applied -= ThemeApplied;
         if (_watched is not null) _watched.CollectionChanged -= Arrived;
         _watched = null;
         base.OnDetachedFromVisualTree(e);
@@ -154,6 +202,7 @@ internal sealed class ChannelMessageList : Border
 
     private void ModelChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (!_shown) return;
         if (e.PropertyName is not (nameof(ChannelsViewModel.SelectedIndex) or nameof(ChannelsViewModel.IsEmpty))) return;
         // IsEmpty is announced on every refresh of the model (each output flush). The rows already follow the shown
         // tab's messages through Arrived, so only another tab, or rows that no longer match, need a rebuild.
@@ -179,21 +228,22 @@ internal sealed class ChannelMessageList : Border
     /// </summary>
     private void Arrived(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        if (!_shown) return;
         var messages = _model.Selected.Messages;
         if (!ReferenceEquals(sender, messages)) { Rebuild(); return; }
         var rows = _rows.Children;
         switch (e.Action)
         {
             case NotifyCollectionChangedAction.Add when e.NewItems is { Count: 1 } && e.NewStartingIndex == rows.Count && rows.Count + 1 == messages.Count:
-                var row = NewRow();
-                Fill(row, messages[e.NewStartingIndex]);
+                var row = new ChannelRow();
+                row.Fill(messages[e.NewStartingIndex], this);
                 rows.Add(row);
                 break;
             case NotifyCollectionChangedAction.Remove when e.OldItems is { Count: 1 } && e.OldStartingIndex >= 0 && e.OldStartingIndex < rows.Count && rows.Count == messages.Count + 1:
                 rows.RemoveAt(e.OldStartingIndex);
                 break;
             case NotifyCollectionChangedAction.Replace when e.NewItems is { Count: 1 } && e.NewStartingIndex >= 0 && e.NewStartingIndex < rows.Count && rows.Count == messages.Count:
-                Fill((TextBlock)rows[e.NewStartingIndex], messages[e.NewStartingIndex]);
+                ((ChannelRow)rows[e.NewStartingIndex]).Fill(messages[e.NewStartingIndex], this);
                 break;
             default:
                 Rebuild();
@@ -202,12 +252,18 @@ internal sealed class ChannelMessageList : Border
         FollowIfAtEnd();
     }
 
+    // A palette applied while a cached panel was off screen is caught on its return.
+    private static int _themeGeneration;
+    private int _builtForTheme = -1;
+    static ChannelMessageList() => ThemeService.Applied += () => _themeGeneration++;
+
     private void Rebuild()
     {
+        _builtForTheme = _themeGeneration;
         var messages = _model.Selected.Messages;
         while (_rows.Children.Count > messages.Count) _rows.Children.RemoveAt(_rows.Children.Count - 1);
-        while (_rows.Children.Count < messages.Count) _rows.Children.Add(NewRow());
-        for (var i = 0; i < messages.Count; i++) Fill((TextBlock)_rows.Children[i], messages[i]);
+        while (_rows.Children.Count < messages.Count) _rows.Children.Add(new ChannelRow());
+        for (var i = 0; i < messages.Count; i++) ((ChannelRow)_rows.Children[i]).Fill(messages[i], this);
         FollowIfAtEnd();
     }
 
@@ -216,25 +272,7 @@ internal sealed class ChannelMessageList : Border
         if (_follow) Avalonia.Threading.Dispatcher.UIThread.Post(_viewer.ScrollToEnd, Avalonia.Threading.DispatcherPriority.Background);
     }
 
-    private static TextBlock NewRow() => new()
-    {
-        FontFamily = new FontFamily(TerminalPalette.Monospace), FontSize = 14,
-        TextWrapping = TextWrapping.Wrap, Inlines = []
-    };
-
-    private void Fill(TextBlock block, ChannelMessage message)
-    {
-        var inlines = block.Inlines!;
-        inlines.Clear();
-        var stamp = new Run(message.Timestamp.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture) + " ") { FontSize = 12 };
-        if (GetValue(MutedProperty) is { } muted) stamp.Foreground = muted;
-        inlines.Add(stamp);
-        if (message.Speaker.Length > 0) inlines.Add(new Run(message.Speaker + ": ") { FontWeight = FontWeight.Bold });
-        foreach (var run in message.Runs) inlines.Add(Styled(run));
-        if (message.Runs.Count == 0) inlines.Add(new Run(message.Text));
-    }
-
-    private Run Styled(Wandur.Core.Terminal.TextRun run)
+    internal Run Styled(Wandur.Core.Terminal.TextRun run)
     {
         var span = new Run(run.Text);
         if (TerminalPalette.Resolve(this, run.Style.ForegroundIndex, run.Style.Foreground) is { } foreground) span.Foreground = foreground;
@@ -243,5 +281,38 @@ internal sealed class ChannelMessageList : Border
         if (run.Style.Italic) span.FontStyle = FontStyle.Italic;
         if (run.Style.Underline) span.TextDecorations = TextDecorations.Underline;
         return span;
+    }
+}
+
+/// <summary>
+/// One channel message: the time in a narrow muted column and the message beside it, so wrapped lines start under the
+/// text rather than under the time. Chat is prose, so it is set in the interface font rather than the transcript's
+/// monospace, with the world's colors kept on each run.
+/// </summary>
+internal sealed class ChannelRow : DockPanel
+{
+    private readonly TextBlock _time = new() { FontSize = 11, Margin = new Thickness(0, 3, 8, 0), VerticalAlignment = VerticalAlignment.Top };
+    private readonly TextBlock _message = new() { FontSize = 13, LineHeight = 18, TextWrapping = TextWrapping.Wrap, Inlines = [] };
+
+    public ChannelRow()
+    {
+        SetDock(_time, Avalonia.Controls.Dock.Left);
+        Children.Add(_time);
+        Children.Add(_message);
+    }
+
+    public string Text => _time.Text + " " + string.Concat(_message.Inlines!.OfType<Run>().Select(run => run.Text));
+    public ChannelMessage? Message { get; private set; }
+
+    public void Fill(ChannelMessage message, ChannelMessageList owner)
+    {
+        Message = message;
+        _time.Text = message.Timestamp.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture);
+        _time.Foreground = owner.GetValue(ChannelMessageList.MutedProperty);
+        var inlines = _message.Inlines!;
+        inlines.Clear();
+        if (message.Speaker.Length > 0) inlines.Add(new Run(message.Speaker + ": ") { FontWeight = FontWeight.SemiBold });
+        foreach (var run in message.Runs) inlines.Add(owner.Styled(run));
+        if (message.Runs.Count == 0) inlines.Add(new Run(message.Text));
     }
 }

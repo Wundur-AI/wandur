@@ -210,7 +210,8 @@ public sealed class ChannelPanelTests
             await world.Output("[OOC] Aldric: \u001b[31manyone selling a lantern?\u001b[0m\r\n");
             window.UpdateLayout();
             var list = Messages(window);
-            var block = Assert.Single(list.GetVisualDescendants().OfType<TextBlock>());
+            // A row is the time and the message beside it; the message block carries the runs.
+            var block = Assert.Single(list.GetVisualDescendants().OfType<TextBlock>(), t => t.Inlines is { Count: > 0 });
             var body = block.Inlines!.OfType<Run>().Last();
             Assert.Equal("anyone selling a lantern?", body.Text);
             var before = Of(body.Foreground);
@@ -218,7 +219,7 @@ public sealed class ChannelPanelTests
 
             world.Controller.SaveSettings(world.Controller.Settings with { Theme = "Paper" });
             Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
-            var after = Of(Assert.Single(Messages(window).GetVisualDescendants().OfType<TextBlock>()).Inlines!.OfType<Run>().Last().Foreground);
+            var after = Of(Assert.Single(Messages(window).GetVisualDescendants().OfType<TextBlock>(), t => t.Inlines is { Count: > 0 }).Inlines!.OfType<Run>().Last().Foreground);
             Assert.NotEqual(before, after);
             Assert.NotEqual(backgroundBefore, Of(Messages(window).Background));
         }

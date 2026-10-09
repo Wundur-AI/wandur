@@ -17,13 +17,16 @@ public sealed class MudServer : IAsyncDisposable
     private readonly int _bytesPerSecond;
     private readonly long _limitBytes;
     private readonly bool _chat;
+    private readonly int _writeMs;
     private readonly Task _accept;
     private long _sent;
     private int _clients;
 
-    public MudServer(int port, int bytesPerSecond, long limitBytes = long.MaxValue, bool chat = true)
+    /// <param name="writeMs">Time between writes: 100 (ten bursts a second) by default; 2 gives a steady stream, like a busy
+    /// world, which is what a redraw cap is for.</param>
+    public MudServer(int port, int bytesPerSecond, long limitBytes = long.MaxValue, bool chat = true, int writeMs = 100)
     {
-        _bytesPerSecond = bytesPerSecond; _limitBytes = limitBytes; _chat = chat;
+        _bytesPerSecond = bytesPerSecond; _limitBytes = limitBytes; _chat = chat; _writeMs = Math.Max(1, writeMs);
         _listener = new TcpListener(IPAddress.Loopback, port);
         _listener.Start();
         Port = ((IPEndPoint)_listener.LocalEndpoint).Port;
@@ -74,20 +77,21 @@ public sealed class MudServer : IAsyncDisposable
                 }
                 return;
             }
-            // Ten writes a second, each worth a tenth of the rate, paced against a clock so a slow reader does not drift.
+            // One write per interval (ten a second by default), each worth what is due, paced against a clock so a slow
+            // reader does not drift.
             var clock = Stopwatch.StartNew();
             var pending = new StringBuilder();
             while (!token.IsCancellationRequested && sentHere < _limitBytes)
             {
                 var due = (long)(clock.Elapsed.TotalSeconds * _bytesPerSecond) - sentHere;
-                if (due <= 0) { await Task.Delay(10, token); continue; }
+                if (due <= 0) { await Task.Delay(Math.Min(10, _writeMs), token); continue; }
                 pending.Clear();
                 while (pending.Length < due) pending.Append(generator.NextLine());
                 var bytes = Encoding.UTF8.GetBytes(pending.ToString());
                 await stream.WriteAsync(bytes, token);
                 sentHere += bytes.Length;
                 Interlocked.Add(ref _sent, bytes.Length);
-                await Task.Delay(100, token);
+                await Task.Delay(_writeMs, token);
             }
             while (!token.IsCancellationRequested) await Task.Delay(1000, token);
         }

@@ -63,7 +63,7 @@ public sealed class ComposerCompletionTests
             Type(window, input, "wom");
             Assert.True(ghost.IsVisible);
             Assert.Equal("prat", ghost.Text);
-            Assert.Equal(Strings.CommandHintTabComplete, hint.Text);
+            Assert.Equal(Strings.CommandHintTabComplete, hint.Text); Assert.True(hint.IsVisible);
             // The ghost sits inside the box, after the typed text, at the box's font size.
             var origin = ghost.TranslatePoint(new Point(0, 0), input);
             Assert.NotNull(origin);
@@ -81,7 +81,8 @@ public sealed class ComposerCompletionTests
             Assert.True(input.IsFocused);
             Assert.False(ghost.IsVisible);
             Assert.Equal(sent, controller.CommandsSent);
-            Assert.Equal(Strings.CommandHistoryEnterSend, hint.Text);
+            // With nothing to say the footer hint is empty and hidden; the standing help is the Send button's tooltip.
+            Assert.Equal("", hint.Text); Assert.False(hint.IsVisible);
 
             // A sent command becomes a line to complete, and the line wins over the word.
             input.Text = "";
@@ -99,7 +100,8 @@ public sealed class ComposerCompletionTests
             Press(window, PhysicalKey.Escape);
             Assert.False(ghost.IsVisible);
             Assert.Equal("loo", input.Text);
-            Assert.Equal(Strings.CommandHistoryEnterSend, hint.Text);
+            // With nothing to say the footer hint is empty and hidden; the standing help is the Send button's tooltip.
+            Assert.Equal("", hint.Text); Assert.False(hint.IsVisible);
             Type(window, input, "k");
             Assert.True(ghost.IsVisible);
             Assert.Equal(" womprat", ghost.Text);

@@ -63,10 +63,10 @@ Version 0.1</value>
     <value>Session</value>
   </data>
   <data name="ChooseAWorld" xml:space="preserve">
-    <value>Choose a world…</value>
+    <value>World or host:port…</value>
   </data>
   <data name="ChooseASavedWorldToOpenInASession" xml:space="preserve">
-    <value>Choose a saved world to open in a session tab</value>
+    <value>Choose a saved world, or type host:port and press Enter to connect</value>
   </data>
   <data name="Connect" xml:space="preserve">
     <value>▶  Connect</value>
@@ -91,9 +91,6 @@ Version 0.1</value>
   </data>
   <data name="SearchTheDirectoryForAMUDServer" xml:space="preserve">
     <value>Search the directory for a MUD server</value>
-  </data>
-  <data name="CtrlTabSwitchSessionsDragPanelHeadersToArrange" xml:space="preserve">
-    <value>Ctrl+Tab  switch workspace views   ·   Drag panel headers to arrange</value>
   </data>
   <data name="Done" xml:space="preserve">
     <value>Done</value>
@@ -558,7 +555,7 @@ Exits: north · east
     <value>Close session</value>
   </data>
   <data name="SearchWorldsThemesOrAnAddress" xml:space="preserve">
-    <value>Search worlds, themes, or an address…</value>
+    <value>Search worlds or an address…</value>
   </data>
   <data name="AllWorlds" xml:space="preserve">
     <value>All worlds</value>
@@ -577,9 +574,6 @@ Exits: north · east
   </data>
   <data name="FindAMUDWandur" xml:space="preserve">
     <value>Find a MUD · Wandur</value>
-  </data>
-  <data name="FindYourNextWorld" xml:space="preserve">
-    <value>Browse MUDs</value>
   </data>
   <data name="SearchMUDServersByNameThemeLanguageOrAddress" xml:space="preserve">
     <value>Search MUD servers by name, theme, language, or address.</value>
@@ -1884,7 +1878,9 @@ Stop after receiving one inventory listing.</value></data>
   <data name="HistoryRecordingNotice" xml:space="preserve"><value>Session history is saved on this device. Change recording and retention in Settings.</value></data>
   <data name="HistoryLocalNotice" xml:space="preserve"><value>Local history uses 30-day retention by default. Change recording and retention in Settings. Privacy filtering is best-effort. No history or protocol data is uploaded.</value></data>
   <data name="HistoryQuery" xml:space="preserve"><value>Words or "quoted phrase"</value></data>
-  <data name="HistorySearch" xml:space="preserve"><value>Search / refresh</value></data>
+  <data name="HistorySearch" xml:space="preserve">
+    <value>Search</value>
+  </data>
   <data name="HistoryWorld" xml:space="preserve"><value>World name or endpoint</value></data>
   <data name="HistoryCharacter" xml:space="preserve"><value>Character</value></data>
   <data name="HistoryFrom" xml:space="preserve"><value>From date</value></data>
@@ -1980,4 +1976,19 @@ Stop after receiving one inventory listing.</value></data>
   <data name="CheckForUpdatesAutomaticallyHint" xml:space="preserve"><value>Once a day the client asks wandur.net whether a newer version is out and, if so, shows a notice. It never downloads or installs anything by itself.</value></data>
   <data name="SendInstallId" xml:space="preserve"><value>Send an anonymous install id so wandur.net can count installs</value></data>
   <data name="SendInstallIdHint" xml:space="preserve"><value>A random number made once for this installation, sent with the client's requests to wandur.net (the directory, artwork and update checks) and nowhere else. It says nothing about you or this computer. Turn it off and the client sends no id.</value></data>
+  <data name="DockGripTip" xml:space="preserve">
+    <value>Drag to move or undock this panel</value>
+  </data>
+  <data name="DockCloseTip" xml:space="preserve">
+    <value>Close panel · reopen from the View menu</value>
+  </data>
+  <data name="DockClosePanel" xml:space="preserve">
+    <value>Close panel</value>
+  </data>
+  <data name="HistoryAnyDate" xml:space="preserve">
+    <value>Any date</value>
+  </data>
+  <data name="QuickCommandSendTip" xml:space="preserve">
+    <value>Send: {0}</value>
+  </data>
 </root>

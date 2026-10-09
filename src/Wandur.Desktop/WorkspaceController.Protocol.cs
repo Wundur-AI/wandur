@@ -31,6 +31,7 @@ public sealed partial class WorkspaceController
             _pending.Enqueue((session, "", epoch, new(ScriptPromptKind, text), null, -1));
             _pendingCharacters += text.Length;
         }
+        RequestOutputFlush();
     }
 
     /// <summary>The server's MSSP self-description for this session, or null when it sent none.</summary>

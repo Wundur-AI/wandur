@@ -94,6 +94,40 @@ public static class Harness
         }
     }
 
+    /// <summary>
+    /// Switching the active session: two sessions that each took in about 300 KB of chatty output (so the Channels panel
+    /// has a full history), then the active tab alternates between them. Each switch runs the dispatcher's queued work and
+    /// a layout pass of the window, which is what the user waits for before the panels show the other world.
+    /// </summary>
+    public static async Task<Measurement> SwitchAsync()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "wandur-bench-switch-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        await using var server = new MudServer(0, 400_000, limitBytes: 300_000, chat: true);
+        var window = Window(Path.Combine(folder, "settings.json"), new WorldCatalog(Path.Combine(folder, "directory.json"), new Uri("http://127.0.0.1:9/")));
+        try
+        {
+            window.Width = 1440; window.Height = 900;
+            for (var i = 0; i < 2; i++)
+                await window.Sessions.OpenAsync(new ConnectionProfile { Name = $"Bench {i + 1}", Host = "127.0.0.1", Port = server.Port });
+            await Wait(TimeSpan.FromSeconds(3));
+            var tabs = window.Sessions.Tabs.ToArray();
+            var n = 0;
+            return Micro.Time("Switch the active session (2 sessions, channel history, 1440 by 900)", "switch", 9, 10, () =>
+            {
+                window.Sessions.Select(tabs[n++ % tabs.Length]);
+                Dispatcher.UIThread.RunJobs();
+                window.UpdateLayout();
+            }, $"{server.BytesSent / 1024} KB sent");
+        }
+        finally
+        {
+            window.Close();
+            await Wait(TimeSpan.FromSeconds(1));
+            try { Directory.Delete(folder, true); } catch { }
+        }
+    }
+
     /// <summary>Lets the headless dispatcher run its timers (the 60 ms output flush) for a while.</summary>
     internal static async Task Wait(TimeSpan time)
     {

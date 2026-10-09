@@ -4,6 +4,7 @@
 Usage: python3 bench/summarize.py FILE.json [FILE.json ...]
 """
 import json
+import re
 import statistics
 import sys
 from collections import OrderedDict
@@ -14,7 +15,12 @@ columns = [("StartupMs", "Startup ms", 0), ("WorkingSetMb", "Working set MB", 0)
 groups = OrderedDict()
 for path in sys.argv[1:]:
     for run in json.load(open(path)):
+        # Frames drawn per second, when the probe counted them (recorded in Extra).
+        match = re.search(r"frames/s=([0-9.]+)", run.get("Extra", ""))
+        run["FramesPerSec"] = float(match.group(1)) if match else float("nan")
         groups.setdefault(run["Scenario"], []).append(run)
+if any(r["FramesPerSec"] == r["FramesPerSec"] for runs in groups.values() for r in runs):
+    columns.append(("FramesPerSec", "Frames/s", 1))
 print("| Scenario | Runs | " + " | ".join(c[1] for c in columns) + " |")
 print("|---|---:|" + "---:|" * len(columns))
 for scenario, runs in groups.items():

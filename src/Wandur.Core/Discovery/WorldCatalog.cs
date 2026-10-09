@@ -174,16 +174,38 @@ public sealed partial class WorldCatalog : IWorldDirectory, IDisposable
     public IReadOnlyList<WorldListing> Search(string? query)
     {
         var terms = Normalize(query ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (terms.Length == 0) return Worlds;
-        return Worlds.Select(w => (World: w, Score: Score(w, terms))).Where(x => x.Score > 0)
-            .OrderByDescending(x => x.Score).ThenBy(x => x.World.Name).Select(x => x.World).ToArray();
+        var worlds = Worlds;
+        if (terms.Length == 0) return worlds;
+        var index = SearchIndex(worlds);
+        var scored = new List<(WorldListing World, int Score)>();
+        for (var i = 0; i < worlds.Count; i++)
+            if (Score(index[i], terms) is var score and > 0) scored.Add((worlds[i], score));
+        return scored.OrderByDescending(x => x.Score).ThenBy(x => x.World.Name).Select(x => x.World).ToArray();
     }
     private static string Normalize(string text) => Regex.Replace(text.ToLowerInvariant(), @"[^\p{L}\p{N}]+", " ", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
-    private static int Score(WorldListing world, string[] terms)
+
+    /// <summary>A world's searchable text, normalized once per catalog instead of on every query.</summary>
+    private sealed record SearchText(string Name, string Tags, string Host, string Details, string[] Words);
+    // One reference, so a search on another thread sees either the old index or the new one, never half of each.
+    private sealed record Indexed(IReadOnlyList<WorldListing> Worlds, SearchText[] Index);
+    private Indexed? _searchIndex;
+    private SearchText[] SearchIndex(IReadOnlyList<WorldListing> worlds)
     {
-        var name = Normalize(world.Name); var tags = Normalize(world.SearchTags); var host = Normalize($"{world.Host} {world.Port} {world.TlsPort}");
-        var details = Normalize(world.Summary + " " + world.Description);
-        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (_searchIndex is { } cached && ReferenceEquals(cached.Worlds, worlds)) return cached.Index;
+        var index = new SearchText[worlds.Count];
+        for (var i = 0; i < index.Length; i++)
+        {
+            var world = worlds[i];
+            var name = Normalize(world.Name);
+            index[i] = new(name, Normalize(world.SearchTags), Normalize($"{world.Host} {world.Port} {world.TlsPort}"),
+                Normalize(world.Summary + " " + world.Description), name.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        }
+        _searchIndex = new(worlds, index);
+        return index;
+    }
+    private static int Score(SearchText world, string[] terms)
+    {
+        var (name, tags, host, details, words) = (world.Name, world.Tags, world.Host, world.Details, world.Words);
         var score = 0;
         foreach (var term in terms)
         {

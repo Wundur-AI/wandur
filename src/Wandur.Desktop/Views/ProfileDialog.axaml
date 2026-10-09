@@ -10,7 +10,7 @@
         <ComboBox Name="WorldProfileChoice" Grid.Column="1" ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile, Mode=OneWay}"
                   PlaceholderText="{ReflectionBinding [NewWorld], Source={x:Static loc:LocalizedText.Instance}}" HorizontalAlignment="Stretch" MaxWidth="460">
         </ComboBox>
-        <Button Name="NewProfile" Grid.Column="2" Content="{ReflectionBinding [New], Source={x:Static loc:LocalizedText.Instance}}" Command="{Binding NewCommand}" Classes="app-button quiet" />
+        <Button Name="NewProfile" Grid.Column="2" Content="{ReflectionBinding [NewWorld], Source={x:Static loc:LocalizedText.Instance}}" Command="{Binding NewCommand}" Classes="app-button quiet" />
       </Grid>
     </Border>
     <Grid Grid.Row="1" ColumnDefinitions="Auto,*">

@@ -120,6 +120,7 @@ public sealed partial class WorkspaceController
                     _pending.Enqueue((session, "", -1, null, room, -1));
                     _pendingCharacters += length;
                 }
+                RequestOutputFlush();
             };
         }
     }

@@ -87,7 +87,18 @@ public sealed partial class ChannelsViewModel : ObservableObject, IDisposable
         Wandur.Core.Localization.UiLanguage.Changed += RefreshLanguage;
     }
 
+    /// <summary>The session's own panel model: it listens for the whole life of the session, so a world's conversation
+    /// is still there after the reader looks at another world. A view leaving the screen does not detach it; disposing
+    /// the session does.</summary>
+    public bool OwnedBySession { get; init; }
+
     public void Detach()
+    {
+        if (OwnedBySession) return;
+        DetachCore();
+    }
+
+    private void DetachCore()
     {
         if (!_attached) return;
         _attached = false;
@@ -96,7 +107,7 @@ public sealed partial class ChannelsViewModel : ObservableObject, IDisposable
         Wandur.Core.Localization.UiLanguage.Changed -= RefreshLanguage;
     }
 
-    public void Dispose() => Detach();
+    public void Dispose() => DetachCore();
 
     private void RefreshLanguage()
     {

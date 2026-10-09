@@ -63,10 +63,10 @@ Versión 0.1</value>
     <value>Sesión</value>
   </data>
   <data name="ChooseAWorld" xml:space="preserve">
-    <value>Elige un mundo…</value>
+    <value>Mundo o host:puerto…</value>
   </data>
   <data name="ChooseASavedWorldToOpenInASession" xml:space="preserve">
-    <value>Elige un mundo guardado para abrirlo en una pestaña de sesión</value>
+    <value>Elige un mundo guardado o escribe host:puerto y pulsa Intro para conectar</value>
   </data>
   <data name="Connect" xml:space="preserve">
     <value>▶  Conectar</value>
@@ -91,9 +91,6 @@ Versión 0.1</value>
   </data>
   <data name="SearchTheDirectoryForAMUDServer" xml:space="preserve">
     <value>Buscar un servidor MUD en el directorio</value>
-  </data>
-  <data name="CtrlTabSwitchSessionsDragPanelHeadersToArrange" xml:space="preserve">
-    <value>Ctrl+Tab  cambiar de vista   ·   Arrastra las cabeceras para organizar</value>
   </data>
   <data name="Done" xml:space="preserve">
     <value>Listo</value>
@@ -558,7 +555,7 @@ Salidas: north · east
     <value>Cerrar sesión</value>
   </data>
   <data name="SearchWorldsThemesOrAnAddress" xml:space="preserve">
-    <value>Buscar mundos, temáticas o una dirección…</value>
+    <value>Buscar mundos o una dirección…</value>
   </data>
   <data name="AllWorlds" xml:space="preserve">
     <value>Todos los mundos</value>
@@ -577,9 +574,6 @@ Salidas: north · east
   </data>
   <data name="FindAMUDWandur" xml:space="preserve">
     <value>Buscar un MUD · Wandur</value>
-  </data>
-  <data name="FindYourNextWorld" xml:space="preserve">
-    <value>Explorar MUDs</value>
   </data>
   <data name="SearchMUDServersByNameThemeLanguageOrAddress" xml:space="preserve">
     <value>Busca servidores MUD por nombre, temática, idioma o dirección.</value>
@@ -1884,7 +1878,9 @@ Detente después de recibir una lista del inventario.</value></data>
   <data name="HistoryRecordingNotice" xml:space="preserve"><value>El historial se guarda en este dispositivo. Cambia la grabación y la conservación en Ajustes.</value></data>
   <data name="HistoryLocalNotice" xml:space="preserve"><value>El historial local se conserva 30 días por defecto. Cambia la grabación y conservación en Ajustes. El filtro de privacidad no es infalible. No se suben datos del historial ni del protocolo.</value></data>
   <data name="HistoryQuery" xml:space="preserve"><value>Palabras o "frase entre comillas"</value></data>
-  <data name="HistorySearch" xml:space="preserve"><value>Buscar / actualizar</value></data>
+  <data name="HistorySearch" xml:space="preserve">
+    <value>Buscar</value>
+  </data>
   <data name="HistoryWorld" xml:space="preserve"><value>Nombre del mundo o dirección</value></data>
   <data name="HistoryCharacter" xml:space="preserve"><value>Personaje</value></data>
   <data name="HistoryFrom" xml:space="preserve"><value>Desde la fecha</value></data>
@@ -1980,4 +1976,19 @@ Detente después de recibir una lista del inventario.</value></data>
   <data name="CheckForUpdatesAutomaticallyHint" xml:space="preserve"><value>Una vez al día, el cliente pregunta a wandur.net si hay una versión más reciente y, si la hay, muestra un aviso. Nunca descarga ni instala nada por su cuenta.</value></data>
   <data name="SendInstallId" xml:space="preserve"><value>Enviar un identificador de instalación anónimo para que wandur.net pueda contar las instalaciones</value></data>
   <data name="SendInstallIdHint" xml:space="preserve"><value>Un número aleatorio creado una sola vez para esta instalación, que el cliente envía con sus peticiones a wandur.net (el directorio, las imágenes y la búsqueda de actualizaciones) y a ningún otro sitio. No dice nada de ti ni de este ordenador. Si lo desactivas, el cliente no envía ningún identificador.</value></data>
+  <data name="DockGripTip" xml:space="preserve">
+    <value>Arrastra para mover o desacoplar este panel</value>
+  </data>
+  <data name="DockCloseTip" xml:space="preserve">
+    <value>Cerrar panel · vuelve a abrirlo desde el menú Ver</value>
+  </data>
+  <data name="DockClosePanel" xml:space="preserve">
+    <value>Cerrar panel</value>
+  </data>
+  <data name="HistoryAnyDate" xml:space="preserve">
+    <value>Cualquier fecha</value>
+  </data>
+  <data name="QuickCommandSendTip" xml:space="preserve">
+    <value>Enviar: {0}</value>
+  </data>
 </root>

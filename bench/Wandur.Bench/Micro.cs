@@ -210,6 +210,8 @@ public static class Micro
             var n = 0;
             results.Add(Time($"Directory filter, {catalog.Worlds.Count} worlds, search text changes", "query", 9, 20, () =>
                 model.Query = model.Query with { Search = searches[n++ % searches.Length] }));
+            results.Add(Time($"WorldCatalog.Search alone, {catalog.Worlds.Count} worlds, same searches", "query", 9, 20, () =>
+                _ = catalog.Search(searches[n++ % searches.Length])));
             results.Add(Time($"Directory sort, {catalog.Worlds.Count} worlds, cycling 6 sorts", "query", 9, 20, () =>
                 model.Query = model.Query with { Search = "", Sort = n++ % 6 }));
             model.Detach();

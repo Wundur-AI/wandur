@@ -37,7 +37,6 @@ public static class Strings
     public static string AddOrEditASavedWorld => Get(nameof(AddOrEditASavedWorld));
     public static string FindAMUD => Get(nameof(FindAMUD));
     public static string SearchTheDirectoryForAMUDServer => Get(nameof(SearchTheDirectoryForAMUDServer));
-    public static string CtrlTabSwitchSessionsDragPanelHeadersToArrange => Get(nameof(CtrlTabSwitchSessionsDragPanelHeadersToArrange));
     public static string Done => Get(nameof(Done));
     public static string SessionConnected => Get(nameof(SessionConnected));
     public static string Cancel => Get(nameof(Cancel));
@@ -197,7 +196,6 @@ public static class Strings
     public static string ReportedOnline => Get(nameof(ReportedOnline));
     public static string LoadingArtwork => Get(nameof(LoadingArtwork));
     public static string FindAMUDWandur => Get(nameof(FindAMUDWandur));
-    public static string FindYourNextWorld => Get(nameof(FindYourNextWorld));
     public static string SearchMUDServersByNameThemeLanguageOrAddress => Get(nameof(SearchMUDServersByNameThemeLanguageOrAddress));
     public static string RefreshDirectory => Get(nameof(RefreshDirectory));
     public static string BasedOnTheDirectorySLatestReportNotA => Get(nameof(BasedOnTheDirectorySLatestReportNotA));
@@ -1025,4 +1023,9 @@ public static class Strings
     public static string CheckForUpdatesAutomaticallyHint => Get(nameof(CheckForUpdatesAutomaticallyHint));
     public static string SendInstallId => Get(nameof(SendInstallId));
     public static string SendInstallIdHint => Get(nameof(SendInstallIdHint));
+    public static string DockGripTip => Get(nameof(DockGripTip));
+    public static string DockCloseTip => Get(nameof(DockCloseTip));
+    public static string DockClosePanel => Get(nameof(DockClosePanel));
+    public static string HistoryAnyDate => Get(nameof(HistoryAnyDate));
+    public static string QuickCommandSendTip => Get(nameof(QuickCommandSendTip));
 }

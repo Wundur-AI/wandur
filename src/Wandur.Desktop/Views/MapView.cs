@@ -52,7 +52,8 @@ public sealed partial class MapView : UserControl
         var empty = Ui.TextKey(nameof(L.MapEmpty), 13); empty.Name = "MapEmptyLabel";
         empty.Bind(TextBlock.ForegroundProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("MapLabelBrush"));
         empty.Opacity = .72;
-        empty.HorizontalAlignment = HorizontalAlignment.Center; empty.VerticalAlignment = VerticalAlignment.Center; empty.Margin = new Thickness(18);
+        empty.HorizontalAlignment = HorizontalAlignment.Center; empty.VerticalAlignment = VerticalAlignment.Center; empty.Margin = new Thickness(24);
+        empty.MaxWidth = 280; empty.TextAlignment = TextAlignment.Center; empty.LineHeight = 19;
         empty.Bind(IsVisibleProperty, new Binding(nameof(model.IsEmpty)));
         var searchDropdown = CreateRoomSearchOtherFloorDropdown();
         var map = new Grid { Children = { canvas, empty, searchDropdown } };
@@ -173,7 +174,9 @@ public sealed partial class MapView : UserControl
         var toolbarContent = new StackPanel { Spacing = 2, Children = { buttons, searchRow } };
         var toolbar = Ui.Toolbar(toolbarContent, "MapToolbar");
         toolbar.Padding = new Thickness(4, 2);
-        var protocols = Label(nameof(model.ProtocolStatus), 10);
+        // The line names only the protocols in use; "GMCP: Supported · MSDP: Not negotiated" truncated into the zoom
+        // slider. The full state is the tooltip, with the room fields received.
+        var protocols = Label(nameof(model.ProtocolBadge), 10);
         protocols.Name = "MapProtocolStatus";
         protocols.TextWrapping = TextWrapping.NoWrap;
         protocols.TextTrimming = TextTrimming.CharacterEllipsis;
@@ -229,6 +232,8 @@ public sealed partial class MapView : UserControl
             Child = new StackPanel { Spacing = 2, Children = { walkStatus, statusLine } }
         };
         statusBar.Bind(Border.BackgroundProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("ShellBrush"));
+        // Zoom and protocol details mean nothing before the first room; the empty map is just its message.
+        statusBar.Bind(IsVisibleProperty, new Binding(nameof(model.IsEmpty)) { Converter = Avalonia.Data.Converters.BoolConverters.Not });
         statusBar.Bind(Border.BorderBrushProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("LineBrush"));
         Grid.SetRow(workspace, 1);
         Grid.SetRow(statusBar, 2);

@@ -52,7 +52,8 @@ public sealed class TerminalView : UserControl
         IsVisible = false,
         Cursor = new Cursor(StandardCursorType.SizeWestEast)
     };
-    private readonly TextBlock _footerHint = Ui.TextKey(nameof(L.CommandHistoryEnterSend), 11, "muted");
+    private readonly TextBlock _footerHint = Ui.Text("", 11, "muted");
+    private bool _footerRoomy = true;
     private readonly ToggleButton _privateToggle = new() { Name = "PrivateInputToggle", Width = double.NaN, Height = 26, MinHeight = 0, Padding = new Thickness(6, 0), FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
     private bool _syncingPrivate;
     private bool _sending;
@@ -127,9 +128,11 @@ public sealed class TerminalView : UserControl
         _send.MinHeight = 36;
         _send.MinWidth = 76;
         _send.VerticalAlignment = VerticalAlignment.Stretch;
+        // How the command box works lives here rather than as a permanent line under it.
+        _send.Bind(ToolTip.TipProperty, LocalizedText.Binding(nameof(L.CommandHistoryEnterSend)));
         _look = ComposerButton(new Button { Name = "LookButton" }, EyeGeometry, nameof(L.LookAround));
         _look.Click += async (_, _) => await controller.SendAsync("look");
-        _quickCommands = ComposerButton(new Button { Name = "CommandsButton" }, GridGeometry, nameof(L.Controls));
+        _quickCommands = ComposerButton(new Button { Name = "CommandsButton" }, CompassGeometry, nameof(L.Controls));
         var commands = new Flyout { Placement = PlacementMode.TopEdgeAlignedLeft };
         commands.Content = QuickCommands(controller, commands);
         _quickCommands.Flyout = commands;
@@ -259,7 +262,7 @@ public sealed class TerminalView : UserControl
         _footerHint.TextTrimming = TextTrimming.CharacterEllipsis;
         _footerHint.MaxWidth = 280;
         // The agent status keeps the room it needs: the hint is the first thing to go on a narrow bar.
-        tabBar.SizeChanged += (_, args) => _footerHint.IsVisible = args.NewSize.Width >= 640;
+        tabBar.SizeChanged += (_, args) => { _footerRoomy = args.NewSize.Width >= 640; UpdateFooterHint(); };
         _privateToggle.Classes.Add("command-bar-button");
         var privateLabel = Ui.TextKey(nameof(L.PrivateInput2), 11);
         privateLabel.VerticalAlignment = VerticalAlignment.Center;
@@ -280,7 +283,8 @@ public sealed class TerminalView : UserControl
 
     private const string EyeGeometry = "M 1,8 C 3.4,4.2 5.7,2.6 8,2.6 C 10.3,2.6 12.6,4.2 15,8 C 12.6,11.8 10.3,13.4 8,13.4 C 5.7,13.4 3.4,11.8 1,8 Z M 8,5.9 A 2.1,2.1 0 1 0 8,10.1 A 2.1,2.1 0 1 0 8,5.9 Z";
     private const string LockGeometry = "M 8,2 A 3,3 0 0 0 5,5 V 7 H 4 V 14 H 12 V 7 H 11 V 5 A 3,3 0 0 0 8,2 Z M 8,3.4 A 1.6,1.6 0 0 1 9.6,5 V 7 H 6.4 V 5 A 1.6,1.6 0 0 1 8,3.4 Z";
-    private const string GridGeometry = "M 2,2 H 6.5 V 6.5 H 2 Z M 9.5,2 H 14 V 6.5 H 9.5 Z M 2,9.5 H 6.5 V 14 H 2 Z M 9.5,9.5 H 14 V 14 H 9.5 Z";
+    // A compass, since the flyout is mostly the eight directions: a grid of squares said nothing about it.
+    private const string CompassGeometry = "M 8,1.5 A 6.5,6.5 0 1 1 7.99,1.5 Z M 8,4 L 10,8 L 8,12 L 6,8 Z";
 
     private Button ComposerButton(Button button, string geometry, string key)
     {
@@ -299,7 +303,7 @@ public sealed class TerminalView : UserControl
         {
             // Closing first keeps the flyout from lingering over the transcript the command changes.
             button.Click += async (_, _) => { flyout.Hide(); await controller.SendAsync(command); };
-            ToolTip.SetTip(button, "Send: " + command);
+            ToolTip.SetTip(button, L.Format(L.QuickCommandSendTip, command));
             _liveButtons.Add(button);
             return button;
         }
@@ -518,8 +522,20 @@ public sealed class TerminalView : UserControl
     private void SyncCommandField()
     {
         ThemeService.SyncTerminalField(_input);
-        _controller.Display.View.Margin = FleetSkin.IsActive ? new Thickness(12, 12, 8, 8) : new Thickness(4, 2, 2, 2);
+        _controller.Display.View.Margin = TranscriptMargin;
+        // In the System skin Send is an ordinary button: Enter does the same, and a solid accent block was the heaviest
+        // thing in the window. The drawn skins keep their primary Send.
+        _send.Classes.Set("primary", ThemeService.ActiveWindowSkin.CustomChrome);
     }
+
+    /// <summary>The gutter around the transcript. Fleet has its own; System, whose centre has no frame, gets enough room
+    /// that the first line does not touch the toolbar and the text does not hug the splitter; Armored keeps its bay.</summary>
+    internal static Thickness TranscriptMargin => ThemeService.ActiveWindowSkin.Id switch
+    {
+        Wandur.Core.Settings.WindowSkinId.Fleet => new Thickness(12, 12, 8, 8),
+        Wandur.Core.Settings.WindowSkinId.System => new Thickness(16, 12, 8, 8),
+        _ => new Thickness(4, 2, 2, 2)
+    };
 
     private void Refresh()
     {
@@ -558,7 +574,15 @@ public sealed class TerminalView : UserControl
         _ghost.Text = _suggestion;
         _ghost.IsVisible = _suggestion is not null;
         if (_suggestion is not null) PlaceGhost();
-        _footerHint.Text = _controller.IsPrivate ? L.PrivateHiddenFromEchoAndHistory : _suggestion is not null ? L.CommandHintTabComplete : L.CommandHistoryEnterSend;
+        UpdateFooterHint();
+    }
+
+    /// <summary>The footer speaks only when something is going on: private input, or a completion Tab would take. The
+    /// standing "command history, Enter sends" line was read past on every screen, so it is the Send button's tooltip.</summary>
+    private void UpdateFooterHint()
+    {
+        _footerHint.Text = _controller.IsPrivate ? L.PrivateHiddenFromEchoAndHistory : _suggestion is not null ? L.CommandHintTabComplete : "";
+        _footerHint.IsVisible = _footerRoomy && _footerHint.Text.Length > 0;
     }
 
     /// <summary>The typed prefix stays as typed; the remainder arrives in the casing it was last seen with.</summary>

@@ -89,6 +89,16 @@ public static class ThemeService
     private static Color? _gripColor;
     /// <summary>Opacity of the transcript's selection highlight, which is drawn on top of the text.</summary>
     internal const byte TranscriptSelectionAlpha = 0x66;
+    /// <summary>Every window, dialogs included, carries skin-system while the System skin is on, so the System-only
+    /// styles (Styles/SystemSkin.axaml) reach the Settings, world editor and history windows as well as the main one.</summary>
+    static ThemeService() => Control.LoadedEvent.AddClassHandler<Window>((window, _) =>
+    {
+        void Mark() => window.Classes.Set("skin-system", ActiveWindowSkin.Id == WindowSkinId.System);
+        Mark();
+        Applied += Mark;
+        window.Closed += (_, _) => Applied -= Mark;
+    });
+
     public static void Apply(ClientSettings settings) => Apply(settings, null);
     public static void Apply(ClientSettings settings, WorldTheme? worldTheme, IReadOnlyDictionary<string, Bitmap>? images = null)
     {
@@ -227,6 +237,17 @@ public static class ThemeService
             return ink;
         }
         resources.Color("AccentTextBrush", Legible(Color.Parse(accent)));
+        // Fluent paints selected list items, checked boxes, toggle switches and tab underlines from the system
+        // accent, which is its own blue unless the application names one. Without this the Settings and world editor
+        // section lists and the history results wore a light blue no palette chose.
+        var systemAccent = Color.Parse(accent);
+        resources.Value("SystemAccentColor", systemAccent);
+        resources.Value("SystemAccentColorLight1", Mix(systemAccent, Colors.White, .15));
+        resources.Value("SystemAccentColorLight2", Mix(systemAccent, Colors.White, .3));
+        resources.Value("SystemAccentColorLight3", Mix(systemAccent, Colors.White, .45));
+        resources.Value("SystemAccentColorDark1", Mix(systemAccent, Colors.Black, .15));
+        resources.Value("SystemAccentColorDark2", Mix(systemAccent, Colors.Black, .3));
+        resources.Value("SystemAccentColorDark3", Mix(systemAccent, Colors.Black, .45));
         var live = Legible(Color.Parse(UserTheme.IsLightBackground(panel) ? "#1E8A4E" : "#3DDC8C"));
         resources.Color("LiveBrush", live);
         resources.Color("LiveEdgeBrush", Color.FromArgb(0x70, live.R, live.G, live.B));

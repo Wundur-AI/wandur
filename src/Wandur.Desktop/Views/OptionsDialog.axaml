@@ -2,6 +2,24 @@
         xmlns:vm="using:Wandur.Desktop.ViewModels" xmlns:l="clr-namespace:Wandur.Core.Localization;assembly=Wandur.Core"
         x:Class="Wandur.Desktop.Views.OptionsDialog" x:DataType="vm:PreferencesViewModel"
         Title="{ReflectionBinding [SettingsTitle], Source={x:Static loc:LocalizedText.Instance}}" Width="880" Height="740" MinWidth="740" MinHeight="560" WindowStartupLocation="CenterOwner">
+  <Window.Styles>
+    <!-- A settings page reads as a form, not a full-width letter: the controls stop at a comfortable measure, and the
+         explanations under them are set smaller, close to the control they explain. -->
+    <Style Selector="ScrollViewer.settings-page > StackPanel">
+      <Setter Property="MaxWidth" Value="600" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+    <Style Selector="ScrollViewer.settings-page > StackPanel > ComboBox">
+      <Setter Property="MaxWidth" Value="360" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="MinWidth" Value="240" />
+    </Style>
+    <Style Selector="ScrollViewer.settings-page > StackPanel > TextBlock.muted">
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="LineHeight" Value="18" />
+      <Setter Property="Margin" Value="0,-6,0,6" />
+    </Style>
+  </Window.Styles>
   <Grid RowDefinitions="*,Auto" ColumnDefinitions="180,*">
     <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,1,0">
       <StackPanel Margin="12,24" Spacing="20">
@@ -15,10 +33,10 @@
     <Grid Grid.Column="1" RowDefinitions="Auto,*" Margin="28,24,28,0">
       <TextBlock Text="{Binding SectionTitle}" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,22" />
       <Grid Grid.Row="1">
-          <ScrollViewer Name="GeneralScroll" IsVisible="{Binding IsGeneral}" HorizontalScrollBarVisibility="Disabled">
+          <ScrollViewer Name="GeneralScroll" Classes="settings-page" IsVisible="{Binding IsGeneral}" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="0,0,10,24" Spacing="12">
             <TextBlock Text="{ReflectionBinding [InterfaceLanguage], Source={x:Static loc:LocalizedText.Instance}}" />
-            <ComboBox Name="LanguageChoice" ItemsSource="{Binding Languages}" SelectedItem="{Binding Language}" HorizontalAlignment="Stretch" />
+            <ComboBox Name="LanguageChoice" ItemsSource="{Binding Languages}" SelectedItem="{Binding Language}" />
             <TextBlock Text="{ReflectionBinding [LanguageLiveHint], Source={x:Static loc:LocalizedText.Instance}}" Classes="muted" TextWrapping="Wrap" />
             <CheckBox Name="ShowChannelsPanel" Content="{ReflectionBinding [ShowChannelsPanel], Source={x:Static loc:LocalizedText.Instance}}" IsChecked="{Binding ShowChannelsPanel}" />
             <TextBlock Text="{ReflectionBinding [ShowChannelsPanelHint], Source={x:Static loc:LocalizedText.Instance}}" Classes="muted" TextWrapping="Wrap" />
@@ -30,20 +48,20 @@
             <CheckBox Name="HistoryEnabled" Content="{ReflectionBinding [HistoryEnabled], Source={x:Static loc:LocalizedText.Instance}}" IsChecked="{Binding HistoryEnabled}" />
             <TextBlock Text="{ReflectionBinding [HistoryPrivacyHint], Source={x:Static loc:LocalizedText.Instance}}" Classes="muted" TextWrapping="Wrap" />
             <TextBlock Text="{ReflectionBinding [HistoryRetention], Source={x:Static loc:LocalizedText.Instance}}" />
-            <ComboBox Name="HistoryRetention" ItemsSource="{Binding HistoryRetentionChoices}" SelectedValueBinding="{Binding Days}" SelectedValue="{Binding HistoryRetentionDays}" HorizontalAlignment="Stretch">
+            <ComboBox Name="HistoryRetention" ItemsSource="{Binding HistoryRetentionChoices}" SelectedValueBinding="{Binding Days}" SelectedValue="{Binding HistoryRetentionDays}">
               <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:HistoryRetentionChoice"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
             </ComboBox>
           </StackPanel>
           </ScrollViewer>
-          <ScrollViewer Name="AppearanceScroll" IsVisible="{Binding IsAppearance}" HorizontalScrollBarVisibility="Disabled">
+          <ScrollViewer Name="AppearanceScroll" Classes="settings-page" IsVisible="{Binding IsAppearance}" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="0,0,10,24" Spacing="14">
             <TextBlock Text="{ReflectionBinding [Skin], Source={x:Static loc:LocalizedText.Instance}}" />
-            <ComboBox Name="SkinChoice" ItemsSource="{Binding Skins}" SelectedValueBinding="{Binding Id}" SelectedValue="{Binding Skin}" HorizontalAlignment="Stretch">
+            <ComboBox Name="SkinChoice" ItemsSource="{Binding Skins}" SelectedValueBinding="{Binding Id}" SelectedValue="{Binding Skin}">
               <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:ThemeChoiceViewModel"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
             </ComboBox>
             <TextBlock Text="{ReflectionBinding [SkinHelp], Source={x:Static loc:LocalizedText.Instance}}" TextWrapping="Wrap" Classes="muted" FontSize="12" />
             <TextBlock Text="{ReflectionBinding [ColorScheme], Source={x:Static loc:LocalizedText.Instance}}" />
-            <ComboBox Name="ThemeChoice" ItemsSource="{Binding Themes}" SelectedValueBinding="{Binding Id}" SelectedValue="{Binding Theme}" HorizontalAlignment="Stretch">
+            <ComboBox Name="ThemeChoice" ItemsSource="{Binding Themes}" SelectedValueBinding="{Binding Id}" SelectedValue="{Binding Theme}">
               <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:ThemeChoiceViewModel"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
             </ComboBox>
             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -72,10 +90,10 @@
 
           </StackPanel>
           </ScrollViewer>
-          <ScrollViewer Name="MudColorsScroll" IsVisible="{Binding IsMudColors}" HorizontalScrollBarVisibility="Disabled">
+          <ScrollViewer Name="MudColorsScroll" Classes="settings-page" IsVisible="{Binding IsMudColors}" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="0,0,10,24" Spacing="14">
               <TextBlock Text="{ReflectionBinding [ColorScheme], Source={x:Static loc:LocalizedText.Instance}}" />
-              <ComboBox Name="AnsiThemeChoice" ItemsSource="{Binding Themes}" SelectedValueBinding="{Binding Id}" SelectedValue="{Binding Theme}" HorizontalAlignment="Stretch">
+              <ComboBox Name="AnsiThemeChoice" ItemsSource="{Binding Themes}" SelectedValueBinding="{Binding Id}" SelectedValue="{Binding Theme}">
                 <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:ThemeChoiceViewModel"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
               </ComboBox>
               <Button Content="{ReflectionBinding [DuplicateTheme], Source={x:Static loc:LocalizedText.Instance}}" Command="{Binding DuplicateThemeCommand}" Classes="app-button" />
@@ -96,7 +114,7 @@
                 </ItemsControl>
                           </StackPanel>
           </ScrollViewer>
-          <ScrollViewer Name="TerminalScroll" IsVisible="{Binding IsTerminal}" HorizontalScrollBarVisibility="Disabled">
+          <ScrollViewer Name="TerminalScroll" Classes="settings-page" IsVisible="{Binding IsTerminal}" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="0,0,10,24" Spacing="12">
             <CheckBox Name="AllowBlinkingText" Content="{ReflectionBinding [AllowBlinkingMudText], Source={x:Static loc:LocalizedText.Instance}}" IsChecked="{Binding AllowBlinkingText}" />
             <TextBlock Text="{ReflectionBinding [SessionTextSize], Source={x:Static loc:LocalizedText.Instance}}" />
@@ -113,7 +131,7 @@
             <TextBox Text="{Binding Background}" PlaceholderText="{ReflectionBinding [UseSchemeDefault], Source={x:Static loc:LocalizedText.Instance}}" />
           </StackPanel>
           </ScrollViewer>
-          <ScrollViewer Name="InputScroll" IsVisible="{Binding IsInput}" HorizontalScrollBarVisibility="Disabled">
+          <ScrollViewer Name="InputScroll" Classes="settings-page" IsVisible="{Binding IsInput}" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="0,0,10,24" Spacing="12">
             <CheckBox Name="LocalEcho" Content="{ReflectionBinding [ShowMyCommandsInTheTranscript], Source={x:Static loc:LocalizedText.Instance}}" IsChecked="{Binding LocalEcho}" />
             <TextBlock Text="{ReflectionBinding [LocalEchoStartsOffUsePrivateInputForPasswords], Source={x:Static loc:LocalizedText.Instance}}" Classes="muted" TextWrapping="Wrap" />

@@ -61,7 +61,6 @@ public sealed partial class MainWindow : Window
     private bool _toolbarInBand;
     private readonly StackPanel _titleBarIdentity;
     private readonly TextBlock _appTitle;
-    private readonly TextBlock _footerHint;
     private readonly ThemeBezelHost _bezel;
     private readonly ThemeWindowSkinHost _windowSkin;
     private readonly ThemeOrnamentLayer _ornaments;
@@ -86,7 +85,22 @@ public sealed partial class MainWindow : Window
     private Window? _dialog;
     private readonly IProfileAutomationFactory _profileAutomationFactory;
     private readonly IAgentClientServices? _agents;
-    public ConnectionProfile? SelectedProfile => _worldPicker.SelectedItem as ConnectionProfile;
+    /// <summary>What Connect opens: the saved world shown in the picker, or, when its text is not a saved world's
+    /// name, the typed address (<c>host:port</c>, <c>host port</c>, <c>telnet://</c> or <c>tls://host:port</c>). A typed
+    /// address that matches a saved world opens that world; any other opens unsaved.</summary>
+    public ConnectionProfile? SelectedProfile => _worldPicker.SelectedItem is ConnectionProfile selected &&
+        string.Equals(_worldPicker.Text ?? selected.Name, selected.Name, StringComparison.Ordinal)
+            ? selected : TypedProfile(_worldPicker.Text, _profiles);
+
+    internal static ConnectionProfile? TypedProfile(string? text, IEnumerable<ConnectionProfile>? saved)
+    {
+        var value = text?.Trim() ?? "";
+        var tls = value.StartsWith("tls://", StringComparison.OrdinalIgnoreCase);
+        if (tls) value = value[6..].TrimEnd('/');
+        if (!WorldAddress.TryParse(value, out var address) || address!.Port is not int port) return null;
+        return saved?.FirstOrDefault(p => p.Host.Equals(address.Host, StringComparison.OrdinalIgnoreCase) && p.Port == port && p.UseTls == tls)
+            ?? new ConnectionProfile { Name = $"{address.Host}:{port}", Host = address.Host, Port = port, UseTls = tls };
+    }
     public bool ToolbarVisible { get => _toolbar?.IsVisible ?? true; set { _toolbar.IsVisible = value; if (ThemeService.ActiveWindowSkin.CustomChrome) UpdateTitleBarInsets(); RequestTitleChromeUpdate(); _menus.Refresh(); } }
 
     public MainWindow(Wandur.Desktop.Terminal.ITranscriptDisplayFactory displays, ISettingsStore store, IPasswordVault passwords, IRoomMapStore maps, IScriptRuntimeFactory scriptRuntimes, IWorldScriptLibraryStore scriptLibraryStore, IWorldKnowledgeStore? knowledge = null, WorldCatalog? catalog = null, IProfileAutomationFactory? profileAutomationFactory = null, IAgentClientServices? agents = null, Wandur.Core.Classification.RoomClassificationService? classification = null, IWorldUsageStore? usage = null, Wandur.Core.History.IHistoryStore? history = null, Wandur.Core.Updates.UpdateService? updates = null)
@@ -119,6 +133,16 @@ public sealed partial class MainWindow : Window
         });
         // Choosing a world here only changes what Connect will open; the theme follows the session.
         _worldPicker.SelectionChanged += (_, _) => _menus.Refresh();
+        // Editable: a saved world shows by name, and a typed host:port connects without saving it first.
+        _worldPicker.IsEditable = true;
+        Avalonia.Controls.Primitives.TextSearch.SetTextBinding(_worldPicker, new Avalonia.Data.Binding(nameof(ConnectionProfile.Name)));
+        _worldPicker.PropertyChanged += (_, e) => { if (e.Property == ComboBox.TextProperty) _menus.Refresh(); };
+        _worldPicker.AddHandler(KeyDownEvent, async (_, e) =>
+        {
+            if (e.Key != Key.Enter || _worldPicker.IsDropDownOpen || SelectedProfile is null) return;
+            e.Handled = true;
+            await ConnectSelectedAsync();
+        }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         ToolTip.SetTip(_worldPicker, L.ChooseASavedWorldToOpenInASession);
         Avalonia.Automation.AutomationProperties.SetName(_worldPicker, L.ChooseAWorld);
         _worldPicker.Classes.Add("toolbar-world-picker");
@@ -200,15 +224,10 @@ public sealed partial class MainWindow : Window
         _noticeText.Bind(TextBlock.ForegroundProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("TextBrush"));
         _noticeText.TextWrapping = TextWrapping.Wrap;
         _noticeText.VerticalAlignment = VerticalAlignment.Center;
-        var statusRight = Ui.TextKey(nameof(L.CtrlTabSwitchSessionsDragPanelHeadersToArrange), 10, "muted");
-        statusRight.HorizontalAlignment = HorizontalAlignment.Right;
-        statusRight.VerticalAlignment = VerticalAlignment.Center;
-        _footerHint = statusRight;
-        Grid.SetColumn(statusRight, 1);
         var footerSeparator = Ui.Text("·", 10); footerSeparator.Classes.Add("muted"); footerSeparator.VerticalAlignment = VerticalAlignment.Center;
         _status.VerticalAlignment = VerticalAlignment.Center;
         var footerLeft = new StackPanel { Name = "FooterStatus", Orientation = Orientation.Horizontal, Spacing = 8, Children = { _status, footerSeparator, _toolbarStatus } };
-        _footer = new Border { Name = "WindowFooter", Padding = _footerBasePadding, BorderThickness = new Thickness(0, 1, 0, 0), Child = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { footerLeft, statusRight } } };
+        _footer = new Border { Name = "WindowFooter", Padding = _footerBasePadding, BorderThickness = new Thickness(0, 1, 0, 0), Child = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { footerLeft } } };
         _footer.Bind(Border.BorderBrushProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("LineBrush"));
         _footer.Bind(Border.BackgroundProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("FooterBrush"));
         var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto") };
@@ -280,10 +299,15 @@ public sealed partial class MainWindow : Window
     {
         _fullScreenChromeDirty = true;
         Classes.Set("fleet", ThemeService.ActiveWindowSkin.CustomChrome);
+        Classes.Set("skin-system", ThemeService.ActiveWindowSkin.Id == Wandur.Core.Settings.WindowSkinId.System);
         _fleetToolbarSurfaceKey = null;
         _fleetSettings.IsVisible = ThemeService.ActiveWindowSkin.CustomChrome;
         foreach (var button in new[] { _browse, _fleetSettings }) button.Classes.Set("fleet-action", ThemeService.ActiveWindowSkin.CustomChrome);
-        _connect.Content = ThemeService.ActiveWindowSkin.CustomChrome ? Ui.ChromeGlyph(FleetIcons.Connect) : Ui.ChromeGlyph("M 4,2 L 14,8 L 4,14 Z", true);
+        // System draws every toolbar glyph as an outline of one weight; the filled play and stop read heavier than the
+        // search, layout and palette outlines beside them. Fleet and Armored keep their own faces.
+        _connect.Content = ThemeService.ActiveWindowSkin.CustomChrome ? Ui.ChromeGlyph(FleetIcons.Connect) : Ui.ChromeGlyph(SystemConnectGlyph);
+        _disconnect.Content = ThemeService.ActiveWindowSkin.CustomChrome ? Ui.ChromeGlyph("M 3,3 H 13 V 13 H 3 Z", true) : Ui.ChromeGlyph(SystemDisconnectGlyph);
+        UpdateConnectionTips();
         _browse.Content = ThemeService.ActiveWindowSkin.CustomChrome ? FleetIcons.Action(FleetIcons.Search, nameof(L.FindAMUD)) : Ui.ChromeGlyph(FleetIcons.Search);
         _fleetSettings.Content = FleetIcons.Action(FleetIcons.Settings, nameof(L.SettingsTitle), true);
         // On Windows the fallback menu remains available, below the overlapping title/toolbar pair.
@@ -672,7 +696,6 @@ public sealed partial class MainWindow : Window
         _footer.MinHeight = clearance.MinHeight > 0
             ? Math.Max(0, clearance.MinHeight + _footerBasePadding.Top + _footerBasePadding.Bottom)
             : 0;
-        _footerHint.IsVisible = clearance.Left == 0 && clearance.Right == 0;
     }
 
     private void UpdateTitleBarInsets()
@@ -829,6 +852,22 @@ public sealed partial class MainWindow : Window
         return logo;
     }
 
+    private void UpdateConnectionTips()
+    {
+        var disconnectTip = Controller.IsConnecting ? L.Cancel : L.DisconnectTheActiveSession;
+        var system = !ThemeService.ActiveWindowSkin.CustomChrome;
+        ToolTip.SetTip(_disconnect, system ? WithShortcut(disconnectTip, _menus.Disconnect.Gesture) : disconnectTip);
+        Avalonia.Automation.AutomationProperties.SetName(_disconnect, disconnectTip);
+        ToolTip.SetTip(_connect, system ? WithShortcut(L.ConnectToTheSelectedWorldInASessionTab, _menus.Connect.Gesture) : L.ConnectToTheSelectedWorldInASessionTab);
+    }
+
+    internal const string SystemConnectGlyph = "M 5,3 L 13,8 L 5,13 Z";
+    internal const string SystemDisconnectGlyph = "M 4,4 H 12 V 12 H 4 Z";
+
+    /// <summary>A toolbar tooltip with its keyboard shortcut, in the platform's notation, after it.</summary>
+    private static string WithShortcut(string tip, KeyGesture? gesture) =>
+        gesture is null ? tip : $"{tip} ({gesture.ToString("p", null)})";
+
     private static Button ToolbarButton(string geometry, string name, string tip, bool filled = false)
     {
         var button = new Button { Name = name, HorizontalContentAlignment = HorizontalAlignment.Center };
@@ -968,9 +1007,7 @@ public sealed partial class MainWindow : Window
         _status.Text = L.Format(count == 1 ? L.SessionsOne : L.SessionsMany, count, connected);
         // The session bar: world, character and connection state of the active session, in one muted line.
         _toolbarStatus.Text = (Controller.IsConnected ? "●  " : "○  ") + (Controller.HasSession ? $"{Controller.SessionLabel}  ·  " : "") + Controller.Status;
-        var disconnectTip = Controller.IsConnecting ? L.Cancel : L.DisconnectTheActiveSession;
-        ToolTip.SetTip(_disconnect, disconnectTip);
-        Avalonia.Automation.AutomationProperties.SetName(_disconnect, disconnectTip);
+        UpdateConnectionTips();
         _notice.IsVisible = Controller.Notice is not null;
         _noticeText.Text = Controller.Notice;
         _hideHistoryNotice.IsVisible = Controller.IsHistoryRecordingNotice;

@@ -19,6 +19,7 @@
     <AvaloniaResource Include="Styles/ThemeDockSkin.axaml" />
     <AvaloniaResource Include="Styles/Fleet.axaml" />
     <AvaloniaResource Include="Styles/ArmoredDocks.axaml" />
+    <AvaloniaResource Include="Styles/SystemSkin.axaml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Wandur.Core/Wandur.Core.csproj" />

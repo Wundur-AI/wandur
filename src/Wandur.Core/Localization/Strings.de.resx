@@ -63,10 +63,10 @@ Version 0.1</value>
     <value>Sitzung</value>
   </data>
   <data name="ChooseAWorld" xml:space="preserve">
-    <value>Welt auswählen…</value>
+    <value>Welt oder Host:Port…</value>
   </data>
   <data name="ChooseASavedWorldToOpenInASession" xml:space="preserve">
-    <value>Wähle eine gespeicherte Welt, um sie in einem Sitzungstab zu öffnen</value>
+    <value>Wähle eine gespeicherte Welt oder gib Host:Port ein und drücke die Eingabetaste, um dich zu verbinden</value>
   </data>
   <data name="Connect" xml:space="preserve">
     <value>▶  Verbinden</value>
@@ -91,9 +91,6 @@ Version 0.1</value>
   </data>
   <data name="SearchTheDirectoryForAMUDServer" xml:space="preserve">
     <value>Im Verzeichnis nach einem MUD-Server suchen</value>
-  </data>
-  <data name="CtrlTabSwitchSessionsDragPanelHeadersToArrange" xml:space="preserve">
-    <value>Strg+Tab  Arbeitsbereich wechseln   ·   Fensterleisten zum Anordnen ziehen</value>
   </data>
   <data name="Done" xml:space="preserve">
     <value>Fertig</value>
@@ -558,7 +555,7 @@ Ausgänge: Norden · Osten
     <value>Sitzung schließen</value>
   </data>
   <data name="SearchWorldsThemesOrAnAddress" xml:space="preserve">
-    <value>Welten, Themen oder eine Adresse suchen…</value>
+    <value>Welten oder Adresse suchen…</value>
   </data>
   <data name="AllWorlds" xml:space="preserve">
     <value>Alle Welten</value>
@@ -577,9 +574,6 @@ Ausgänge: Norden · Osten
   </data>
   <data name="FindAMUDWandur" xml:space="preserve">
     <value>MUD finden · Wandur</value>
-  </data>
-  <data name="FindYourNextWorld" xml:space="preserve">
-    <value>MUDs entdecken</value>
   </data>
   <data name="SearchMUDServersByNameThemeLanguageOrAddress" xml:space="preserve">
     <value>Suche MUD-Server nach Name, Thema, Sprache oder Adresse.</value>
@@ -1884,7 +1878,9 @@ Stoppe nach einer Inventarliste.</value></data>
   <data name="HistoryRecordingNotice" xml:space="preserve"><value>Der Sitzungsverlauf wird auf diesem Gerät gespeichert. Aufzeichnung und Aufbewahrung lassen sich in den Einstellungen ändern.</value></data>
   <data name="HistoryLocalNotice" xml:space="preserve"><value>Der lokale Verlauf wird standardmäßig 30 Tage aufbewahrt. Aufzeichnung und Aufbewahrung lassen sich in den Einstellungen ändern. Der Datenschutzfilter ist nicht lückenlos. Es werden keine Verlaufs- oder Protokolldaten hochgeladen.</value></data>
   <data name="HistoryQuery" xml:space="preserve"><value>Wörter oder "Ausdruck in Anführungszeichen"</value></data>
-  <data name="HistorySearch" xml:space="preserve"><value>Suchen / aktualisieren</value></data>
+  <data name="HistorySearch" xml:space="preserve">
+    <value>Suchen</value>
+  </data>
   <data name="HistoryWorld" xml:space="preserve"><value>Weltname oder Adresse</value></data>
   <data name="HistoryCharacter" xml:space="preserve"><value>Charakter</value></data>
   <data name="HistoryFrom" xml:space="preserve"><value>Ab Datum</value></data>
@@ -1980,4 +1976,19 @@ Stoppe nach einer Inventarliste.</value></data>
   <data name="CheckForUpdatesAutomaticallyHint" xml:space="preserve"><value>Einmal am Tag fragt der Client bei wandur.net nach, ob eine neuere Version erschienen ist, und zeigt dann einen Hinweis. Er lädt nie selbst etwas herunter und installiert nichts.</value></data>
   <data name="SendInstallId" xml:space="preserve"><value>Eine anonyme Installations-ID senden, damit wandur.net Installationen zählen kann</value></data>
   <data name="SendInstallIdHint" xml:space="preserve"><value>Eine Zufallszahl, die einmal für diese Installation erzeugt wird. Der Client sendet sie mit seinen Anfragen an wandur.net (Verzeichnis, Bilder und Update-Prüfung) und nirgendwohin sonst. Sie verrät nichts über dich oder diesen Computer. Ist die Option aus, sendet der Client keine ID.</value></data>
+  <data name="DockGripTip" xml:space="preserve">
+    <value>Ziehen, um dieses Fenster zu verschieben oder abzudocken</value>
+  </data>
+  <data name="DockCloseTip" xml:space="preserve">
+    <value>Fenster schließen · über das Menü Ansicht wieder öffnen</value>
+  </data>
+  <data name="DockClosePanel" xml:space="preserve">
+    <value>Fenster schließen</value>
+  </data>
+  <data name="HistoryAnyDate" xml:space="preserve">
+    <value>Beliebiges Datum</value>
+  </data>
+  <data name="QuickCommandSendTip" xml:space="preserve">
+    <value>Senden: {0}</value>
+  </data>
 </root>

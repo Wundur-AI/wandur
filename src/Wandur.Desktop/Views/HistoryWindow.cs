@@ -34,7 +34,6 @@ public sealed class HistoryWindow : Window
         heading.FontWeight = FontWeight.SemiBold;
         var local = Ui.TextKey(nameof(L.HistoryLocalNotice), 12, "muted");
         local.Name = "HistoryLocalNotice";
-        var privacy = Ui.TextKey(nameof(L.HistoryPrivacyHint), 12, "muted");
         var query = Input("HistoryQuery", nameof(Model.Query), nameof(L.HistoryQuery));
         query.KeyDown += async (_, e) =>
         {
@@ -55,16 +54,18 @@ public sealed class HistoryWindow : Window
         filters.Children.Add(from); Grid.SetColumn(from, 2);
         filters.Children.Add(until); Grid.SetColumn(until, 3);
 
-        var header = new StackPanel { Spacing = 10, Children = { heading, local, privacy, queryRow, filters } };
+        // One notice: the privacy explanation lives with the recording setting, where it is decided.
+        local.TextWrapping = TextWrapping.Wrap;
+        var header = new StackPanel { Spacing = 10, Children = { heading, local, queryRow, filters } };
         header.Bind(IsEnabledProperty, new Binding("!" + nameof(Model.IsDeleting)));
         var sessions = new ListBox
         {
-            Name = "HistorySessions", ItemsSource = Model.Sessions,
+            Name = "HistorySessions", ItemsSource = Model.Sessions, Background = Brushes.Transparent,
             ItemTemplate = new FuncDataTemplate<HistorySession>((session, _) => session is null ? null : SessionRow(session))
         };
         var results = new ListBox
         {
-            Name = "HistoryResults", ItemsSource = Model.Results,
+            Name = "HistoryResults", ItemsSource = Model.Results, Background = Brushes.Transparent,
             ItemTemplate = new FuncDataTemplate<HistoryHit>((hit, _) =>
             {
                 if (hit is null) return null;
@@ -72,8 +73,8 @@ public sealed class HistoryWindow : Window
                 // The full, unmodified entry remains available in the read-only transcript.
                 if (snippet.Text!.Length > 180) snippet.Text = snippet.Text[..180] + "...";
                 snippet.TextTrimming = TextTrimming.CharacterEllipsis; snippet.MaxLines = 2;
-                var row = SessionRow(hit.Session);
-                row.Children.Add(Ui.Text($"{hit.Entry.At.ToLocalTime():g}", 11, "muted"));
+                // A hit names its world, then the character and when the line was seen, once; then the line.
+                var row = Row(hit.Session.WorldName, HistoryViewModel.Join(hit.Session.CharacterName, $"{hit.Entry.At.ToLocalTime():g}"), hit.Session);
                 row.Children.Add(snippet);
                 return row;
             })
@@ -170,11 +171,14 @@ public sealed class HistoryWindow : Window
         Content = root;
     }
 
-    private static StackPanel SessionRow(HistorySession session)
+    private static StackPanel SessionRow(HistorySession session) =>
+        Row(session.WorldName, HistoryViewModel.Join(session.CharacterName, $"{session.StartedAt.ToLocalTime():g}"), session);
+
+    private static StackPanel Row(string title, string details, HistorySession session)
     {
-        var name = Ui.Text(session.WorldName, 14);
+        var name = Ui.Text(title, 14);
         name.FontWeight = FontWeight.Medium; name.MaxLines = 1; name.TextTrimming = TextTrimming.CharacterEllipsis;
-        var metadata = Ui.Text($"{session.CharacterName} · {session.StartedAt.ToLocalTime():g}", 12, "muted");
+        var metadata = Ui.Text(details, 12, "muted");
         metadata.MaxLines = 1; metadata.TextTrimming = TextTrimming.CharacterEllipsis;
         var row = new StackPanel { Spacing = 5, Margin = new Thickness(4, 5), Children = { name, metadata } };
         ToolTip.SetTip(row, $"{HistoryViewModel.SessionLabel(session)}\n{session.WorldKey}");
@@ -192,6 +196,8 @@ public sealed class HistoryWindow : Window
     private static Control DateField(string name, string label, Action<DateTimeOffset?> changed)
     {
         var picker = new CalendarDatePicker { Name = name, MinHeight = 36, HorizontalAlignment = HorizontalAlignment.Stretch };
+        // Instead of the raw date pattern ("<M/d/yyyy>") an empty field says what it means.
+        picker.Bind(CalendarDatePicker.PlaceholderTextProperty, LocalizedText.Binding(nameof(L.HistoryAnyDate)));
         picker.Bind(AutomationProperties.NameProperty, LocalizedText.Binding(label));
         picker.SelectedDateChanged += (_, _) => changed(picker.SelectedDate is { } date ? new DateTimeOffset(date.Date) : null);
         return Ui.FieldKey(label, picker);

@@ -93,7 +93,10 @@ public sealed class MacroLibraryView : UserControl
         var empty = Ui.TextKey(nameof(L.MacroEmpty), 14, "muted"); empty.Margin = new Thickness(28);
         empty.Bind(IsVisibleProperty, new Binding(nameof(model.IsEmpty)));
         var formHost = new Grid { Children = { new ScrollViewer { Content = form }, empty } };
-        var body = new Grid { ColumnDefinitions = new ColumnDefinitions("170,5,*"), Children = { list, new GridSplitter { Width = 5, ResizeDirection = GridResizeDirection.Columns }, formHost } };
+        // The splitter is a hairline in the line colour with a wider grab area, not a pale full-height bar.
+        var splitter = new GridSplitter { Width = 5, ResizeDirection = GridResizeDirection.Columns, Background = Brushes.Transparent, BorderThickness = new Thickness(0, 0, 1, 0), Margin = new Thickness(0, 0, 2, 0) };
+        splitter.Bind(BorderBrushProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("LineBrush"));
+        var body = new Grid { ColumnDefinitions = new ColumnDefinitions("170,5,*"), Children = { list, splitter, formHost } };
         Grid.SetColumn(body.Children[1], 1); Grid.SetColumn(formHost, 2);
         var error = Ui.Text("", 12); error.Bind(TextBlock.TextProperty, new Binding(nameof(model.Error))); error.Bind(IsVisibleProperty, new Binding(nameof(model.HasError)));
         var confirmDelete = new Button { Name = "ConfirmDeleteMacro", Command = model.DeleteCommand };
@@ -102,9 +105,9 @@ public sealed class MacroLibraryView : UserControl
         var confirm = new StackPanel { Spacing = 6, Children = { Ui.TextKey(nameof(L.MacroDeletePrompt), 12), new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { confirmDelete, cancel } } } };
         confirm.Bind(IsVisibleProperty, new Binding(nameof(model.ConfirmDelete)));
         var notices = new StackPanel { Margin = new Thickness(10, 4), Children = { error, confirm } };
-        var status = Ui.Text("", 11, "muted"); status.Bind(TextBlock.TextProperty, new Binding(nameof(model.Status)));
+        // The selected macro's state is already under its name in the list; the footer only says when edits are unsaved.
         var unsaved = Ui.TextKey(nameof(L.ScriptUnsaved), 11, "muted"); unsaved.Bind(IsVisibleProperty, new Binding(nameof(model.HasUnsavedChanges)));
-        var footer = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(10, 4), Spacing = 12, Children = { status, unsaved } };
+        var footer = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(10, 4), Spacing = 12, Children = { unsaved } };
         var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto"), Children = { toolbar, notices, body, footer } };
         Grid.SetRow(notices, 1); Grid.SetRow(body, 2); Grid.SetRow(footer, 3);
         Content = root;

@@ -143,6 +143,24 @@ public sealed class WorldCatalogTests : IDisposable
         Assert.Equal(1, handler.Calls);
     }
     [Fact]
+    public async Task SearchFollowsARefreshedCatalog()
+    {
+        var renamed = false;
+        using var handler = new Handler(_ => new(HttpStatusCode.OK)
+        {
+            Content = new StringContent(renamed ? Snapshot(DateTimeOffset.UtcNow).Replace("Lantern Forest", "Ember Hollow") : Snapshot(DateTimeOffset.UtcNow))
+        });
+        using var http = new HttpClient(handler);
+        using var catalog = new WorldCatalog(CachePath, new Uri("http://localhost/"), http);
+        await catalog.LoadAsync();
+        Assert.Equal("Lantern Forest", catalog.Search("lantern")[0].Name);
+        // The searchable text is kept per catalog; a refresh with new listings must not search the old ones.
+        renamed = true;
+        await catalog.LoadAsync(force: true);
+        Assert.Equal("Ember Hollow", Assert.Single(catalog.Search("ember")).Name);
+        Assert.DoesNotContain(catalog.Search("forest"), w => w.Name == "Lantern Forest");
+    }
+    [Fact]
     public async Task FreshAndExpiredCachesSurviveFailedStartupRefresh()
     {
         Directory.CreateDirectory(_dir);

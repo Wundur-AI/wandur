@@ -54,27 +54,55 @@ public sealed partial class HistoryViewModel : ObservableObject, IDisposable
     public string ResultsLabel => L.Format(L.HistoryPage, _resultOffset / PageSize + 1, Results.Count);
     public string ContextLabel => ActiveSession is { } session ? SessionLabel(session) : L.HistorySelect;
     public string DeletePrompt => L.Format(L.HistoryDeletePrompt, _pendingDelete is { } session ? SessionLabel(session) : "");
-    public string TranscriptText => string.Join("\n\n", Transcript.Select(e => $"{e.At.ToLocalTime():g}  {KindLabel(e.Kind)}\n{e.Text}"));
-    public int TranscriptSelectionStart
+    public string TranscriptText => BuildTranscript().Text;
+    public int TranscriptSelectionStart => BuildTranscript().Start;
+    public int TranscriptSelectionEnd => BuildTranscript().End;
+
+    /// <summary>
+    /// The read-only transcript: a time heading only when the minute changes, received text as it came, and a label only
+    /// on what the reader sent, scripts and private input. Blank lines stay as paragraph spacing, never two in a row.
+    /// Returns the text and where the opened entry sits in it.
+    /// </summary>
+    private (string Text, int Start, int End) BuildTranscript()
     {
-        get
+        var text = new System.Text.StringBuilder();
+        string? lastStamp = null;
+        int start = 0, end = 0;
+        foreach (var entry in Transcript)
         {
-            var offset = 0;
-            foreach (var entry in Transcript)
+            var anchor = entry.Sequence == _anchorSequence;
+            // A blank line the world sent is kept as paragraph spacing, but never two in a row.
+            if (!anchor && string.IsNullOrWhiteSpace(entry.Text))
             {
-                var heading = $"{entry.At.ToLocalTime():g}  {KindLabel(entry.Kind)}\n";
-                if (entry.Sequence == _anchorSequence) return offset + heading.Length;
-                offset += heading.Length + entry.Text.Length + 2;
+                if (text.Length > 0 && !EndsWithBlankLine(text)) text.Append('\n');
+                continue;
             }
-            return 0;
+            var stamp = entry.At.ToLocalTime().ToString("g", System.Globalization.CultureInfo.CurrentCulture);
+            if (stamp != lastStamp)
+            {
+                if (text.Length > 0 && !EndsWithBlankLine(text)) text.Append('\n');
+                text.Append(stamp).Append('\n');
+                lastStamp = stamp;
+            }
+            if (!IsReceived(entry.Kind)) text.Append(KindLabel(entry.Kind)).Append("  ");
+            if (anchor) start = text.Length;
+            text.Append(entry.Text);
+            if (anchor) end = text.Length;
+            text.Append('\n');
         }
+        return (text.ToString().TrimEnd('\n'), start, end);
     }
-    public int TranscriptSelectionEnd => TranscriptSelectionStart + (Transcript.FirstOrDefault(e => e.Sequence == _anchorSequence)?.Text.Length ?? 0);
+
+    private static bool EndsWithBlankLine(System.Text.StringBuilder text) => text.Length >= 2 && text[^1] == '\n' && text[^2] == '\n';
+
+    private static bool IsReceived(string kind) => kind is not ("sent" or "script" or "private");
     public bool CanDelete => ActiveSession is not null && !IsDeleting && !IsContextBusy;
     public bool SessionsEmpty => Sessions.Count == 0 && !IsBusy;
     public bool ResultsEmpty => Results.Count == 0 && !IsBusy;
 
-    public static string SessionLabel(HistorySession session) => $"{session.WorldName} · {session.CharacterName} · {session.StartedAt.ToLocalTime():g}";
+    public static string SessionLabel(HistorySession session) => Join(session.WorldName, session.CharacterName, $"{session.StartedAt.ToLocalTime():g}");
+    /// <summary>The non-empty parts with a middle dot between them, so a session with no character reads "World · time".</summary>
+    public static string Join(params string?[] parts) => string.Join(" · ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
     public static string KindLabel(string kind) => kind switch
     {
         "sent" => L.HistorySent, "script" => L.HistoryScript, "private" => L.HistoryPrivate, _ => L.HistoryReceived

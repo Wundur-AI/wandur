@@ -87,9 +87,11 @@ public sealed class FleetRefinementTests
         try
         {
             var footer = window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "WindowFooter");
-            var hint = footer.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text?.Contains("Ctrl+Tab") == true);
-            Assert.Equal(Avalonia.Layout.VerticalAlignment.Center, hint.VerticalAlignment);
-            Assert.InRange(Math.Abs(hint.TranslatePoint(new Point(0, hint.Bounds.Height / 2), footer)!.Value.Y - footer.Bounds.Height / 2), 0, 1);
+            // The standing Ctrl+Tab hint is gone (UI review item 6); the status line it sat beside stays centred.
+            Assert.DoesNotContain(footer.GetVisualDescendants().OfType<TextBlock>(), t => t.Text?.Contains("Ctrl+Tab") == true);
+            var status = footer.GetVisualDescendants().OfType<StackPanel>().Single(p => p.Name == "FooterStatus");
+            Assert.Equal(Avalonia.Layout.VerticalAlignment.Center, status.Children.OfType<TextBlock>().First().VerticalAlignment);
+            Assert.InRange(Math.Abs(status.TranslatePoint(new Point(0, status.Bounds.Height / 2), footer)!.Value.Y - footer.Bounds.Height / 2), 0, 1);
             Assert.InRange(window.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "ToolbarWorlds").FontSize, 12, 13);
             Assert.All(window.GetVisualDescendants().OfType<TextBlock>().Where(t => t.Classes.Contains("fleet-action-label")), t => Assert.InRange(t.FontSize, 12, 13));
         }

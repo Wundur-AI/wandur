@@ -20,6 +20,10 @@ public sealed partial class WorkspaceNavigationEntry : ObservableObject
     [ObservableProperty] private string _title = "";
     [ObservableProperty] private string _details = "";
     [ObservableProperty] private string _status = "";
+    /// <summary>Where the session connects (host, port and encoding), kept for the row's tooltip.</summary>
+    [ObservableProperty] private string _address = "";
+    [ObservableProperty] private bool _isLive;
+    [ObservableProperty] private bool _hasActivity;
     public bool HasDetails => Key is SessionTab;
 }
 
@@ -80,7 +84,7 @@ public sealed partial class WorkspaceNavigationViewModel(SessionWorkspace sessio
         try
         {
             var desired = new List<(object Key, string Title, string Details, string Status)>
-                { (WorkspaceFactory.SearchKey, L.FindAMUD, "", "⌕") };
+                { (WorkspaceFactory.SearchKey, L.FindAMUD, "", "") };
             var tabs = sessions.Tabs.Where(t => t.Controller.HasSession && !t.IsClosing).ToArray();
             foreach (var tab in tabs)
             {
@@ -89,7 +93,12 @@ public sealed partial class WorkspaceNavigationViewModel(SessionWorkspace sessio
                 var label = tab.Controller.SessionLabel;
                 var siblings = tabs.Where(t => t.Controller.SessionLabel == label).ToArray();
                 var title = tab.CustomName ?? label + (siblings.Length > 1 ? $" · {Array.IndexOf(siblings, tab) + 1}" : "");
-                desired.Add((tab, title, tab.Endpoint, tab.Controller.IsConnected ? "●" : "○"));
+                // The row says what the session is doing; where it connects is in the tooltip.
+                var controller = tab.Controller;
+                var state = controller.IsConnecting ? L.Connecting
+                    : controller.IsConnected ? (controller.ActiveProfile?.UseTls == true ? L.ConnectedTLS : L.ConnectedTelnet)
+                    : L.Disconnected;
+                desired.Add((tab, title, state, ""));
                 foreach (var map in workspace.MapDocuments.Where(d => !d.IsClosed && d.Controller == tab.Controller))
                     desired.Add((map, L.MapEditor, "", ""));
 
@@ -114,7 +123,10 @@ public sealed partial class WorkspaceNavigationViewModel(SessionWorkspace sessio
                 }
                 else if (Entries.IndexOf(row) != i) Entries.Move(Entries.IndexOf(row), i);
                 row.Title = item.Title; row.Details = item.Details;
-                row.Status = item.Key is SessionTab { HasActivity: true } ? "●  " + L.NewActivity : item.Status;
+                row.HasActivity = item.Key is SessionTab { HasActivity: true };
+                row.Status = row.HasActivity ? L.NewActivity : item.Status;
+                row.IsLive = item.Key is SessionTab { Controller.IsConnected: true };
+                row.Address = item.Key is SessionTab session ? session.Endpoint : "";
             }
             foreach (var old in OpenEntries.Where(e => !Entries.Contains(e)).ToArray()) OpenEntries.Remove(old);
             for (var i = 1; i < Entries.Count; i++)

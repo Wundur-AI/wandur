@@ -30,10 +30,11 @@ public sealed class AgentSessionTests
             var status = footer.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "SessionAgentStatus");
             var scripts = footer.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "SessionScripts");
             var toggle = footer.GetVisualDescendants().OfType<ToggleButton>().Single(c => c.Name == "PrivateInputToggle");
-            // The hint text hides below 640px so the agent status and the private toggle both keep their room.
+            // Below 640px the hint would hide so the agent status and the private toggle keep their room.
             Assert.Equal(28, footer.Bounds.Height); Assert.True(scripts.Bounds.Width > 50); Assert.True(toggle.Bounds.Width > 10);
             Assert.True(status.Bounds.Width > 10);
-            Assert.Equal(width >= 640, footer.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "CommandHint").IsVisible);
+            // The hint speaks only for private input or a completion, so an idle composer shows none at any width.
+            Assert.False(footer.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "CommandHint").IsVisible);
             Assert.Equal(world.Controller.Agent!.Status, status.Text);
             Assert.Equal(2, footer.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.TabStripItem>().Count());
             if (Environment.GetEnvironmentVariable("WANDUR_CAPTURE_DIR") is { } folder)

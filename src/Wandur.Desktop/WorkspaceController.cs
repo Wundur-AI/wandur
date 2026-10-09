@@ -33,6 +33,11 @@ public sealed partial class WorkspaceController : IAsyncDisposable
     private int _pendingCharacters;
     private bool _droppedOutput;
     private readonly DispatcherTimer _outputTimer;
+    // Output is drawn as soon as it arrives rather than waiting for the 60 ms timer, which made a stream land in
+    // visible clumps. Flushes stay at least OutputFlushGap apart, so a flood still costs about 30 flushes a second.
+    internal static readonly TimeSpan OutputFlushGap = TimeSpan.FromMilliseconds(33);
+    private int _flushRequested;
+    private long _lastFlushTimestamp;
 
     public WorkspaceController(Wandur.Desktop.Terminal.ITranscriptDisplayFactory displays, ISettingsStore store, IPasswordVault passwords, IRoomMapStore maps, IScriptRuntimeFactory scriptRuntimes, IWorldScriptLibraryStore scriptLibraryStore, IWorldKnowledgeStore? knowledge = null, IAgentClientServices? agents = null, Wandur.Core.Classification.RoomClassificationService? classification = null, Wandur.Core.History.IHistoryStore? history = null)
     {
@@ -57,11 +62,18 @@ public sealed partial class WorkspaceController : IAsyncDisposable
         ThemeService.Apply(Settings, WorldTheme);
         if (loaded.Warning is not null) Notice = loaded.Warning;
         ApplyHistorySettings();
-        _outputTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(60), DispatcherPriority.Background, (_, _) => { FlushOutput(); TickHistory(); ReplayCachedState(); SaveMap(); ScriptLibrary.Tick(); });
+        _outputTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(60), DispatcherPriority.Background, (_, _) => { FlushOnTimer(); TickHistory(); ReplayCachedState(); SaveMap(); ScriptLibrary.Tick(); });
         _outputTimer.Start();
         InitializeWindowSize();
         Wandur.Core.Localization.UiLanguage.Changed += RefreshLanguage;
+        ChannelPanel = new(this) { OwnedBySession = true };
+        ChannelPanel.Attach();
     }
+
+    /// <summary>What the Channels panel shows for this session. It lives as long as the session, so switching to
+    /// another world and back keeps the conversation, and messages that arrive while another world is in front are
+    /// kept too.</summary>
+    public ViewModels.ChannelsViewModel ChannelPanel { get; }
 
     public WorldScriptLibrary ScriptLibrary { get; }
     private ViewModels.SessionPagesViewModel? _pages;
@@ -223,6 +235,7 @@ public sealed partial class WorkspaceController : IAsyncDisposable
                     if (_pendingCharacters + text.Length > 524_288 || _pending.Count >= 2048) { _pending.Clear(); _pendingCharacters = 0; _droppedOutput = true; }
                     _pending.Enqueue((session, text, containsPrivateText || wirePrivate || _scriptPrivacyBlocked ? -1 : _scriptOutputEpoch, null, null, -1)); _pendingCharacters += text.Length;
                 }
+                RequestOutputFlush();
             }
             if (session is TelnetSession telnet)
             {
@@ -251,6 +264,7 @@ public sealed partial class WorkspaceController : IAsyncDisposable
                         _pending.Enqueue((session, "", epoch, new("gmcp", received.Text), null, cacheEpoch));
                         _pendingCharacters += received.Text.Length;
                     }
+                    RequestOutputFlush();
                 };
             }
             else session.Output += text => ReceiveText(text, false);
@@ -293,7 +307,7 @@ public sealed partial class WorkspaceController : IAsyncDisposable
     private void RefreshScriptState()
     {
         if (IsPrivate || _login is not null) _historyRecorder?.Received("", true, _diagnosticSecrets);
-        if (IsPrivate || _login is not null) { StopMapWalk("MapWalkPrivate"); if (_agentPublicText.Length > 0 || _agentProtocol.Length > 0 || _agentRunner?.IsBusy == true) ResetAgentContext(); }
+        if (IsPrivate || _login is not null) { StopMapWalk("MapWalkPrivate"); if (_agentPublicText.Length > 0 || _agentTextStale || _agentProtocol.Length > 0 || _agentRunner?.IsBusy == true) ResetAgentContext(); }
         lock (_pendingLock)
         {
             var blocked = IsPrivate || _login is not null;
@@ -326,8 +340,38 @@ public sealed partial class WorkspaceController : IAsyncDisposable
         Dispatcher.UIThread.Post(() => { if (ReferenceEquals(_session, session)) action(); });
     }
 
+    /// <summary>Called from the network threads after queueing output: flushes on the next UI pass, or once
+    /// <see cref="OutputFlushGap"/> has passed since the last flush. One request is outstanding at a time.</summary>
+    private void RequestOutputFlush()
+    {
+        if (Interlocked.Exchange(ref _flushRequested, 1) == 1) return;
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_disposed) return;
+            var wait = OutputFlushGap - System.Diagnostics.Stopwatch.GetElapsedTime(Interlocked.Read(ref _lastFlushTimestamp));
+            if (wait <= TimeSpan.Zero) RequestedFlush();
+            else DispatcherTimer.RunOnce(RequestedFlush, wait, DispatcherPriority.Default);
+        }, DispatcherPriority.Default);
+    }
+
+    /// <summary>The 60 ms timer's flush: a fallback only, skipped while a requested flush is pending or one ran within
+    /// <see cref="OutputFlushGap"/>, so the two paths do not add up to more flushes than the gap allows.</summary>
+    private void FlushOnTimer()
+    {
+        if (Volatile.Read(ref _flushRequested) == 1) return;
+        if (System.Diagnostics.Stopwatch.GetElapsedTime(Interlocked.Read(ref _lastFlushTimestamp)) < OutputFlushGap) return;
+        FlushOutput();
+    }
+
+    private void RequestedFlush()
+    {
+        Interlocked.Exchange(ref _flushRequested, 0);
+        if (!_disposed) FlushOutput();
+    }
+
     public void FlushOutput()
     {
+        Interlocked.Exchange(ref _lastFlushTimestamp, System.Diagnostics.Stopwatch.GetTimestamp());
         List<(IMudSession Session, string Text, long ScriptEpoch, ScriptEvent? Event, RoomObservation? Room, long CacheEpoch)> batch;
         List<(IMudSession Session, long Epoch, long CacheEpoch, PendingProtocolDiagnostic Message)> diagnostics;
         bool dropped;
@@ -513,5 +557,5 @@ public sealed partial class WorkspaceController : IAsyncDisposable
         Changed?.Invoke();
     }
 
-    public async ValueTask DisposeAsync() { if (_disposed) return; _disposed = true; CancelInference(); Wandur.Core.Localization.UiLanguage.Changed -= RefreshLanguage; _outputTimer.Stop(); StopWindowSize(); await DisconnectAsync(); _pages?.Dispose(); Agent?.Dispose(); await ScriptLibrary.DisposeAsync(); Display.Dispose(); }
+    public async ValueTask DisposeAsync() { if (_disposed) return; _disposed = true; CancelInference(); Wandur.Core.Localization.UiLanguage.Changed -= RefreshLanguage; _outputTimer.Stop(); StopWindowSize(); await DisconnectAsync(); _pages?.Dispose(); ChannelPanel.Dispose(); Agent?.Dispose(); await ScriptLibrary.DisposeAsync(); Display.Dispose(); }
 }

@@ -148,7 +148,10 @@ public sealed class WorldScriptLibrary : IAsyncDisposable
     public WorldScriptEntry AddMacro()
     {
         var macro = new MacroDefinition(MacroKind.Trigger, "You are hungry", "eat bread");
-        return AddDefinition(new(Guid.NewGuid(), L.MacroNewName, MacroCompiler.Compile(macro), Macro: macro));
+        // Two new macros side by side must not look like one listed twice: the second is "New macro 2", and so on.
+        var name = L.MacroNewName;
+        for (var n = 2; Items.Any(item => item.IsMacro && item.Name == name); n++) name = $"{L.MacroNewName} {n}";
+        return AddDefinition(new(Guid.NewGuid(), name, MacroCompiler.Compile(macro), Macro: macro));
     }
 
     private WorldScriptEntry AddDefinition(WorldScriptDefinition definition)
