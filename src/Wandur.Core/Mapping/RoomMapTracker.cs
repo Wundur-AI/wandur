@@ -107,6 +107,7 @@ public sealed partial class RoomMapTracker
         };
         if (observation.ServerId is not null && _deletedRooms.ContainsKey(ResolveAlias("s:" + observation.ServerId)) && !_rooms.ContainsKey(ResolveAlias("s:" + observation.ServerId))) { LosePosition(); return; }
         var direction = NormalizeDirection(movement);
+        if (observation.X is not null || observation.Y is not null || observation.Z is not null) _serverCoordinates = true;
         _observations++;
         _source = observation.Source;
         if (!string.IsNullOrWhiteSpace(observation.ServerId) && observation.ServerId is not "-1" and not "0")
@@ -149,6 +150,8 @@ public sealed partial class RoomMapTracker
             var link = _links.FirstOrDefault(l => l.FromId == _current && l.Direction == direction);
             if (link is not null && _rooms.TryGetValue(link.ToId, out var target) && Matches(target, observation))
             {
+                // Walking a saved link also repairs a room left parked away from it.
+                Dock(_current, target.Id, direction);
                 _lastTraversal = (_current, target.Id, direction);
                 _current = target.Id;
                 UpdateRoom(_current, observation);
@@ -191,7 +194,7 @@ public sealed partial class RoomMapTracker
         {
             if (_rooms.Count >= 10000) { LosePosition(); return; }
             var id = "t:" + Guid.NewGuid().ToString("N");
-            var (x, y, z) = Position(origin, direction);
+            var (x, y, z) = Position(origin, direction, observation.Area);
             _rooms[id] = new(id, observation.Name, observation.Description, observation.Area, x, y, z, true) { KnownExits = observation.Exits.Keys.Select(e => NormalizeDirection(e) ?? e).ToArray() };
             UpdateRoom(id, observation);
             if (origin is not null && direction is not null)
@@ -231,7 +234,7 @@ public sealed partial class RoomMapTracker
             var incoming = _links.FirstOrDefault(l => l.ToId == id && _rooms.ContainsKey(l.FromId));
             // An unsolicited room change is authoritative location evidence, not
             // evidence of an adjacent exit from the previous room.
-            var (x, y, z) = Position(incoming?.FromId ?? (direction is not null ? previous : null), incoming?.Direction ?? direction);
+            var (x, y, z) = Position(incoming?.FromId ?? (direction is not null ? previous : null), incoming?.Direction ?? direction, observation.Area);
             _rooms[id] = new(id, observation.Name, observation.Description, observation.Area, x, y, z, false, observation.ServerId);
         }
         UpdateRoom(id, observation);
@@ -299,11 +302,13 @@ public sealed partial class RoomMapTracker
             var edited = _links[existing];
             if (confirmed && !edited.Confirmed && edited.ToId == to)
                 _links[existing] = edited with { Confirmed = true, Revision = NextRevision() };
+            Dock(from, to, direction);
             return;
         }
         var value = new MapLink(from, to, direction, confirmed) { Revision = existing >= 0 ? _links[existing].Revision : 0 };
         if (existing >= 0) _links[existing] = value;
         else if (_links.Count < 60000) _links.Add(value);
+        Dock(from, to, direction);
     }
 
     private static string Normalize(string value) => Regex.Replace(value.Trim().ToLowerInvariant(), @"\s+", " ", RegexOptions.None, TimeSpan.FromMilliseconds(50));
@@ -331,21 +336,6 @@ public sealed partial class RoomMapTracker
         var a = first.Split(' ').Where(w => w.Length > 2).ToHashSet();
         var b = second.Split(' ').Where(w => w.Length > 2).ToHashSet();
         return a.Count > 0 && (double)a.Intersect(b).Count() / a.Union(b).Count() >= 0.8;
-    }
-
-    private (double X, double Y, double Z) Position(string? origin, string? direction)
-    {
-        if (origin is null || !_rooms.TryGetValue(origin, out var room)) return (_rooms.Count * 2, 0, 0);
-        var offset = direction switch
-        {
-            "north" => (0, 1, 0), "south" => (0, -1, 0), "east" => (1, 0, 0), "west" => (-1, 0, 0),
-            "northeast" => (1, 1, 0), "northwest" => (-1, 1, 0), "southeast" => (1, -1, 0), "southwest" => (-1, -1, 0),
-            "up" => (0, 0, 1), "down" => (0, 0, -1), _ => (1, 0, 0)
-        };
-        var position = (X: room.X + offset.Item1, Y: room.Y + offset.Item2, Z: room.Z + offset.Item3);
-        // Display overlap is not proof that two rooms are identical.
-        while (_rooms.Values.Any(r => r.X == position.X && r.Y == position.Y && r.Z == position.Z)) position.X += 0.35;
-        return position;
     }
 
     public static string? NormalizeDirection(string? value) => value?.Trim().ToLowerInvariant() switch
