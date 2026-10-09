@@ -171,6 +171,32 @@ public sealed class MapDockingTests : IDisposable
         AssertAt(reloaded.Rooms.Single(r => r.Id == "s:10"), 3, 1);
     }
 
+    [Fact]
+    public void AMoveTheServerExitsContradictIsATransportAndAddsNoLink()
+    {
+        var tracker = new RoomMapTracker();
+        tracker.Observe(At("1", new() { ["north"] = "2" }));
+        tracker.Observe(At("2", new() { ["south"] = "1" }), "north");
+        tracker.Observe(At("1", new() { ["north"] = "2" }), "south");
+        // "north" again, but the game moves the player to a shuttle bay instead.
+        tracker.Observe(At("50"), "north");
+        var links = tracker.Snapshot.Links;
+        Assert.Contains(links, l => l.FromId == "s:1" && l.Direction == "north" && l.ToId == "s:2");
+        Assert.DoesNotContain(links, l => l.ToId == "s:50");
+        var bay = Get(tracker, "s:50");
+        Assert.False(bay.X == 0 && bay.Y == 1); // not placed where room 2 belongs
+    }
+
+    [Fact]
+    public void AMoveThroughAnUnlistedExitStillLinksBecauseDoorsCanBeHidden()
+    {
+        var tracker = new RoomMapTracker();
+        tracker.Observe(At("1", new() { ["south"] = "0" }));
+        tracker.Observe(At("7"), "northeast");
+        Assert.Contains(tracker.Snapshot.Links, l => l.FromId == "s:1" && l.Direction == "northeast" && l.ToId == "s:7");
+        AssertAt(Get(tracker, "s:7"), 1, 1);
+    }
+
     private static RoomMapTracker ParkedIslandWithSeveralLinks(bool conflicting)
     {
         MapRoom Saved(string id, double x, double y) => new("s:" + id, "Room " + id, "", Area, x, y, 0, false, id) { Revision = 5 };

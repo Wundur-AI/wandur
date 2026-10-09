@@ -228,6 +228,13 @@ public sealed partial class RoomMapTracker
         var id = ResolveAlias("s:" + observation.ServerId);
         ReconcileProvisionalIdentity(id, observation, direction);
         var previous = _current;
+        // A move the server's own exit data contradicts was a transport (a shuttle, a recall, a script, death):
+        // the previous room's confirmed exit that way leads somewhere else. It is not an exit, so it adds no link,
+        // overwrites no real exit and places nothing beside the previous room. A missing exit proves nothing
+        // (doors can be hidden or closed), so only a contradicting link counts.
+        if (previous is not null && direction is not null && previous != id &&
+            _links.Any(l => l.FromId == previous && l.Direction == direction && l.Confirmed && l.ToId != id))
+            direction = null;
         if (!_rooms.ContainsKey(id))
         {
             if (_rooms.Count >= 10000) { LosePosition(); return; }
